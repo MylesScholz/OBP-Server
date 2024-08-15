@@ -5,7 +5,7 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "dev": "nodemon --exec \"npm start\" -e 'js jsx' --ignore ./dist",
+    "dev": "nodemon --exec \"npm start\" -e \"js jsx\" --ignore ./dist",
     "build": "vite build",
     "start": "npm run build && node server.js"
   },
@@ -19,7 +19,8 @@
     "morgan": "^1.10.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.0"
+    "react-router-dom": "^6.26.0",
+    "vhost": "^3.0.2"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",

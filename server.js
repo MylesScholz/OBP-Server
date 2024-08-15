@@ -4,6 +4,7 @@ import morgan from 'morgan'
 
 import observationsRouter from './api/observations.js'
 import labelsRouter from './api/labels.js'
+import { connectToRabbitMQ } from './api/lib/rabbitmq.js'
 
 const port = process.env.PORT || '8080'
 const app = express()
@@ -25,6 +26,8 @@ app.use('*', (req, res, next) => {
     })
 })
 
-app.listen(port, () => {
-    console.log('Listening on port ' + port + '...')
+connectToRabbitMQ().then(() => {
+    app.listen(port, () => {
+        console.log('Listening on port ' + port + '...')
+    })
 })

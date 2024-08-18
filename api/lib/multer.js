@@ -1,3 +1,4 @@
+import Crypto from 'node:crypto'
 import multer from 'multer'
 
 const fileTypes = {
@@ -6,9 +7,9 @@ const fileTypes = {
 
 const upload = multer({
     storage: multer.diskStorage({
-        destination: `./api/uploads`,
+        destination: `./api/data/uploads`,
         filename: (req, file, cb) => {
-            cb(null, `dataset.${fileTypes[file.mimetype]}`)
+            cb(null, `${Crypto.randomUUID()}.${fileTypes[file.mimetype]}`)
         }
     }),
     fileFilter: (req, file, cb) => {

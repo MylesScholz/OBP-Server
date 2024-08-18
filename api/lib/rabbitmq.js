@@ -14,9 +14,11 @@ async function connectToRabbitMQ() {
 
     observationsChannel = await connection.createChannel()
     await observationsChannel.assertQueue(observationsQueueName)
+    observationsChannel.purgeQueue(observationsQueueName)
 
     labelsChannel = await connection.createChannel()
     await labelsChannel.assertQueue(labelsQueueName)
+    observationsChannel.purgeQueue(labelsQueueName)
 }
 
 function getObservationsChannel() {

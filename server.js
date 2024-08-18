@@ -4,6 +4,7 @@ import morgan from 'morgan'
 
 import observationsRouter from './api/observations.js'
 import labelsRouter from './api/labels.js'
+import tasksRouter from './api/tasks.js'
 import { connectToRabbitMQ } from './api/lib/rabbitmq.js'
 
 const port = process.env.PORT || '8080'
@@ -18,6 +19,7 @@ app.use(express.static('dist'))
 // API routes
 apiRouter.use('/observations', observationsRouter)
 apiRouter.use('/labels', labelsRouter)
+apiRouter.use('/tasks', tasksRouter)
 app.use(vhost('api.*', apiRouter))
 
 app.use('*', (req, res, next) => {

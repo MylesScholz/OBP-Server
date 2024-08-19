@@ -21,10 +21,10 @@ tasksRouter.post('/', upload.single('file'), async (req, res, next) => {
 
         if (req.body.type === 'observations') {
             const channel = getObservationsChannel()
-            channel.sendToQueue(observationsQueueName, Buffer.from(`./api${datasetURI}`))        
+            channel.sendToQueue(observationsQueueName, Buffer.from(taskId.toString()))        
         } else if (req.body.type === 'labels') {
             const channel = getLabelsChannel()
-            channel.sendToQueue(labelsQueueName, Buffer.from(`./api${datasetURI}`))
+            channel.sendToQueue(labelsQueueName, Buffer.from(taskId.toString()))
         }
 
         res.status(202).send({

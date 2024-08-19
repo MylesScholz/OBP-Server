@@ -1,7 +1,8 @@
 import amqp from 'amqplib'
+import 'dotenv/config'
 
 const rabbitmqHost = process.env.RABBITMQ_HOST || 'localhost'
-const rabbitmqUrl = `amqp://${rabbitmqHost}`
+const rabbitmqURL = `amqp://${rabbitmqHost}`
 
 const observationsQueueName = 'observations'
 let _observationsChannel = null
@@ -10,7 +11,7 @@ const labelsQueueName = 'labels'
 let _labelsChannel = null
 
 async function connectToRabbitMQ() {
-    const connection = await amqp.connect(rabbitmqUrl)
+    const connection = await amqp.connect(rabbitmqURL)
 
     _observationsChannel = await connection.createChannel()
     await _observationsChannel.assertQueue(observationsQueueName)

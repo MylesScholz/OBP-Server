@@ -1,4 +1,5 @@
 import { MongoClient } from 'mongodb'
+import 'dotenv/config'
 
 const mongoHost = process.env.MONGO_HOST || 'localhost'
 const mongoPort = process.env.MONGO_PORT || 27017
@@ -18,9 +19,6 @@ async function connectToDb() {
     _closeDbConnection = function () {
         client.close()
     }
-
-    const tasks = _db.collection('tasks')
-    await tasks.deleteMany({})
 }
 
 function getDb() {

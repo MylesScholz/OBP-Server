@@ -1,6 +1,12 @@
 import { ObjectId } from "mongodb"
 import { getDb } from "../lib/mongo.js"
 
+async function clearTasks() {
+    const db = getDb()
+    const tasks = db.collection('tasks')
+    tasks.deleteMany({})
+}
+
 async function createTask(type, dataset) {
     if (type !== 'observations' && type !== 'labels') {
         throw new Error('Invalid task field \'type\'')
@@ -42,4 +48,44 @@ async function getTasks() {
     return result
 }
 
-export { createTask, getTaskById, getTasks }
+async function updateTaskInProgress(id, progress) {
+    const db = getDb()
+    const tasks = db.collection('tasks')
+
+    if (!ObjectId.isValid(id)) {
+        throw new Error('Invalid field \'id\'')
+    } else {
+        await tasks.updateOne(
+            { _id: new ObjectId(id) },
+            {
+                $set: {
+                    status: 'Running',
+                    progress: progress
+                }
+            }
+        )
+    }
+}
+
+async function updateTaskResult(id, result) {
+    const db = getDb()
+    const tasks = db.collection('tasks')
+
+    if (!ObjectId.isValid(id)) {
+        throw new Error('Invalid field \'id\'')
+    } else {
+        await tasks.updateOne(
+            { _id: new ObjectId(id) },
+            {
+                $set: {
+                    status: 'Completed',
+                    result: result,
+                    completedAt: new Date().toISOString()
+                },
+                $unset: { progress }
+            }
+        )
+    }
+}
+
+export { clearTasks, createTask, getTaskById, getTasks, updateTaskInProgress, updateTaskResult }

@@ -8,6 +8,7 @@ import labelsRouter from './api/labels.js'
 import tasksRouter from './api/tasks.js'
 import { connectToRabbitMQ } from './api/lib/rabbitmq.js'
 import { connectToDb } from './api/lib/mongo.js'
+import { clearTasks } from './api/models/task.js'
 
 const port = process.env.PORT || '8080'
 const app = express()
@@ -38,6 +39,7 @@ app.use('*', (err, req, res, next) => {
 })
 
 connectToDb().then(async () => {
+    await clearTasks()
     await connectToRabbitMQ()
     app.listen(port, () => {
         console.log('Listening on port ' + port + '...')

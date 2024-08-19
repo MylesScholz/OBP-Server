@@ -4,29 +4,29 @@ const rabbitmqHost = process.env.RABBITMQ_HOST || 'localhost'
 const rabbitmqUrl = `amqp://${rabbitmqHost}`
 
 const observationsQueueName = 'observations'
-let observationsChannel
+let _observationsChannel = null
 
 const labelsQueueName = 'labels'
-let labelsChannel
+let _labelsChannel = null
 
 async function connectToRabbitMQ() {
     const connection = await amqp.connect(rabbitmqUrl)
 
-    observationsChannel = await connection.createChannel()
-    await observationsChannel.assertQueue(observationsQueueName)
-    observationsChannel.purgeQueue(observationsQueueName)
+    _observationsChannel = await connection.createChannel()
+    await _observationsChannel.assertQueue(observationsQueueName)
+    _observationsChannel.purgeQueue(observationsQueueName)
 
-    labelsChannel = await connection.createChannel()
-    await labelsChannel.assertQueue(labelsQueueName)
-    observationsChannel.purgeQueue(labelsQueueName)
+    _labelsChannel = await connection.createChannel()
+    await _labelsChannel.assertQueue(labelsQueueName)
+    _observationsChannel.purgeQueue(labelsQueueName)
 }
 
 function getObservationsChannel() {
-    return observationsChannel
+    return _observationsChannel
 }
 
 function getLabelsChannel() {
-    return labelsChannel
+    return _labelsChannel
 }
 
 export { connectToRabbitMQ, getObservationsChannel, observationsQueueName, getLabelsChannel, labelsQueueName }

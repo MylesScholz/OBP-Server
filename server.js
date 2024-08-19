@@ -1,11 +1,13 @@
 import vhost from 'vhost'
 import express from 'express'
 import morgan from 'morgan'
+import 'dotenv/config'
 
 import observationsRouter from './api/observations.js'
 import labelsRouter from './api/labels.js'
 import tasksRouter from './api/tasks.js'
 import { connectToRabbitMQ } from './api/lib/rabbitmq.js'
+import { connectToDb } from './api/lib/mongo.js'
 
 const port = process.env.PORT || '8080'
 const app = express()
@@ -28,7 +30,15 @@ app.use('*', (req, res, next) => {
     })
 })
 
-connectToRabbitMQ().then(() => {
+app.use('*', (err, req, res, next) => {
+    console.error('Error:', err)
+    res.status(500).send({
+        error: 'Unable to complete the request because of a server error'
+    })
+})
+
+connectToDb().then(async () => {
+    await connectToRabbitMQ()
     app.listen(port, () => {
         console.log('Listening on port ' + port + '...')
     })

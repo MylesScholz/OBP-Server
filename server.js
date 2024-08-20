@@ -41,6 +41,9 @@ app.use('*', (err, req, res, next) => {
 connectToDb().then(async () => {
     await clearTasks()
     await connectToRabbitMQ()
+
+    // TODO: clear ./api/data folders
+
     app.listen(port, () => {
         console.log('Listening on port ' + port + '...')
     })

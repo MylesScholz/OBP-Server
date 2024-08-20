@@ -13,10 +13,17 @@ tasksRouter.post('/', upload.single('file'), async (req, res, next) => {
         })
         return
     }
+    if (req.body.type === 'observations' && (!req.query.sources || !req.query.minDate || !req.query.maxDate)) {
+        res.status(400).send({
+            error: 'Tasks of type \'observations\' must have \'sources\', \'minDate\', and \'maxDate\' query parameters'
+        })
+        return
+    }
 
     try {
         const datasetURI = `/data/uploads/${req.file.filename}`
-        const { id: taskId } = await createTask(req.body.type, datasetURI)
+        const sources = req.query.sources ? req.query.sources.split(',') : null
+        const { id: taskId } = await createTask(req.body.type, datasetURI, sources, req.query.minDate, req.query.maxDate)
         const task = await getTaskById(taskId)
 
         if (req.body.type === 'observations') {
@@ -28,8 +35,7 @@ tasksRouter.post('/', upload.single('file'), async (req, res, next) => {
         }
 
         res.status(202).send({
-            taskId: task._id,
-            status: task.status,
+            uri: `/tasks/${task._id}`,
             createdAt: task.createdAt
         })
     } catch (err) {

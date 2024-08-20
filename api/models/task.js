@@ -7,7 +7,7 @@ async function clearTasks() {
     tasks.deleteMany({})
 }
 
-async function createTask(type, dataset) {
+async function createTask(type, dataset, sources, minDate, maxDate) {
     if (type !== 'observations' && type !== 'labels') {
         throw new Error('Invalid task field \'type\'')
     }
@@ -18,6 +18,9 @@ async function createTask(type, dataset) {
         status: 'Pending',
         createdAt: new Date().toISOString()
     }
+    if (sources) task.sources = sources
+    if (minDate) task.minDate = minDate
+    if (maxDate) task.maxDate = maxDate
 
     const db = getDb()
     const tasks = db.collection('tasks')
@@ -82,7 +85,7 @@ async function updateTaskResult(id, result) {
                     result: result,
                     completedAt: new Date().toISOString()
                 },
-                $unset: { progress }
+                $unset: { progress: undefined }
             }
         )
     }

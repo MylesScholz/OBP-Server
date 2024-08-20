@@ -1,9 +1,11 @@
 import amqp from 'amqplib'
 import 'dotenv/config'
+import fs from 'fs'
 
-import { connectToDb, getDb } from './api/lib/mongo.js'
+import { connectToDb } from './api/lib/mongo.js'
 import { observationsQueueName } from './api/lib/rabbitmq.js'
 import { getTaskById, updateTaskInProgress, updateTaskResult } from './api/models/task.js'
+import places from './api/data/places.json' assert { type: 'json' }
 
 const rabbitmqHost = process.env.RABBITMQ_HOST || 'localhost'
 const rabbitmqURL = `amqp://${rabbitmqHost}`
@@ -36,13 +38,58 @@ async function pullObservations(task) {
     }
 
     return observations
+}
 
+function readPlacesFile() {
+    const placesData = fs.readFileSync('./api/data/places.json')
+    return JSON.parse(placesData)
+}
+
+function writePlacesFile(places) {
+    fs.writeFileSync('./api/data/places.json', JSON.stringify(places))
+}
+
+async function fetchPlaces(places) {
+    const res = await fetch(`https://api.inaturalist.org/v1/places/${places.join(',')}`)
+    return await res.json()
+}
+
+async function updatePlaces(observations) {
+    const places = readPlacesFile()
+    const unknownPlaces = []
+
+    for (const observation of observations) {
+        const placeIds = observation['place_ids']
+        
+        for (const placeId of placeIds) {
+            if (!(placeId in places) && !unknownPlaces.includes(placeId)) {
+                unknownPlaces.push(placeId)
+            }
+        }
+    }
+
+    if (unknownPlaces.length > 0) {
+        const res = await fetchPlaces(unknownPlaces)
+        for (const newPlace of res['results']) {
+            if (
+                newPlace['admin_level'] === 0 ||
+                newPlace['admin_level'] === 10 ||
+                newPlace['admin_level'] === 20
+            ) {
+                places[newPlace['id']] = [
+                    newPlace['admin_level'].toString(),
+                    newPlace['name']
+                ]
+            }
+        }
+    }
+
+    writePlacesFile(places)
 }
 
 async function main() {
     try {
         await connectToDb()
-        const db = getDb()
 
         const connection = await amqp.connect(rabbitmqURL)
         const observationsChannel = await connection.createChannel()
@@ -58,6 +105,10 @@ async function main() {
                 updateTaskInProgress(taskId, { currentStep: 'Pulling observations from iNaturalist' })
 
                 const observations = await pullObservations(task)
+
+                updateTaskInProgress(taskId, { currentStep: 'Updating place data' })
+
+                await updatePlaces(observations)
 
                 updateTaskInProgress(taskId, { currentStep: 'Formatting new observations' })
 

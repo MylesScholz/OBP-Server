@@ -273,8 +273,7 @@ function lookUpUserName(user) {
     const usernames = readUsernamesFile()
 
     const userLogin = user['login']
-    const userName = user['name']
-    const fullName = usernames[userLogin]?.split(' ') ?? userName?.split(' ')
+    const fullName = usernames[userLogin]?.split(' ')
 
     if (fullName) {
         firstName = fullName[0]
@@ -330,6 +329,42 @@ function getFamily(identifications) {
     return ''
 }
 
+function readHGT(filePath, latitude, longitude) {
+
+}
+
+function getElevation(latitude, longitude) {
+    if (latitude === '' || longitude === '') {
+        return ''
+    }
+
+    let cardinalLatitude = latitude.split('.')[0]
+    const degreesLatitude = parseInt(cardinalLatitude)
+    let cardinalLongitude = longitude.split('.')[0]
+    const degreesLongitude = parseInt(cardinalLongitude)
+
+    if (degreesLatitude < 0) {
+        cardinalLatitude = 'S' + `${-degreesLatitude + 1}`
+    } else {
+        cardinalLatitude = 'N' + cardinalLatitude
+    }
+
+    if (degreesLongitude < 0) {
+        cardinalLongitude = 'W' + `${-degreesLongitude + 1}`
+    } else {
+        cardinalLongitude = 'E' + cardinalLongitude
+    }
+
+    const hgtFilePath = './api/data/elevation/' + cardinalLatitude + cardinalLongitude + '.hgt'
+
+    if (fs.existsSync(hgtFilePath)) {
+        return ''
+    }
+
+    // TODO: read elevation from hgt file
+    return hgtFilePath
+}
+
 function formatObservation(observation, year) {
     // Parse user name
     const { firstName, firstInitial, lastName } = lookUpUserName(observation['user'])
@@ -360,18 +395,18 @@ function formatObservation(observation, year) {
     formattedObservation['bibliographicCitation'] = `Oregon Bee Atlas ${year}. Oregon State University, Corvallis, OR, USA.`
     formattedObservation['datasetName'] = `OBA-OSAC-${year}`
 
-    formattedObservation['recordedBy'] = `${firstName} ${lastName}`                                             // Needs validation
+    formattedObservation['recordedBy'] = `${firstName} ${lastName}`
 
-    formattedObservation['associatedTaxa'] = `foraging on ${scientificName !== '' ? scientificName : family}`   // Needs validation
+    formattedObservation['associatedTaxa'] = `foraging on : "${scientificName !== '' ? scientificName : family}"`
 
     formattedObservation['year'] = observedYear?.toString() ?? ''
-    formattedObservation['month'] = observedMonth?.toString() ?? ''                                             // Needs validation
+    formattedObservation['month'] = observedMonth?.toString() ?? ''
     formattedObservation['day'] = observedDay?.toString() ?? ''
-    formattedObservation['verbatimEventDate'] = ''                                                              // Needs validation
+    formattedObservation['verbatimEventDate'] = observation['time_observed_at'] ?? ''
 
     formattedObservation['fieldNotes'] = observation['description'] ?? ''
 
-    formattedObservation['country'] = country                                                                   // Needs validation
+    formattedObservation['country'] = country
     formattedObservation['stateProvince'] = stateProvince
     formattedObservation['county'] = county
     formattedObservation['locality'] = formattedLocation
@@ -405,7 +440,7 @@ function formatObservation(observation, year) {
     formattedObservation['Dec. Long.'] = formattedLongitude
     formattedObservation['Lat/Long Accuracy'] = observation.positional_accuracy?.toString() ?? ''
 
-    formattedObservation['Elevation'] = ''  // TODO
+    formattedObservation['Elevation'] = getElevation(formattedLatitude, formattedLongitude)
 
     formattedObservation['Associated plant - family'] = family
     formattedObservation['Associated plant - genus, species'] = scientificName

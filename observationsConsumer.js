@@ -183,20 +183,30 @@ const stateProvinceAbbreviations = {
 }
 
 async function fetchObservations(sourceId, minDate, maxDate, page) {
-    const res = await fetch(`https://api.inaturalist.org/v1/observations?project_id=${sourceId}&d1=${minDate}&d2=${maxDate}&per_page=200&page=${page}`)
-    return await res.json()
+    const requestURL = `https://api.inaturalist.org/v1/observations?project_id=${sourceId}&d1=${minDate}&d2=${maxDate}&per_page=200&page=${page}`
+
+    try {
+        const res = await fetch(requestURL)
+        if (res.ok) {
+            return await res.json()
+        } else {
+            console.error(`Bad response while fetching '${requestURL}':`, res)
+        }
+    } catch (err) {
+        console.error(`ERROR while fetching '${requestURL}':`, err)
+    }
 }
 
 async function pullSourceObservations(sourceId, minDate, maxDate) {
     let response = await fetchObservations(sourceId, minDate, maxDate, 1)
-    let results = response['results']
+    let results = response?.results ?? []
 
-    const totalResults = parseInt(response['total_results'])
+    const totalResults = parseInt(response?.total_results ?? '0')
     let totalPages = Math.floor(totalResults / 200) + 1
 
     for (let i = 2; i < totalPages + 1; i++) {
         response = await fetchObservations(sourceId, minDate, maxDate, i)
-        results = results.concat(response['results'])
+        results = results.concat(response?.results ?? [])
     }
 
     return results
@@ -222,8 +232,19 @@ function writePlacesFile(places) {
 }
 
 async function fetchPlaces(places) {
-    const res = await fetch(`https://api.inaturalist.org/v1/places/${places.join(',')}`)
-    return await res.json()
+    const requestURL = `https://api.inaturalist.org/v1/places/${places.join(',')}`
+
+    try {
+        const res = await fetch(requestURL)
+        if (res.ok) {
+            return await res.json()
+        } else {
+            console.error(`Bad response while fetching '${requestURL}':`, res)
+        }
+    } catch (err) {
+        console.error(`ERROR while fetching ${requestURL}:`, err)
+    }
+    
 }
 
 async function updatePlaces(observations) {
@@ -241,7 +262,7 @@ async function updatePlaces(observations) {
     }
 
     if (unknownPlaces.length > 0) {
-        const res = await fetchPlaces(unknownPlaces)
+        const res = await fetchPlaces(unknownPlaces) ?? []
         for (const newPlace of res['results']) {
             if (
                 newPlace['admin_level'] === 0 ||
@@ -338,7 +359,7 @@ async function readElevationFromFile(filePath, latitude, longitude) {
         const data = rasters[0]
 
         const latitudeDecimalPart = latitude - Math.floor(latitude)
-        const row = 3601 - Math.floor(latitudeDecimalPart * rasters.height)     // Needs validation
+        const row = Math.floor(latitudeDecimalPart * rasters.height)
 
         const longitudeDecimalPart = longitude - Math.floor(longitude)
         const column = Math.floor(longitudeDecimalPart * rasters.width)
@@ -521,22 +542,27 @@ async function main() {
 
                 console.log(`Processing task ${taskId}...`)
                 updateTaskInProgress(taskId, { currentStep: 'Pulling observations from iNaturalist' })
+                console.log('\tPulling observations from iNaturalist...')
 
                 const observations = await pullObservations(task)
 
                 updateTaskInProgress(taskId, { currentStep: 'Updating place data' })
+                console.log('\tUpdating place data...')
 
                 await updatePlaces(observations)
 
                 updateTaskInProgress(taskId, { currentStep: 'Formatting new observations' })
+                console.log('\tFormatting new observations...')
 
-                // TODO: parse year from minDate and maxDate
-                const formattedObservations = await formatObservations(observations, '2024')
+                const minDate = new Date(task.minDate)
+                const year = minDate.getFullYear()
+                const formattedObservations = await formatObservations(observations, year)
 
                 // For now, output unmerged formatted observations
                 writeObservationsFile('./api/data/formatTest.csv', formattedObservations)
 
                 updateTaskInProgress(taskId, { currentStep: 'Merging new observations with provided dataset' })
+                console.log('\tMerging new observations with provided dataset...')
                 
                 /* TODO: Merge new observations with task's dataset */
 

@@ -23,7 +23,18 @@ tasksRouter.post('/', upload.single('file'), async (req, res, next) => {
     try {
         const datasetURI = `/data/uploads/${req.file.filename}`
         const sources = req.query.sources ? req.query.sources.split(',') : null
-        const { id: taskId } = await createTask(req.body.type, datasetURI, sources, req.query.minDate, req.query.maxDate)
+
+        const minDate = new Date(req.query.minDate)
+        const maxDate = new Date(req.query.maxDate)
+        if (minDate.getFullYear() !== maxDate.getFullYear()) {
+            res.status(400).send({
+                error: 'The \'minDate\' and \'maxDate\' query parameters must have the same year'
+            })
+        }
+        const formattedMinDate = `${minDate.getUTCFullYear()}-${(minDate.getUTCMonth() + 1).toString().padStart(2, '0')}-${minDate.getUTCDate().toString().padStart(2, '0')}`
+        const formattedMaxDate = `${maxDate.getUTCFullYear()}-${(maxDate.getUTCMonth() + 1).toString().padStart(2, '0')}-${maxDate.getUTCDate().toString().padStart(2, '0')}`
+
+        const { id: taskId } = await createTask(req.body.type, datasetURI, sources, formattedMinDate, formattedMaxDate)
         const task = await getTaskById(taskId)
 
         if (req.body.type === 'observations') {

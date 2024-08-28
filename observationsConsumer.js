@@ -1,6 +1,7 @@
 import amqp from 'amqplib'
-import 'dotenv/config'
+import { fromFile } from 'geotiff'
 import fs from 'fs'
+import 'dotenv/config'
 
 import { connectToDb } from './api/lib/mongo.js'
 import { observationsQueueName } from './api/lib/rabbitmq.js'
@@ -329,11 +330,27 @@ function getFamily(identifications) {
     return ''
 }
 
-function readHGT(filePath, latitude, longitude) {
+async function readElevationFromFile(filePath, latitude, longitude) {
+    try {
+        const tiff = await fromFile(filePath)
+        const image = await tiff.getImage()
+        const rasters = await image.readRasters()
+        const data = rasters[0]
 
+        const latitudeDecimalPart = latitude - Math.floor(latitude)
+        const row = 3601 - Math.floor(latitudeDecimalPart * rasters.height)     // Needs validation
+
+        const longitudeDecimalPart = longitude - Math.floor(longitude)
+        const column = Math.floor(longitudeDecimalPart * rasters.width)
+
+        const elevation = data[column + rasters.width * row]
+        return elevation?.toString() ?? ''
+    } catch (err) {
+        return ''
+    }
 }
 
-function getElevation(latitude, longitude) {
+async function getElevation(latitude, longitude) {
     if (latitude === '' || longitude === '') {
         return ''
     }
@@ -344,28 +361,27 @@ function getElevation(latitude, longitude) {
     const degreesLongitude = parseInt(cardinalLongitude)
 
     if (degreesLatitude < 0) {
-        cardinalLatitude = 'S' + `${-degreesLatitude + 1}`
+        cardinalLatitude = 's' + `${-degreesLatitude + 1}`
     } else {
-        cardinalLatitude = 'N' + cardinalLatitude
+        cardinalLatitude = 'n' + cardinalLatitude
     }
 
     if (degreesLongitude < 0) {
-        cardinalLongitude = 'W' + `${-degreesLongitude + 1}`
+        cardinalLongitude = 'w' + `${-degreesLongitude + 1}`.padStart(3, '0')
     } else {
-        cardinalLongitude = 'E' + cardinalLongitude
+        cardinalLongitude = 'e' + cardinalLongitude.padStart(3, '0')
     }
 
-    const hgtFilePath = './api/data/elevation/' + cardinalLatitude + cardinalLongitude + '.hgt'
+    const filePath = `./api/data/elevation/${cardinalLatitude}_${cardinalLongitude}_1arc_v3.tif`
 
-    if (fs.existsSync(hgtFilePath)) {
+    if (!fs.existsSync(filePath)) {
         return ''
     }
 
-    // TODO: read elevation from hgt file
-    return hgtFilePath
+    return await readElevationFromFile(filePath, parseFloat(latitude), parseFloat(longitude))
 }
 
-function formatObservation(observation, year) {
+async function formatObservation(observation, year) {
     // Parse user name
     const { firstName, firstInitial, lastName } = lookUpUserName(observation['user'])
 
@@ -440,7 +456,7 @@ function formatObservation(observation, year) {
     formattedObservation['Dec. Long.'] = formattedLongitude
     formattedObservation['Lat/Long Accuracy'] = observation.positional_accuracy?.toString() ?? ''
 
-    formattedObservation['Elevation'] = getElevation(formattedLatitude, formattedLongitude)
+    formattedObservation['Elevation'] = await getElevation(formattedLatitude, formattedLongitude)
 
     formattedObservation['Associated plant - family'] = family
     formattedObservation['Associated plant - genus, species'] = scientificName
@@ -449,11 +465,11 @@ function formatObservation(observation, year) {
     return formattedObservation
 }
 
-function formatObservations(observations, year) {
+async function formatObservations(observations, year) {
     let formattedObservations = []
 
     for (const observation of observations) {
-        const formattedObservation = formatObservation(observation, year)
+        const formattedObservation = await formatObservation(observation, year)
 
         if (formattedObservation['Specimen ID'] !== '') {
             try {
@@ -515,7 +531,7 @@ async function main() {
                 updateTaskInProgress(taskId, { currentStep: 'Formatting new observations' })
 
                 // TODO: parse year from minDate and maxDate
-                const formattedObservations = formatObservations(observations, '2024')
+                const formattedObservations = await formatObservations(observations, '2024')
 
                 // For now, output unmerged formatted observations
                 writeObservationsFile('./api/data/formatTest.csv', formattedObservations)

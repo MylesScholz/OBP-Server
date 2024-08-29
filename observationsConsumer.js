@@ -417,14 +417,20 @@ async function formatObservation(observation, year) {
     const family = getFamily(observation['identifications'])
     const scientificName = observation.taxon?.name ?? ''
 
-    const observedDate = observation['time_observed_at'] ? new Date(observation['time_observed_at']) : undefined
+    const observedDate = observation['observed_on_string'] ? new Date(observation['observed_on_string']) : undefined
 
     const observedDay = observedDate?.getDate()
     const observedMonth = observedDate?.getMonth()
     const observedYear = observedDate?.getFullYear()
+    const observedHour = observedDate?.getHours()
+    const observedMinute = observedDate?.getMinutes()
 
-    const timeFormatter = new Intl.DateTimeFormat('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
-    const formattedTime = observedDate ? timeFormatter.format(observedDate) : ''
+    const formattedDay = !isNaN(observedDay) ? observedDay.toString() : ''
+    const formattedMonth = !isNaN(observedMonth) ? observedMonth.toString() : ''
+    const formattedYear = !isNaN(observedYear) ? observedYear.toString() : ''
+    const formattedHours  = !isNaN(observedHour) ? observedHour.toString().padStart(2, '0') : undefined
+    const formattedMinutes = !isNaN(observedMinute) ? observedMinute.toString().padStart(2, '0') : undefined
+    const formattedTime = formattedHours && formattedMinutes ? `${formattedHours}:${formattedMinutes}` : ''
     
     const formattedLocation = observation.place_guess?.split(', ')?.at(0) ?? ''
     const formattedLatitude = observation.geojson?.coordinates?.at(1)?.toFixed(3)?.toString() ?? ''
@@ -438,12 +444,12 @@ async function formatObservation(observation, year) {
 
     formattedObservation['recordedBy'] = `${firstName} ${lastName}`
 
-    formattedObservation['associatedTaxa'] = `foraging on : "${scientificName !== '' ? scientificName : family}"`
+    formattedObservation['associatedTaxa'] = scientificName !== '' || family !== '' ? `foraging on : "${scientificName !== '' ? scientificName : family}"` : ''
 
-    formattedObservation['year'] = observedYear?.toString() ?? ''
-    formattedObservation['month'] = observedMonth?.toString() ?? ''
-    formattedObservation['day'] = observedDay?.toString() ?? ''
-    formattedObservation['verbatimEventDate'] = observation['time_observed_at'] ?? ''
+    formattedObservation['year'] = formattedYear
+    formattedObservation['month'] = formattedMonth
+    formattedObservation['day'] = formattedDay
+    formattedObservation['verbatimEventDate'] = observation['observed_on_string'] ?? ''
 
     formattedObservation['fieldNotes'] = observation['description'] ?? ''
 
@@ -465,9 +471,9 @@ async function formatObservation(observation, year) {
     formattedObservation['Sample ID'] = getOFV(observation['ofvs'], 'Sample ID.')
     formattedObservation['Specimen ID'] = getOFV(observation['ofvs'], 'Number of bees collected')
 
-    formattedObservation['Collection Day 1'] = observedDay?.toString() ?? ''
-    formattedObservation['Month 1'] = monthNumerals[observedMonth - 1] ?? ''
-    formattedObservation['Year 1'] = observedYear?.toString() ?? ''
+    formattedObservation['Collection Day 1'] = formattedDay
+    formattedObservation['Month 1'] = monthNumerals[observedMonth] ?? ''
+    formattedObservation['Year 1'] = formattedYear
     formattedObservation['Time 1'] = formattedTime
 
     formattedObservation['Country'] = countryAbbreviations[country] ?? country
@@ -586,51 +592,71 @@ function mergeData(baseDataset, newObservations) {
     return mergedData
 }
 
+function compareStrings(str1, str2) {
+    if (str1 === '' && str2 !== '') {
+        return 1
+    } else if (str1 !== '' && str2 === '') {
+        return -1
+    } else if (str1 === '' && str2 === '') {
+        return 0
+    }
+
+    return (str1 > str2) - (str1 < str2)
+}
+
 function compareNumericStrings(str1, str2) {
     if (str1 === '' && str2 !== '') {
         return 1
     } else if (str1 !== '' && str2 === '') {
         return -1
+    } else if (str1 === '' && str2 === '') {
+        return 0
     }
 
-    return new Intl.Collator('en', { numeric: true }).compare(str1, str2)
+    try {
+        const num1 = parseInt(str1)
+        const num2 = parseInt(str2)
+        return (num1 > num2) - (num1 < num2)
+    } catch (err) {
+        return compareStrings(str1, str2)
+    }
 }
 
 function compareRows(row1, row2) {
     const observationNumberComparison = compareNumericStrings(row1['Observation No.'], row2['Observation No.'])
-    if (observationNumberComparison != 0) {
+    if (observationNumberComparison !== 0) {
         return observationNumberComparison
     }
 
-    const lastNameComparison = new Intl.Collator('en').compare(row1['Collector - Last Name'], row2['Collector - Last Name'])
-    if (lastNameComparison != 0) {
+    const lastNameComparison = compareStrings(row1['Collector - Last Name'], row2['Collector - Last Name'])
+    if (lastNameComparison !== 0) {
         return lastNameComparison
     }
 
-    const firstNameComparison = new Intl.Collator('en').compare(row1['Collector - First Name'], row2['Collector - First Name'])
-    if (firstNameComparison != 0) {
+    const firstNameComparison = compareStrings(row1['Collector - First Name'], row2['Collector - First Name'])
+    if (firstNameComparison !== 0) {
         return firstNameComparison
     }
 
     const month1 = monthNumerals.indexOf(row1['Month 1'])
     const month2 = monthNumerals.indexOf(row2['Month 1'])
     const monthComparison = (month1 > month2) - (month1 < month2)
-    if (monthComparison != 0) {
+    if (monthComparison !== 0) {
         return monthComparison
     }
 
     const dayComparison = compareNumericStrings(row1['Collection Day 1'], row2['Collection Day 1'])
-    if (dayComparison != 0) {
+    if (dayComparison !== 0) {
         return dayComparison
     }
 
     const sampleIDComparison = compareNumericStrings(row1['Sample ID'], row2['Sample ID'])
-    if (sampleIDComparison != 0) {
+    if (sampleIDComparison !== 0) {
         return sampleIDComparison
     }
 
     const specimenIDComparison = compareNumericStrings(row1['Specimen ID'], row2['Specimen ID'])
-    if (specimenIDComparison != 0) {
+    if (specimenIDComparison !== 0) {
         return specimenIDComparison
     }
 
@@ -638,13 +664,14 @@ function compareRows(row1, row2) {
 }
 
 function indexData(dataset) {
-    dataset.sort(compareRows)
+    const sortedDataset = dataset.sort(compareRows)
 
-    // TODO
+    return sortedDataset
 }
 
 function writeObservationsFile(filePath, observations) {
-    const csv = stringify(observations, { header: true })
+    const header = Object.keys(observationTemplate)
+    const csv = stringify(observations, { header: true, columns: header })
 
     fs.writeFileSync(filePath, csv)
 }
@@ -684,18 +711,18 @@ async function main() {
                 updateTaskInProgress(taskId, { currentStep: 'Merging new observations with provided dataset' })
                 console.log('\tMerging new observations with provided dataset...')
                 
-                const baseDataset = readObservationsFile('./api/data/uploads' + task.dataset)
+                const baseDataset = readObservationsFile('./api/data' + task.dataset)
                 const mergedData = mergeData(baseDataset, formattedObservations)
 
-                // TODO: Index data
+                const indexedData = indexData(mergedData)
 
                 updateTaskInProgress(taskId, { currentStep: 'Writing updated dataset to file' })
                 console.log('\tWriting updated dataset to file...')
 
                 const resultFileName = `${Crypto.randomUUID()}.csv`
-                writeObservationsFile(`./api/data/observations/${resultFileName}`, mergedData)
+                writeObservationsFile(`./api/data/observations/${resultFileName}`, indexedData)
 
-                updateTaskResult(taskId, { uri: `/${resultFileName}` })
+                updateTaskResult(taskId, { uri: `/observations/${resultFileName}` })
                 console.log('Completed task', taskId)
                 observationsChannel.ack(msg)
             }

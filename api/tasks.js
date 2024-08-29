@@ -21,7 +21,7 @@ tasksRouter.post('/', upload.single('file'), async (req, res, next) => {
     }
 
     try {
-        const datasetURI = `/${req.file.filename}`
+        const datasetURI = `/uploads/${req.file.filename}`
         const sources = req.query.sources ? req.query.sources.split(',') : null
 
         const minDate = new Date(req.query.minDate)

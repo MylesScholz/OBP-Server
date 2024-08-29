@@ -663,8 +663,34 @@ function compareRows(row1, row2) {
     return 0
 }
 
-function indexData(dataset) {
+function isRowEmpty(row) {
+    for (const field of Object.keys(row)) {
+        if (row[field] && row[field] !== '') {
+            return false
+        }
+    }
+    return true
+}
+
+function indexData(dataset, year) {
     const sortedDataset = dataset.sort(compareRows)
+
+    const argYearObservationNumber = year ? year.toString().slice(2) + '00000' : undefined
+    const currentYearObservationNumber = (new Date()).getFullYear().toString().slice(2) + '00000'
+    let nextObservationNumber = parseInt(argYearObservationNumber ?? currentYearObservationNumber)
+
+    const lastObservationNumberIndex = sortedDataset.findLastIndex((row) => row['Observation No.'] && row['Observation No.'] !== '')
+    if (sortedDataset[lastObservationNumberIndex]) {
+        const lastObservationNumber = parseInt(sortedDataset[lastObservationNumberIndex]['Observation No.'])
+        nextObservationNumber = !isNaN(lastObservationNumber) ? lastObservationNumber + 1 : nextObservationNumber
+    }
+
+    for (let i = lastObservationNumberIndex + 1; i < sortedDataset.length; i++) {
+        if (!isRowEmpty(sortedDataset[i])) {
+            sortedDataset[i]['Observation No.'] = nextObservationNumber.toString()
+            nextObservationNumber++
+        }
+    }
 
     return sortedDataset
 }
@@ -714,7 +740,7 @@ async function main() {
                 const baseDataset = readObservationsFile('./api/data' + task.dataset)
                 const mergedData = mergeData(baseDataset, formattedObservations)
 
-                const indexedData = indexData(mergedData)
+                const indexedData = indexData(mergedData, year)
 
                 updateTaskInProgress(taskId, { currentStep: 'Writing updated dataset to file' })
                 console.log('\tWriting updated dataset to file...')

@@ -1,4 +1,6 @@
 import amqp from 'amqplib'
+import { PDFDocument } from 'pdfkit'
+import { bwipjs } from 'bwip-js'
 import 'dotenv/config'
 
 import { connectToDb, getDb } from './api/lib/mongo.js'
@@ -11,7 +13,6 @@ const rabbitmqURL = `amqp://${rabbitmqHost}`
 async function main() {
     try {
         await connectToDb()
-        const db = getDb()
 
         const connection = await amqp.connect(rabbitmqURL)
         const labelsChannel = await connection.createChannel()
@@ -23,12 +24,13 @@ async function main() {
                 const taskId = msg.content.toString()
                 const task = getTaskById(taskId)
 
-                console.log('Consuming task', taskId)
+                console.log(`Processing task ${taskId} (${task.type})...`)
                 updateTaskInProgress(taskId, { currentStep: 'Generating labels from provided dataset' })
+                console.log('\tGenerating labels from provided dataset...')
 
                 /* TODO: Generate labels from task's dataset */
 
-                updateTaskResult(taskId, { uri: '' })
+                updateTaskResult(taskId, { uri: `/labels/` })
                 console.log('Completed task', taskId)
                 labelsChannel.ack(msg)
             }

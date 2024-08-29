@@ -1,6 +1,9 @@
+import Crypto from 'node:crypto'
+import fs from 'fs'
 import amqp from 'amqplib'
 import { fromFile } from 'geotiff'
-import fs from 'fs'
+import { parse } from 'csv-parse/sync'
+import { stringify } from 'csv-stringify/sync'
 import 'dotenv/config'
 
 import { connectToDb } from './api/lib/mongo.js'
@@ -56,6 +59,7 @@ const observationTemplate = {
     'subgenus': '',
     'specificEpithet': '',
     'taxonRank': '',
+    'Verified': '',
     'Date Added': '',
     'Date Label Print': '',
     'Date Label Sent': '',
@@ -511,17 +515,136 @@ async function formatObservations(observations, year) {
     return formattedObservations
 }
 
+function readObservationsFile(filePath) {
+    const observationsBuffer = fs.readFileSync(filePath)
+    const observations = parse(observationsBuffer, { columns: true })
+
+    return observations
+}
+
+function equalIdentifiers(row1, row2) {
+    if (!row1 || !row2) {
+        return false
+    }
+
+    if (
+        row1['Observation No.'] !== '' &&
+        row1['Observation No.'] === row2['Observation No.']
+    ) {
+        return true
+    } else if (
+        row1['Associated plant - Inaturalist URL'] !== '' &&
+        row1['Associated plant - Inaturalist URL'] === row2['Associated plant - Inaturalist URL'] &&
+        row1['Sample ID'] === row2['Sample ID'] &&
+        row1['Specimen ID'] === row2['Specimen ID']
+    ) {
+        return true
+    } else if (
+        row1['iNaturalist Alias'] === row2['iNaturalist Alias'] &&
+        row1['Sample ID'] === row2['Sample ID'] &&
+        row1['Specimen ID'] === row2['Specimen ID'] &&
+        row1['Collection Day 1'] === row2['Collection Day 1'] &&
+        row1['Month 1'] === row2['Month 1'] &&
+        row1['Year 1'] === row2['Year 1']
+    ) {
+        return true
+    }
+
+    return false
+}
+
+function findRow(dataset, row) {
+    if (!dataset || !row) {
+        return -1
+    }
+
+    for (let i = 0; i < dataset.length; i++) {
+        if (equalIdentifiers(dataset[i], row)) {
+            return i
+        }
+    }
+
+    return -1
+}
+
+function mergeData(baseDataset, newObservations) {
+    const mergedData = baseDataset.slice(0)
+
+    for (const observation of newObservations) {
+        const index = findRow(mergedData, observation)
+
+        if (index === -1) {
+            mergedData.push(observation)
+        } else {
+            const header = Object.keys(observationTemplate)
+            header.forEach((field) => { if (!mergedData[index][field]) { mergedData[index][field] = '' } })
+            
+            // TODO: update replaceable values in base row with new data
+        }
+    }
+
+    return mergedData
+}
+
+function compareNumericStrings(str1, str2) {
+    if (str1 === '' && str2 !== '') {
+        return 1
+    } else if (str1 !== '' && str2 === '') {
+        return -1
+    }
+
+    return new Intl.Collator('en', { numeric: true }).compare(str1, str2)
+}
+
+function compareRows(row1, row2) {
+    const observationNumberComparison = compareNumericStrings(row1['Observation No.'], row2['Observation No.'])
+    if (observationNumberComparison != 0) {
+        return observationNumberComparison
+    }
+
+    const lastNameComparison = new Intl.Collator('en').compare(row1['Collector - Last Name'], row2['Collector - Last Name'])
+    if (lastNameComparison != 0) {
+        return lastNameComparison
+    }
+
+    const firstNameComparison = new Intl.Collator('en').compare(row1['Collector - First Name'], row2['Collector - First Name'])
+    if (firstNameComparison != 0) {
+        return firstNameComparison
+    }
+
+    const month1 = monthNumerals.indexOf(row1['Month 1'])
+    const month2 = monthNumerals.indexOf(row2['Month 1'])
+    const monthComparison = (month1 > month2) - (month1 < month2)
+    if (monthComparison != 0) {
+        return monthComparison
+    }
+
+    const dayComparison = compareNumericStrings(row1['Collection Day 1'], row2['Collection Day 1'])
+    if (dayComparison != 0) {
+        return dayComparison
+    }
+
+    const sampleIDComparison = compareNumericStrings(row1['Sample ID'], row2['Sample ID'])
+    if (sampleIDComparison != 0) {
+        return sampleIDComparison
+    }
+
+    const specimenIDComparison = compareNumericStrings(row1['Specimen ID'], row2['Specimen ID'])
+    if (specimenIDComparison != 0) {
+        return specimenIDComparison
+    }
+
+    return 0
+}
+
+function indexData(dataset) {
+    dataset.sort(compareRows)
+
+    // TODO
+}
+
 function writeObservationsFile(filePath, observations) {
-    const header = Object.keys(observations[0])
-    const headerRow = header.join(',')
-
-    const csvRows = observations.map((observation) =>
-        header.map((field) =>
-            observation[field].includes(',') ? `"${observation[field]}"` : observation[field]
-        ).join(',')
-    )
-
-    const csv = [headerRow, ...csvRows].join('\r\n')
+    const csv = stringify(observations, { header: true })
 
     fs.writeFileSync(filePath, csv)
 }
@@ -555,18 +678,24 @@ async function main() {
                 console.log('\tFormatting new observations...')
 
                 const minDate = new Date(task.minDate)
-                const year = minDate.getFullYear()
+                const year = minDate.getUTCFullYear()
                 const formattedObservations = await formatObservations(observations, year)
-
-                // For now, output unmerged formatted observations
-                writeObservationsFile('./api/data/formatTest.csv', formattedObservations)
 
                 updateTaskInProgress(taskId, { currentStep: 'Merging new observations with provided dataset' })
                 console.log('\tMerging new observations with provided dataset...')
                 
-                /* TODO: Merge new observations with task's dataset */
+                const baseDataset = readObservationsFile('./api/data/uploads' + task.dataset)
+                const mergedData = mergeData(baseDataset, formattedObservations)
 
-                updateTaskResult(taskId, { uri: '' })
+                // TODO: Index data
+
+                updateTaskInProgress(taskId, { currentStep: 'Writing updated dataset to file' })
+                console.log('\tWriting updated dataset to file...')
+
+                const resultFileName = `${Crypto.randomUUID()}.csv`
+                writeObservationsFile(`./api/data/observations/${resultFileName}`, mergedData)
+
+                updateTaskResult(taskId, { uri: `/${resultFileName}` })
                 console.log('Completed task', taskId)
                 observationsChannel.ack(msg)
             }

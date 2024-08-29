@@ -16,6 +16,8 @@
     "@emotion/react": "^11.13.0",
     "@emotion/styled": "^11.13.0",
     "amqplib": "^0.10.4",
+    "csv-parse": "^5.5.6",
+    "csv-stringify": "^6.5.1",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "geotiff": "^2.1.3",

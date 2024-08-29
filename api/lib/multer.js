@@ -9,7 +9,8 @@ const upload = multer({
     storage: multer.diskStorage({
         destination: `./api/data/uploads`,
         filename: (req, file, cb) => {
-            cb(null, `${Crypto.randomUUID()}.${fileTypes[file.mimetype]}`)
+            const uniqueName = `${Crypto.randomUUID()}.${fileTypes[file.mimetype]}`
+            cb(null, uniqueName)
         }
     }),
     fileFilter: (req, file, cb) => {

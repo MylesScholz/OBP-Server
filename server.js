@@ -3,8 +3,6 @@ import express from 'express'
 import morgan from 'morgan'
 import 'dotenv/config'
 
-import observationsRouter from './api/observations.js'
-import labelsRouter from './api/labels.js'
 import tasksRouter from './api/tasks.js'
 import { connectToRabbitMQ } from './api/lib/rabbitmq.js'
 import { connectToDb } from './api/lib/mongo.js'
@@ -20,8 +18,9 @@ app.use(express.static('public'))
 app.use(express.static('dist'))
 
 // API routes
-apiRouter.use('/observations', observationsRouter)
-apiRouter.use('/labels', labelsRouter)
+apiRouter.use('/uploads', express.static('api/data/uploads'))
+apiRouter.use('/observations', express.static('api/data/observations'))
+apiRouter.use('/labels', express.static('api/data/labels'))
 apiRouter.use('/tasks', tasksRouter)
 app.use(vhost('api.*', apiRouter))
 

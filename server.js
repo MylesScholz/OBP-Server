@@ -26,12 +26,12 @@ app.use(vhost('api.*', apiRouter))
 
 app.use('*', (req, res, next) => {
     res.status(404).send({
-        error: `Requested resource "${req.originalUrl}" does not exist`
+        error: `Requested operation '${req.method} ${req.originalUrl}' does not exist`
     })
 })
 
 app.use('*', (err, req, res, next) => {
-    console.error('Error:', err)
+    console.error('ERROR:', err)
     res.status(500).send({
         error: 'Unable to complete the request because of a server error'
     })

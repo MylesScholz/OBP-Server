@@ -716,7 +716,7 @@ async function main() {
                 const taskId = msg.content.toString()
                 const task = await getTaskById(taskId)
 
-                console.log(`Processing task ${taskId} (${task.type})...`)
+                console.log(`Processing task ${taskId}...`)
                 updateTaskInProgress(taskId, { currentStep: 'Pulling observations from iNaturalist' })
                 console.log('\tPulling observations from iNaturalist...')
 

@@ -15,6 +15,50 @@ const rabbitmqURL = `amqp://${rabbitmqHost}`
 
 /* Formatting Constants */
 const observationTemplate = {
+    'Error Flags': '',
+    'Verified': '',
+    'Date Added': '',
+    'Date Label Print': '',
+    'Date Label Sent': '',
+    'Observation No.': '',
+    'Voucher No.': '',
+    'iNaturalist ID': null,
+    'iNaturalist Alias': null,
+    'Collector - First Name': null,
+    'Collector - First Initial': null,
+    'Collector - Last Name': null,
+    'Sample ID': null,
+    'Specimen ID': null,
+    'Collection Day 1': null,
+    'Month 1': null,
+    'Year 1': null,
+    'Time 1': null,
+    'Collection Day 2': '',
+    'Month 2': '',
+    'Year 2': '',
+    'Time 2': '',
+    'Collect Date 2 Merge': '',
+    'Country': null,
+    'State': null,
+    'County': null,
+    'Location': null,
+    'Collection Site Description': '',
+    'Abbreviated Location': null,
+    'Dec. Lat.': null,
+    'Dec. Long.': null,
+    'Lat/Long Accuracy': null,
+    'Elevation': null,
+    'Collection method': 'net',
+    'Associated plant - family': null,
+    'Associated plant - genus, species': null,
+    'Associated plant - Inaturalist URL': null,
+    'Det. Volunteer - Family': '',
+    'Det. Volunteer - Genus': '',
+    'Det. Volunteer - Species': '',
+    'Det. Volunteer - Sex/Caste': '',
+    'Det LR Best - Genus': '',          // sic
+    'Det. LR Best - Species': '',
+    'Det LR Best - Sex/Caste': '',      // sic
     'id': '',
     'type': 'Dataset',
     'language': 'en',
@@ -58,50 +102,7 @@ const observationTemplate = {
     'genus': '',
     'subgenus': '',
     'specificEpithet': '',
-    'taxonRank': '',
-    'Verified': '',
-    'Date Added': '',
-    'Date Label Print': '',
-    'Date Label Sent': '',
-    'Observation No.': '',
-    'Voucher No.': '',
-    'iNaturalist ID': null,
-    'iNaturalist Alias': null,
-    'Collector - First Name': null,
-    'Collector - First Initial': null,
-    'Collector - Last Name': null,
-    'Sample ID': null,
-    'Specimen ID': null,
-    'Collection Day 1': null,
-    'Month 1': null,
-    'Year 1': null,
-    'Time 1': null,
-    'Collection Day 2': '',
-    'Month 2': '',
-    'Year 2': '',
-    'Time 2': '',
-    'Collect Date 2 Merge': '',
-    'Country': null,
-    'State': null,
-    'County': null,
-    'Location': null,
-    'Collection Site Description': '',
-    'Abbreviated Location': null,
-    'Dec. Lat.': null,
-    'Dec. Long.': null,
-    'Lat/Long Accuracy': null,
-    'Elevation': null,
-    'Collection method': 'net',
-    'Associated plant - family': null,
-    'Associated plant - genus, species': null,
-    'Associated plant - Inaturalist URL': null,
-    'Det. Volunteer - Family': '',
-    'Det. Volunteer - Genus': '',
-    'Det. Volunteer - Species': '',
-    'Det. Volunteer - Sex/Caste': '',
-    'Det LR Best - Genus': '',          // sic
-    'Det. LR Best - Species': '',
-    'Det LR Best - Sex/Caste': ''       // sic
+    'taxonRank': ''
 }
 const monthNumerals = [
     'I',
@@ -439,28 +440,6 @@ async function formatObservation(observation, year) {
     // Formatting
     const formattedObservation = Object.assign({}, observationTemplate)
 
-    formattedObservation['bibliographicCitation'] = `Oregon Bee Atlas ${year}. Oregon State University, Corvallis, OR, USA.`
-    formattedObservation['datasetName'] = `OBA-OSAC-${year}`
-
-    formattedObservation['recordedBy'] = `${firstName} ${lastName}`
-
-    formattedObservation['associatedTaxa'] = scientificName !== '' || family !== '' ? `foraging on : "${scientificName !== '' ? scientificName : family}"` : ''
-
-    formattedObservation['year'] = formattedYear
-    formattedObservation['month'] = formattedMonth
-    formattedObservation['day'] = formattedDay
-    formattedObservation['verbatimEventDate'] = observation['observed_on_string'] ?? ''
-
-    formattedObservation['fieldNotes'] = observation['description'] ?? ''
-
-    formattedObservation['country'] = country
-    formattedObservation['stateProvince'] = stateProvince
-    formattedObservation['county'] = county
-    formattedObservation['locality'] = formattedLocation
-
-    formattedObservation['decimalLatitude'] = formattedLatitude
-    formattedObservation['decimalLongitude'] = formattedLongitude
-
     formattedObservation['iNaturalist ID'] = observation.user?.id?.toString() ?? ''
     formattedObservation['iNaturalist Alias'] = observation.user?.login ?? ''
 
@@ -492,6 +471,28 @@ async function formatObservation(observation, year) {
     formattedObservation['Associated plant - family'] = family
     formattedObservation['Associated plant - genus, species'] = scientificName
     formattedObservation['Associated plant - Inaturalist URL'] = observation['uri'] ?? ''
+
+    formattedObservation['bibliographicCitation'] = `Oregon Bee Atlas ${year}. Oregon State University, Corvallis, OR, USA.`
+    formattedObservation['datasetName'] = `OBA-OSAC-${year}`
+
+    formattedObservation['recordedBy'] = `${firstName} ${lastName}`
+
+    formattedObservation['associatedTaxa'] = scientificName !== '' || family !== '' ? `foraging on : "${scientificName !== '' ? scientificName : family}"` : ''
+
+    formattedObservation['year'] = formattedYear
+    formattedObservation['month'] = formattedMonth
+    formattedObservation['day'] = formattedDay
+    formattedObservation['verbatimEventDate'] = observation['observed_on_string'] ?? ''
+
+    formattedObservation['fieldNotes'] = observation['description'] ?? ''
+
+    formattedObservation['country'] = country
+    formattedObservation['stateProvince'] = stateProvince
+    formattedObservation['county'] = county
+    formattedObservation['locality'] = formattedLocation
+
+    formattedObservation['decimalLatitude'] = formattedLatitude
+    formattedObservation['decimalLongitude'] = formattedLongitude
 
     return formattedObservation
 }
@@ -583,9 +584,15 @@ function mergeData(baseDataset, newObservations) {
             mergedData.push(observation)
         } else {
             const header = Object.keys(observationTemplate)
-            header.forEach((field) => { if (!mergedData[index][field]) { mergedData[index][field] = '' } })
-            
-            // TODO: update replaceable values in base row with new data
+            const identifyingFields = ['Observation No.', 'Associated plant - Inaturalist URL', 'iNaturalist Alias', 'Sample ID', 'Specimen ID', 'Collection Day 1', 'Month 1', 'Year 1']
+
+            header.forEach((field) => {
+                if (!mergedData[index][field]) {
+                    mergedData[index][field] = ''
+                } else if (observation[field] && observation[field] !== '' && !identifyingFields.includes(field)) {
+                    mergedData[index][field] = observation[field]
+                }
+            })
         }
     }
 

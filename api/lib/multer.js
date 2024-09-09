@@ -2,7 +2,9 @@ import Crypto from 'node:crypto'
 import multer from 'multer'
 
 const fileTypes = {
-    'text/csv': 'csv'
+    'text/csv': 'csv',
+    'application/vnd.ms-excel': 'csv',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'csv'
 }
 
 const upload = multer({

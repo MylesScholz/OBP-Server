@@ -237,19 +237,32 @@ function writePlacesFile(places) {
 }
 
 async function fetchPlaces(places) {
-    const requestURL = `https://api.inaturalist.org/v1/places/${places.join(',')}`
+    const partitionSize = 50
+    const nPartitions = Math.floor(places.length / partitionSize) + 1
+    let partitionStart = 0
+    let partitionEnd = Math.min(partitionSize, places.length)
 
-    try {
-        const res = await fetch(requestURL)
-        if (res.ok) {
-            return await res.json()
-        } else {
-            console.error(`Bad response while fetching '${requestURL}':`, res)
+    const results = []
+    for (let i = 0; i < nPartitions; i++) {
+        const requestURL = `https://api.inaturalist.org/v1/places/${places.slice(partitionStart, partitionEnd).join(',')}`
+
+        try {
+            const res = await fetch(requestURL)
+            if (res.ok) {
+                const resJSON = await res.json()
+                results.concat(resJSON['results'])
+            } else {
+                console.error(`Bad response while fetching '${requestURL}':`, res)
+            }
+        } catch (err) {
+            console.error(`ERROR while fetching ${requestURL}:`, err)
         }
-    } catch (err) {
-        console.error(`ERROR while fetching ${requestURL}:`, err)
+
+        partitionStart = partitionEnd
+        partitionEnd = Math.min(partitionEnd + partitionSize, places.length)
     }
-    
+
+    return results
 }
 
 async function updatePlaces(observations) {
@@ -267,8 +280,8 @@ async function updatePlaces(observations) {
     }
 
     if (unknownPlaces.length > 0) {
-        const res = await fetchPlaces(unknownPlaces) ?? []
-        for (const newPlace of res['results']) {
+        const newPlaces = await fetchPlaces(unknownPlaces)
+        for (const newPlace of newPlaces) {
             if (
                 newPlace['admin_level'] === 0 ||
                 newPlace['admin_level'] === 10 ||

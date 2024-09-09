@@ -242,23 +242,16 @@ async function main() {
                 const partitionSize = nRows * nColumns
                 const nPartitions = Math.floor(observations.length / partitionSize) + 1
                 let partitionStart = 0
-                let partitionEnd = partitionSize
+                let partitionEnd = Math.min(partitionSize, observations.length)
                 let currentPage = 1
-
-                if (partitionEnd > observations.length) {
-                    partitionEnd = observations.length
-                }
 
                 const resultFileName = `${Crypto.randomUUID()}.pdf`
                 const doc = await PDFDocument.create()
-                while (partitionStart < observations.length) {
+                for (let i = 0; i < nPartitions; i++) {
                     await writePDFPage(doc, observations.slice(partitionStart, partitionEnd))
 
                     partitionStart = partitionEnd
-                    partitionEnd += partitionSize
-                    if (partitionEnd > observations.length) {
-                        partitionEnd = observations.length
-                    }
+                    partitionEnd = Math.min(partitionEnd + partitionSize, observations.length)
                     currentPage++
                 }
                 const docBuffer = await doc.save()

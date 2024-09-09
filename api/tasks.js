@@ -17,13 +17,22 @@ tasksRouter.post('/observations', upload.single('file'), async (req, res, next) 
     try {
         const datasetURI = `/uploads/${req.file.filename}`
         const sources = req.body.sources.split(',')
+        for (const source of sources) {
+            if (!parseInt(source)) {
+                res.status(400).send({
+                    error: 'Request field \'sources\' must be a number or a comma-separated list of numbers'
+                })
+                return
+            }
+        }
 
         const minDate = new Date(req.body.minDate)
         const maxDate = new Date(req.body.maxDate)
-        if (minDate.getFullYear() !== maxDate.getFullYear()) {
+        if (minDate.getUTCFullYear() !== maxDate.getUTCFullYear()) {
             res.status(400).send({
                 error: 'The \'minDate\' and \'maxDate\' request fields must have the same year'
             })
+            return
         }
         const formattedMinDate = `${minDate.getUTCFullYear()}-${(minDate.getUTCMonth() + 1).toString().padStart(2, '0')}-${minDate.getUTCDate().toString().padStart(2, '0')}`
         const formattedMaxDate = `${maxDate.getUTCFullYear()}-${(maxDate.getUTCMonth() + 1).toString().padStart(2, '0')}-${maxDate.getUTCDate().toString().padStart(2, '0')}`

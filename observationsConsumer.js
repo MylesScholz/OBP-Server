@@ -737,24 +737,24 @@ async function main() {
                 const task = await getTaskById(taskId)
 
                 console.log(`Processing task ${taskId}...`)
-                updateTaskInProgress(taskId, { currentStep: 'Pulling observations from iNaturalist' })
+                await updateTaskInProgress(taskId, { currentStep: 'Pulling observations from iNaturalist' })
                 console.log('\tPulling observations from iNaturalist...')
 
                 const observations = await pullObservations(task)
 
-                updateTaskInProgress(taskId, { currentStep: 'Updating place data' })
+                await updateTaskInProgress(taskId, { currentStep: 'Updating place data' })
                 console.log('\tUpdating place data...')
 
                 await updatePlaces(observations)
 
-                updateTaskInProgress(taskId, { currentStep: 'Formatting new observations' })
+                await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations' })
                 console.log('\tFormatting new observations...')
 
                 const minDate = new Date(task.minDate)
                 const year = minDate.getUTCFullYear()
                 const formattedObservations = await formatObservations(observations, year)
 
-                updateTaskInProgress(taskId, { currentStep: 'Merging new observations with provided dataset' })
+                await updateTaskInProgress(taskId, { currentStep: 'Merging new observations with provided dataset' })
                 console.log('\tMerging new observations with provided dataset...')
                 
                 const baseDataset = readObservationsFile('./api/data' + task.dataset)
@@ -762,13 +762,13 @@ async function main() {
 
                 const indexedData = indexData(mergedData, year)
 
-                updateTaskInProgress(taskId, { currentStep: 'Writing updated dataset to file' })
+                await updateTaskInProgress(taskId, { currentStep: 'Writing updated dataset to file' })
                 console.log('\tWriting updated dataset to file...')
 
                 const resultFileName = `${Crypto.randomUUID()}.csv`
                 writeObservationsFile(`./api/data/observations/${resultFileName}`, indexedData)
 
-                updateTaskResult(taskId, { uri: `/observations/${resultFileName}` })
+                await updateTaskResult(taskId, { uri: `/observations/${resultFileName}`, fileName: resultFileName })
                 console.log('Completed task', taskId)
                 observationsChannel.ack(msg)
             }

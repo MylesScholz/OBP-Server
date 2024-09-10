@@ -232,7 +232,7 @@ async function main() {
                 const task = await getTaskById(taskId)
 
                 console.log(`Processing task ${taskId}...`)
-                updateTaskInProgress(taskId, { currentStep: 'Generating labels from provided dataset' })
+                await updateTaskInProgress(taskId, { currentStep: 'Generating labels from provided dataset' })
                 console.log('\tGenerating labels from provided dataset...')
 
                 // TODO: starting and ending rows
@@ -257,7 +257,7 @@ async function main() {
                 const docBuffer = await doc.save()
                 fs.writeFileSync(`./api/data/labels/${resultFileName}`, docBuffer)
 
-                updateTaskResult(taskId, { uri: `/labels/${resultFileName}` })
+                await updateTaskResult(taskId, { uri: `/labels/${resultFileName}`, fileName: resultFileName })
                 console.log('Completed task', taskId)
                 labelsChannel.ack(msg)
             }

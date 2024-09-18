@@ -1,8 +1,8 @@
 import Router from 'express'
 
-import upload from './lib/multer.js'
-import { getObservationsChannel, observationsQueueName, getLabelsChannel, labelsQueueName } from './lib/rabbitmq.js'
-import { createTask, getTaskById, getTasks } from './models/task.js'
+import upload from '../lib/multer.js'
+import { getObservationsChannel, observationsQueueName, getLabelsChannel, labelsQueueName } from '../lib/rabbitmq.js'
+import { createTask, getTaskById, getTasks } from '../lib/task.js'
 
 const tasksRouter = Router()
 

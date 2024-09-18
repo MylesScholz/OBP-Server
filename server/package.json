@@ -1,0 +1,38 @@
+{
+  "name": "obp-server",
+  "version": "1.0.0",
+  "description": "A full stack web application that fetches bee observation data and creates specimen labels for the Oregon Bee Project",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon --exec \"npm start\" -e \"js jsx\" --ignore ./dist",
+    "build": "vite build",
+    "start": "npm run build && node server.js"
+  },
+  "author": "Myles Scholz",
+  "license": "None",
+  "dependencies": {
+    "@emotion/babel-plugin": "^11.12.0",
+    "@emotion/react": "^11.13.0",
+    "@emotion/styled": "^11.13.0",
+    "@tanstack/react-query": "^5.55.4",
+    "amqplib": "^0.10.4",
+    "axios": "^1.7.7",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mongodb": "^6.8.0",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.0",
+    "vhost": "^3.0.2"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "nodemon": "^3.1.4",
+    "vite": "^5.4.0"
+  }
+}

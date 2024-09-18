@@ -1,5 +1,5 @@
 import { ObjectId } from "mongodb"
-import { getDb } from "../lib/mongo.js"
+import { getDb } from "./mongo.js"
 
 async function clearTasks() {
     const db = getDb()

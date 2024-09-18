@@ -4,9 +4,9 @@ import morgan from 'morgan'
 import 'dotenv/config'
 
 import tasksRouter from './api/tasks.js'
-import { connectToRabbitMQ } from './api/lib/rabbitmq.js'
-import { connectToDb } from './api/lib/mongo.js'
-import { clearTasks } from './api/models/task.js'
+import { connectToRabbitMQ } from './lib/rabbitmq.js'
+import { connectToDb } from './lib/mongo.js'
+import { clearTasks } from './lib/task.js'
 
 const port = process.env.PORT || '8080'
 const app = express()

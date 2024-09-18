@@ -7,9 +7,9 @@ import fontkit from '@pdf-lib/fontkit'
 import { datamatrixrectangularextension } from 'bwip-js/node'
 import 'dotenv/config'
 
-import { connectToDb } from './api/lib/mongo.js'
-import { labelsQueueName } from './api/lib/rabbitmq.js'
-import { getTaskById, updateTaskInProgress, updateTaskResult } from './api/models/task.js'
+import { connectToDb } from './lib/mongo.js'
+import { labelsQueueName } from './lib/rabbitmq.js'
+import { getTaskById, updateTaskInProgress, updateTaskResult } from './lib/task.js'
 
 const nRows = 25
 const nColumns = 10

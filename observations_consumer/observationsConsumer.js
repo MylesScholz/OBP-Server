@@ -6,9 +6,9 @@ import { parse } from 'csv-parse/sync'
 import { stringify } from 'csv-stringify/sync'
 import 'dotenv/config'
 
-import { connectToDb } from './api/lib/mongo.js'
-import { observationsQueueName } from './api/lib/rabbitmq.js'
-import { getTaskById, updateTaskInProgress, updateTaskResult } from './api/models/task.js'
+import { connectToDb } from './lib/mongo.js'
+import { observationsQueueName } from './lib/rabbitmq.js'
+import { getTaskById, updateTaskInProgress, updateTaskResult } from './lib/task.js'
 
 const rabbitmqHost = process.env.RABBITMQ_HOST || 'localhost'
 const rabbitmqURL = `amqp://${rabbitmqHost}`
@@ -228,12 +228,12 @@ async function pullObservations(task) {
 }
 
 function readPlacesFile() {
-    const placesData = fs.readFileSync('./api/data/places.json')
+    const placesData = fs.readFileSync('./data/places.json')
     return JSON.parse(placesData)
 }
 
 function writePlacesFile(places) {
-    fs.writeFileSync('./api/data/places.json', JSON.stringify(places))
+    fs.writeFileSync('./data/places.json', JSON.stringify(places))
 }
 
 async function fetchPlaces(places) {
@@ -299,7 +299,7 @@ async function updatePlaces(observations) {
 }
 
 function readUsernamesFile() {
-    const usernamesData = fs.readFileSync('./api/data/usernames.json')
+    const usernamesData = fs.readFileSync('./data/usernames.json')
     return JSON.parse(usernamesData)
 }
 
@@ -411,7 +411,7 @@ async function getElevation(latitude, longitude) {
         cardinalLongitude = 'e' + cardinalLongitude.padStart(3, '0')
     }
 
-    const filePath = `./api/data/elevation/${cardinalLatitude}_${cardinalLongitude}_1arc_v3.tif`
+    const filePath = `./data/elevation/${cardinalLatitude}_${cardinalLongitude}_1arc_v3.tif`
 
     if (!fs.existsSync(filePath)) {
         return ''
@@ -766,7 +766,7 @@ async function main() {
                 console.log('\tWriting updated dataset to file...')
 
                 const resultFileName = `${Crypto.randomUUID()}.csv`
-                writeObservationsFile(`./api/data/observations/${resultFileName}`, indexedData)
+                writeObservationsFile(`./data/observations/${resultFileName}`, indexedData)
 
                 await updateTaskResult(taskId, { uri: `/observations/${resultFileName}`, fileName: resultFileName })
                 console.log('Completed task', taskId)

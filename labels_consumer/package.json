@@ -1,0 +1,25 @@
+{
+  "name": "obp-server-labels-consumer",
+  "version": "1.0.0",
+  "description": "A full stack web application that fetches bee observation data and creates specimen labels for the Oregon Bee Project",
+  "type": "module",
+  "main": "labelsConsumer.js",
+  "scripts": {
+    "dev": "nodemon labelsConsumer.js",
+    "start": "node labelsConsumer.js"
+  },
+  "author": "Myles Scholz",
+  "license": "None",
+  "dependencies": {
+    "@pdf-lib/fontkit": "^1.1.1",
+    "amqplib": "^0.10.4",
+    "bwip-js": "^4.5.1",
+    "csv-parse": "^5.5.6",
+    "dotenv": "^16.4.5",
+    "mongodb": "^6.8.0",
+    "pdf-lib": "^1.17.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}

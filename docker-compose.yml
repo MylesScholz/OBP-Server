@@ -1,0 +1,49 @@
+services:
+    server:
+        depends_on:
+            - mongo
+            - rabbitmq
+        build:
+            dockerfile: server.Dockerfile
+            context: .
+        restart: on-failure
+        container_name: server
+        env_file: ./.env
+    labels-consumer:
+        depends_on:
+            - mongo
+            - rabbitmq
+            - server
+        build:
+            dockerfile: labels-consumer.Dockerfile
+            context: .
+        restart: on-failure
+        container_name: labels-container
+        env_file: ./.env
+    observations-consumer:
+        depends_on:
+            - mongo
+            - rabbitmq
+            - server
+        build:
+            dockerfile: observations-consumer.Dockerfile
+            context: .
+        restart: on-failure
+        container_name: observations-container
+        env_file: ./.env
+    mongo:
+        image: 'mongo'
+        restart: always
+        container_name: 'mongo'
+        ports:
+          - '27017:27017'
+        volumes:
+          - ./mongo/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+        env_file: ./.env
+    rabbitmq:
+        image: 'rabbitmq:management'
+        container_name: 'rabbitmq'
+        ports:
+          - '5672:5672'
+          - '15672:15672'
+        env_file: ./.env

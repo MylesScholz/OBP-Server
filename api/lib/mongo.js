@@ -14,6 +14,7 @@ let _db = null
 let _closeDbConnection = null
 
 async function connectToDb() {
+    console.log(`Connecting to ${mongoURL}...`)
     const client = await MongoClient.connect(mongoURL)
     _db = client.db(mongoDbName)
     _closeDbConnection = function () {

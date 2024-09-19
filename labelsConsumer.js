@@ -219,8 +219,6 @@ async function writePDFPage(doc, observations) {
 
 async function main() {
     try {
-        await connectToDb()
-
         const connection = await amqp.connect(rabbitmqURL)
         const labelsChannel = await connection.createChannel()
         await labelsChannel.assertQueue(labelsQueueName)
@@ -263,8 +261,11 @@ async function main() {
             }
         })
     } catch (err) {
-        console.error(err)
+        // console.error(err)
+        throw err
     }
 }
 
-main()
+connectToDb().then(async () => {
+    main()
+})

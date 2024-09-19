@@ -724,8 +724,6 @@ function writeObservationsFile(filePath, observations) {
 
 async function main() {
     try {
-        await connectToDb()
-
         const connection = await amqp.connect(rabbitmqURL)
         const observationsChannel = await connection.createChannel()
         await observationsChannel.assertQueue(observationsQueueName)
@@ -774,8 +772,11 @@ async function main() {
             }
         })
     } catch (err) {
-        console.error(err)
+        // console.error(err)
+        throw err
     }
 }
 
-main()
+connectToDb().then(async () => {
+    main()
+})

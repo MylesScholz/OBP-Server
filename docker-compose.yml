@@ -8,7 +8,11 @@ services:
             context: .
         restart: on-failure
         container_name: server
+        ports:
+          - '8080:8080'
         env_file: ./.env
+        volumes:
+          - app-data:/app
     labels-consumer:
         depends_on:
             - mongo
@@ -20,6 +24,8 @@ services:
         restart: on-failure
         container_name: labels-container
         env_file: ./.env
+        volumes:
+          - app-data:/app
     observations-consumer:
         depends_on:
             - mongo
@@ -31,15 +37,17 @@ services:
         restart: on-failure
         container_name: observations-container
         env_file: ./.env
+        volumes:
+          - app-data:/app
     mongo:
-        image: 'mongo'
+        image: 'mongo:latest'
         restart: always
         container_name: 'mongo'
         ports:
           - '27017:27017'
-        volumes:
-          - ./mongo/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
         env_file: ./.env
+        volumes:
+          - ./init-mongo.sh:/docker-entrypoint-initdb.d/init-mongo.sh
     rabbitmq:
         image: 'rabbitmq:management'
         container_name: 'rabbitmq'
@@ -47,3 +55,5 @@ services:
           - '5672:5672'
           - '15672:15672'
         env_file: ./.env
+volumes:
+    app-data:

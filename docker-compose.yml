@@ -1,11 +1,9 @@
 services:
     server:
+        image: thefathomlessvoid/obp-server:server
         depends_on:
             - mongo
             - rabbitmq
-        build:
-            dockerfile: server.Dockerfile
-            context: .
         restart: on-failure
         container_name: server
         ports:
@@ -14,26 +12,22 @@ services:
         volumes:
           - app-data:/app
     labels-consumer:
+        image: thefathomlessvoid/obp-server:labels-consumer
         depends_on:
             - mongo
             - rabbitmq
             - server
-        build:
-            dockerfile: labels-consumer.Dockerfile
-            context: .
         restart: on-failure
         container_name: labels-container
         env_file: ./.env
         volumes:
           - app-data:/app
     observations-consumer:
+        image: thefathomlessvoid/obp-server:observations-consumer
         depends_on:
             - mongo
             - rabbitmq
             - server
-        build:
-            dockerfile: observations-consumer.Dockerfile
-            context: .
         restart: on-failure
         container_name: observations-container
         env_file: ./.env

@@ -4,6 +4,8 @@ import amqp from 'amqplib'
 import { fromFile } from 'geotiff'
 import { parse } from 'csv-parse/sync'
 import { stringify } from 'csv-stringify/sync'
+import { ListBucketsCommand, S3Client } from '@aws-sdk/client-s3'
+import { fromInstanceMetadata } from '@aws-sdk/credential-providers'
 import 'dotenv/config'
 
 import { connectToDb } from './api/lib/mongo.js'
@@ -778,5 +780,11 @@ async function main() {
 }
 
 connectToDb().then(async () => {
+    const client = new S3Client({ region: 'us-west-2', credentials: fromInstanceMetadata() })
+    const command = new ListBucketsCommand({})
+    const buckets = await client.send(command)
+    console.log('Buckets:')
+    console.log(buckets.map(b => b.Name).join('\n'))
+
     main()
 })

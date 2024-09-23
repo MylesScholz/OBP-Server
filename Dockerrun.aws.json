@@ -1,0 +1,97 @@
+{
+    "AWSEBDockerrunVersion": 2,
+    "containerDefinitions": [
+        {
+            "name": "server",
+            "image": "thefathomlessvoid/obp-server:server",
+            "hostname": "server",
+            "essential": true,
+            "mountPoints": [
+                {
+                    "sourceVolume": "app-data",
+                    "containerPath": "/app"
+                }
+            ],
+            "portMappings": [
+                {
+                    "hostPort": "8080",
+                    "containerPort": "8080"
+                }
+            ],
+            "memory": 512
+        },
+        {
+            "name": "labels-consumer",
+            "image": "thefathomlessvoid/obp-server:labels-consumer",
+            "hostname": "labels-consumer",
+            "mountPoints": [
+                {
+                    "sourceVolume": "app-data",
+                    "containerPath": "/app"
+                }
+            ],
+            "memory": 512
+        },
+        {
+            "name": "observations-consumer",
+            "image": "thefathomlessvoid/obp-server:observations-consumer",
+            "hostname": "observations-consumer",
+            "mountPoints": [
+                {
+                    "sourceVolume": "app-data",
+                    "containerPath": "/app"
+                }
+            ],
+            "memory": 512
+        },
+        {
+            "name": "mongo",
+            "image": "mongo:latest",
+            "hostname": "mongo",
+            "essential": true,
+            "portMappings": [
+                {
+                    "hostPort": "27017",
+                    "containerPort": "27017"
+                }
+            ],
+            "mountPoints": [
+                {
+                    "sourceVolume": "init-mongo",
+                    "containerPath": "/docker-entrypoint-initdb.d/init-mongo.sh"
+                }
+            ],
+            "memory": 512
+        },
+        {
+            "name": "rabbitmq",
+            "image": "rabbitmq:management",
+            "hostname": "rabbitmq",
+            "portMappings": [
+                {
+                    "hostPort": "5672",
+                    "containerPort": "5672"
+                },
+                {
+                    "hostPort": "15672",
+                    "containerPort": "15672"
+                }
+            ],
+            "memory": 512
+        }
+    ],
+    "volumes": [
+        {
+            "name": "app-data",
+            "host": {
+                "sourcePath": "/var/app/current"
+            }
+        },
+        {
+            "name": "init-mongo",
+            "host": {
+                "sourcePath": "/var/app/current/init-mongo.sh"
+            }
+        }
+    ]
+}

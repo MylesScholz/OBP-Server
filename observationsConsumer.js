@@ -782,9 +782,8 @@ async function main() {
 connectToDb().then(async () => {
     const client = new S3Client({ region: 'us-west-2', credentials: fromInstanceMetadata() })
     const command = new ListBucketsCommand({})
-    const buckets = await client.send(command)
-    console.log('Buckets:')
-    console.log(buckets.map(b => b.Name).join('\n'))
+    const { Body } = await client.send(command)
+    console.log('Buckets:', await Body.transformToString())
 
     main()
 })

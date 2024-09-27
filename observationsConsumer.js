@@ -16,6 +16,8 @@ const rabbitmqHost = process.env.RABBITMQ_HOST || 'localhost'
 const rabbitmqURL = `amqp://${rabbitmqHost}`
 
 /* Formatting Constants */
+
+// Template object for observations; static values are provided as strings, data-dependent values are set to null
 const observationTemplate = {
     'Error Flags': '',
     'Verified': '',
@@ -106,6 +108,7 @@ const observationTemplate = {
     'specificEpithet': '',
     'taxonRank': ''
 }
+// Roman numerals 1 to 12
 const monthNumerals = [
     'I',
     'II',
@@ -120,12 +123,14 @@ const monthNumerals = [
     'XI',
     'XII'
 ]
+// Abbreviations for countries keyed by how iNaturalist refers to them
 const countryAbbreviations = {
     'United States': 'USA',
     'Canada': 'CA'
 }
+// Abbreviations for all states and provinces; not all of these are expected in the actual data
 const stateProvinceAbbreviations = {
-    'Alabama': 'AL',                    // American States
+    'Alabama': 'AL',                    // United States
     'Alaska': 'AK',
     'Arizona': 'AZ',
     'Arkansas': 'AR',
@@ -189,6 +194,10 @@ const stateProvinceAbbreviations = {
     'Yukon': 'YT'
 }
 
+/*
+ * fetchObservations()
+ * Makes an API request to iNaturalist.org for a single page of observations from a given source project over a given period
+ */
 async function fetchObservations(sourceId, minDate, maxDate, page) {
     const requestURL = `https://api.inaturalist.org/v1/observations?project_id=${sourceId}&d1=${minDate}&d2=${maxDate}&per_page=200&page=${page}`
 
@@ -204,6 +213,10 @@ async function fetchObservations(sourceId, minDate, maxDate, page) {
     }
 }
 
+/*
+ * pullSourceObservations()
+ * Pulls observations from iNaturalist.org page-by-page for a given source project over a given period
+ */
 async function pullSourceObservations(sourceId, minDate, maxDate) {
     let response = await fetchObservations(sourceId, minDate, maxDate, 1)
     let results = response?.results ?? []
@@ -219,6 +232,10 @@ async function pullSourceObservations(sourceId, minDate, maxDate) {
     return results
 }
 
+/*
+ * pullObservations()
+ * Pulls all observations specified in a given task
+ */
 async function pullObservations(task) {
     let observations = []
 
@@ -229,21 +246,35 @@ async function pullObservations(task) {
     return observations
 }
 
+/*
+ * readPlacesFile()
+ * Parses /api/data/places.json into a JS object
+ */
 function readPlacesFile() {
     const placesData = fs.readFileSync('./api/data/places.json')
     return JSON.parse(placesData)
 }
 
+/*
+ * writePlacesFile()
+ * Writes a given places object into /api/data/places.json
+ */
 function writePlacesFile(places) {
     fs.writeFileSync('./api/data/places.json', JSON.stringify(places))
 }
 
+/*
+ * fetchPlaces()
+ * Makes API requests to iNaturalist.org to collect place data from a given list of place IDs
+ */
 async function fetchPlaces(places) {
+    // places can be a very long list of IDs, so batch requests to avoid iNaturalist API refusal
     const partitionSize = 50
     const nPartitions = Math.floor(places.length / partitionSize) + 1
     let partitionStart = 0
     let partitionEnd = Math.min(partitionSize, places.length)
 
+    // Fetch place data for each batch from iNaturalist.org and append it together
     const results = []
     for (let i = 0; i < nPartitions; i++) {
         const requestURL = `https://api.inaturalist.org/v1/places/${places.slice(partitionStart, partitionEnd).join(',')}`
@@ -267,10 +298,16 @@ async function fetchPlaces(places) {
     return results
 }
 
+/*
+ * updatePlaces()
+ * Updates local place data (stored in /api/data/places.json) for each given observation
+ */
 async function updatePlaces(observations) {
+    // Get the current place data
     const places = readPlacesFile()
-    const unknownPlaces = []
 
+    // Compile a list of unknown places from the given observations
+    const unknownPlaces = []
     for (const observation of observations) {
         const placeIds = observation['place_ids']
         
@@ -281,6 +318,7 @@ async function updatePlaces(observations) {
         }
     }
 
+    // Fetch data for each unknown place from iNaturalist.org and combine it with the existing data
     if (unknownPlaces.length > 0) {
         const newPlaces = await fetchPlaces(unknownPlaces)
         for (const newPlace of newPlaces) {
@@ -297,26 +335,40 @@ async function updatePlaces(observations) {
         }
     }
 
+    // Store the updated place data
     writePlacesFile(places)
 }
 
+/*
+ * readUsernamesFile()
+ * Parses /api/data/usernames.json into a JS object
+ */
 function readUsernamesFile() {
     const usernamesData = fs.readFileSync('./api/data/usernames.json')
     return JSON.parse(usernamesData)
 }
 
+/*
+ * lookUpUserName()
+ * Searches for the first name, first initial, and last name of an iNaturalist user in /api/data/usernames.json
+ */
 function lookUpUserName(user) {
+    // Default to empty strings
     let firstName = '', firstInitial = '', lastName = ''
 
+    // Check that the user field exists
     if (!user) {
         return { firstName, firstInitial, lastName }
     }
 
+    // Get the known name data
     const usernames = readUsernamesFile()
 
+    // Attempt to extract the user's full name
     const userLogin = user['login']
     const fullName = usernames[userLogin]?.split(' ')
 
+    // Format the outputs if the full name was found
     if (fullName) {
         firstName = fullName[0]
         firstInitial = firstName[0] + '.'
@@ -326,18 +378,27 @@ function lookUpUserName(user) {
     return { firstName, firstInitial, lastName }
 }
 
+/*
+ * lookUpPlaces()
+ * Searches for country, state/province, and county names in /api/data/places.json
+ */
 function lookUpPlaces(placeIds) {
+    // Default to empty strings
     let country = '', stateProvince = '', county = ''
 
+    // Check that the placeIds field exists
     if (!placeIds) {
         return { country, stateProvince, county }
     }
 
+    // Get the known place data
     const places = readPlacesFile()
 
+    // Look up each place ID and set the appropriate output string
     for (const placeId of placeIds) {
         const place = places[placeId]
 
+        // Set the country, stateProvince, or county output string based on the 'admin_level' value, assuming the place was found in places.json
         if (place?.at(0) === '0') country = place[1] ?? ''
         if (place?.at(0) === '10') stateProvince = place[1] ?? ''
         if (place?.at(0) === '20') county = place[1] ?? ''
@@ -346,17 +407,28 @@ function lookUpPlaces(placeIds) {
     return { country, stateProvince, county }
 }
 
+/*
+ * getOFV()
+ * Looks up the value of an iNaturalist observation field by name
+ */
 function getOFV(ofvs, fieldName) {
     const ofv = ofvs?.find((field) => field['name'] === fieldName)
     return ofv?.value ?? ''
 }
 
+/*
+ * getFamily()
+ * Searches for a taxonomic family name in an observation's 'identifications' field
+ */
 function getFamily(identifications) {
+    // Check that the identifications field exists
     if (!identifications) {
         return ''
     }
 
+    // Search each identification
     for (const id of identifications) {
+        // If the identification is a family, return its name; otherwise, search the ancestors field
         if (id.taxon?.rank === 'family') {
             return id.taxon?.name ?? ''
         } else if (id['ancestors']) {
@@ -368,79 +440,108 @@ function getFamily(identifications) {
         }
     }
 
+    // Default to an empty string if the search reaches this point
     return ''
 }
 
+/*
+ * readElevationFromFile()
+ * Searches for the elevation value of a given coordinate in a given GeoTIFF file
+ */
 async function readElevationFromFile(filePath, latitude, longitude) {
     try {
+        // Read the given file's raster data using the geotiff package
         const tiff = await fromFile(filePath)
         const image = await tiff.getImage()
         const rasters = await image.readRasters()
         const data = rasters[0]
 
+        // Calculate the row and column corresponding to the given coordinate
         const latitudeDecimalPart = latitude - Math.floor(latitude)
         const row = Math.floor(latitudeDecimalPart * rasters.height)
 
         const longitudeDecimalPart = longitude - Math.floor(longitude)
         const column = Math.floor(longitudeDecimalPart * rasters.width)
 
+        // Look up the elevation value for the row and column, default to an empty string
         const elevation = data[column + rasters.width * row]
         return elevation?.toString() ?? ''
     } catch (err) {
+        // Default to an empty string if the file reading fails (e.g., the file doesn't exist)
         return ''
     }
 }
 
+/*
+ * getElevation()
+ * Looks up the elevation for a given coordinate using NASA's SRTM 1 Arc-Second Global dataset stored in GeoTIFF files
+ */
 async function getElevation(latitude, longitude) {
-    if (latitude === '' || longitude === '') {
+    // Check that both latitude and longitude are provided and are parseable as floats
+    if (latitude === '' || longitude === '' || !parseFloat(latitude) || !parseFloat(longitude)) {
         return ''
     }
 
+    // Split just the integer part of the latitude and longitude
     let cardinalLatitude = latitude.split('.')[0]
     const degreesLatitude = parseInt(cardinalLatitude)
     let cardinalLongitude = longitude.split('.')[0]
     const degreesLongitude = parseInt(cardinalLongitude)
 
+    // Convert negative latitudes to degrees south
     if (degreesLatitude < 0) {
         cardinalLatitude = 's' + `${-degreesLatitude + 1}`
     } else {
         cardinalLatitude = 'n' + cardinalLatitude
     }
 
+    // Convert negative longitudes to degrees west
     if (degreesLongitude < 0) {
         cardinalLongitude = 'w' + `${-degreesLongitude + 1}`.padStart(3, '0')
     } else {
         cardinalLongitude = 'e' + cardinalLongitude.padStart(3, '0')
     }
 
+    // Create the file path for the elevation data file in which the coordinates lie
     const filePath = `./api/data/elevation/${cardinalLatitude}_${cardinalLongitude}_1arc_v3.tif`
 
+    // Check that the file exists, default to an empty string
     if (!fs.existsSync(filePath)) {
         return ''
     }
 
+    // Get the elevation at the precise coordinate from the elevation data file
     return await readElevationFromFile(filePath, parseFloat(latitude), parseFloat(longitude))
 }
 
+/*
+ * formatObservation()
+ * Creates a fully formatted observation object from a raw iNaturalist observation
+ */
 async function formatObservation(observation, year) {
-    // Parse user name
+    // Parse user's name
     const { firstName, firstInitial, lastName } = lookUpUserName(observation['user'])
 
-    // Parse location
+    // Parse country, state/province, and county
     const { country, stateProvince, county } =  lookUpPlaces(observation['place_ids'])
 
-    // Formatted fields as constants for re-use
+    /* Formatted fields as constants for re-use */
+
+    // Look up the taxonomic family
     const family = getFamily(observation['identifications'])
     const scientificName = observation.taxon?.name ?? ''
 
+    // Attempt to parse 'observed_on_string' as a JavaScript Date object
     const observedDate = observation['observed_on_string'] ? new Date(observation['observed_on_string']) : undefined
 
+    // Extract the day, month, year, hour, and minute from the Date object
     const observedDay = observedDate?.getDate()
     const observedMonth = observedDate?.getMonth()
     const observedYear = observedDate?.getFullYear()
     const observedHour = observedDate?.getHours()
     const observedMinute = observedDate?.getMinutes()
 
+    // Format the day, month, year, and time
     const formattedDay = !isNaN(observedDay) ? observedDay.toString() : ''
     const formattedMonth = !isNaN(observedMonth) ? observedMonth.toString() : ''
     const formattedYear = !isNaN(observedYear) ? observedYear.toString() : ''
@@ -448,13 +549,17 @@ async function formatObservation(observation, year) {
     const formattedMinutes = !isNaN(observedMinute) ? observedMinute.toString().padStart(2, '0') : undefined
     const formattedTime = formattedHours && formattedMinutes ? `${formattedHours}:${formattedMinutes}` : ''
     
+    // Format the location and coordinates
     const formattedLocation = observation.place_guess?.split(', ')?.at(0) ?? ''
     const formattedLatitude = observation.geojson?.coordinates?.at(1)?.toFixed(3)?.toString() ?? ''
     const formattedLongitude = observation.geojson?.coordinates?.at(0)?.toFixed(3)?.toString() ?? ''
 
-    // Formatting
+    /* Final formatting */
+
+    // Start from template observation object
     const formattedObservation = Object.assign({}, observationTemplate)
 
+    // Label fields
     formattedObservation['iNaturalist ID'] = observation.user?.id?.toString() ?? ''
     formattedObservation['iNaturalist Alias'] = observation.user?.login ?? ''
 
@@ -487,6 +592,7 @@ async function formatObservation(observation, year) {
     formattedObservation['Associated plant - genus, species'] = scientificName
     formattedObservation['Associated plant - Inaturalist URL'] = observation['uri'] ?? ''
 
+    // Darwin Core fields
     formattedObservation['bibliographicCitation'] = `Oregon Bee Atlas ${year}. Oregon State University, Corvallis, OR, USA.`
     formattedObservation['datasetName'] = `OBA-OSAC-${year}`
 
@@ -512,12 +618,18 @@ async function formatObservation(observation, year) {
     return formattedObservation
 }
 
+/*
+ * formatObservations()
+ * Formats raw iNaturalist observations and duplicates them by the number of bees collected
+ */
 async function formatObservations(observations, year) {
     let formattedObservations = []
 
     for (const observation of observations) {
         const formattedObservation = await formatObservation(observation, year)
 
+        // 'Specimen ID' is initially set to the number of bees collected
+        // Now, duplicate observations a number of times equal to this value and overwrite 'Specimen ID' to index the duplications
         if (formattedObservation['Specimen ID'] !== '') {
             try {
                 const beesCollected = parseInt(formattedObservation['Specimen ID'])

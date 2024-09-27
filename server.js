@@ -9,9 +9,12 @@ import { connectToDb } from './api/lib/mongo.js'
 import { clearTasks } from './api/models/task.js'
 
 const port = process.env.PORT || '8080'
+// Router for website
 const app = express()
+// Router for API requests
 const apiRouter = express.Router()
 
+// Allows website to make API requests
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*')
     next()
@@ -43,6 +46,7 @@ app.use('*', (err, req, res, next) => {
 })
 
 connectToDb().then(async () => {
+    // Tasks are not persistent between server restarts, so clear the database
     await clearTasks()
     await connectToRabbitMQ()
 

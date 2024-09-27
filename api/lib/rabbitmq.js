@@ -1,9 +1,11 @@
 import amqp from 'amqplib'
 import 'dotenv/config'
 
+// RabbitMQ server network address
 const rabbitmqHost = process.env.RABBITMQ_HOST || 'localhost'
 const rabbitmqURL = `amqp://${rabbitmqHost}`
 
+// Separate queues and channels for observations tasks and labels tasks
 const observationsQueueName = 'observations'
 let _observationsChannel = null
 
@@ -15,10 +17,12 @@ async function connectToRabbitMQ() {
 
     _observationsChannel = await connection.createChannel()
     await _observationsChannel.assertQueue(observationsQueueName)
+    // Empty the queue since tasks are not persistent
     _observationsChannel.purgeQueue(observationsQueueName)
 
     _labelsChannel = await connection.createChannel()
     await _labelsChannel.assertQueue(labelsQueueName)
+    // Empty the queue since tasks are not persistent
     _observationsChannel.purgeQueue(labelsQueueName)
 }
 

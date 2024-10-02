@@ -8,6 +8,8 @@ export default function TaskQueryBuilder({ setQueryResponse }) {
     const [ taskType, setTaskType ] = useState('observations')
     const [ file, setFile ] = useState()
 
+    const serverAddress = `${process.env.SERVER_HOST || 'localhost'}${process.env.PORT ? ':' + process.env.PORT : ''}`
+
     function handleSubmit(event) {
         event.preventDefault()
 
@@ -21,7 +23,7 @@ export default function TaskQueryBuilder({ setQueryResponse }) {
 
         // console.log([...formData.entries()])
 
-        const requestURL = `http://api.localhost:8080/tasks/${taskType}`
+        const requestURL = `http://api.${serverAddress}/tasks/${taskType}`
         axios.postForm(requestURL, formData).then((res) => {
             setQueryResponse({ status: res.status, data: res.data })
         }).catch((err) => {

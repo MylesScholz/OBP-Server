@@ -8,10 +8,12 @@ const TaskTrackerContainer = styled.div``
 export default function TaskTracker({ queryResponse }) {
     const [ result, setResult ] = useState()
 
+    const serverAddress = `${process.env.SERVER_HOST || 'localhost'}${process.env.PORT ? ':' + process.env.PORT : ''}`
+
     const { error, data: taskData } = useQuery({
         queryKey: ['taskData', queryResponse],
         queryFn: async () => {
-            const queryURL = `http://api.localhost:8080${queryResponse.data.uri}`
+            const queryURL = `http://api.${serverAddress}${queryResponse.data.uri}`
             const res = await fetch(queryURL)
             const resJSON = await res.json()
 
@@ -25,7 +27,7 @@ export default function TaskTracker({ queryResponse }) {
     const { data: downloadURL } = useQuery({
         queryKey: ['resultData'],
         queryFn: async () => {
-            const queryURL = `http://api.localhost:8080${result.uri}`
+            const queryURL = `http://api.${serverAddress}${result.uri}`
             const res = await axios.get(queryURL, { responseType: 'blob' })
             return URL.createObjectURL(res.data)
         },
@@ -44,7 +46,10 @@ export default function TaskTracker({ queryResponse }) {
                 <>
                     <p>Task {taskData.task._id}: {taskData.task.status}</p>
                     { taskData.task.status === 'Running' &&
-                        <p>Current Step: {taskData.task.progress.currentStep}</p>
+                        <>
+                            <p>Current Step: {taskData.task.progress.currentStep}</p>
+                            { taskData.task.progress.percentage && <p>{taskData.task.progress.percentage}</p> }
+                        </>
                     }
                     { downloadURL &&
                         <a href={downloadURL} download={result.fileName}>Download Results</a>

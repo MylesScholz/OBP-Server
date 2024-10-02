@@ -1,16 +1,15 @@
 import Crypto from 'node:crypto'
 import fs from 'fs'
 import amqp from 'amqplib'
-import { fromFile } from 'geotiff'
+import { fromArrayBuffer } from 'geotiff'
 import { parse } from 'csv-parse/sync'
 import { stringify } from 'csv-stringify/sync'
-import { ListBucketsCommand, S3Client } from '@aws-sdk/client-s3'
-import { fromInstanceMetadata } from '@aws-sdk/credential-providers'
 import 'dotenv/config'
 
 import { connectToDb } from './api/lib/mongo.js'
 import { observationsQueueName } from './api/lib/rabbitmq.js'
 import { getTaskById, updateTaskInProgress, updateTaskResult } from './api/models/task.js'
+import { connectToS3, getS3Object } from './api/lib/aws-s3.js'
 
 const rabbitmqHost = process.env.RABBITMQ_HOST || 'localhost'
 const rabbitmqURL = `amqp://${rabbitmqHost}`
@@ -341,18 +340,19 @@ async function updatePlaces(observations) {
 
 /*
  * readUsernamesFile()
- * Parses /api/data/usernames.json into a JS object
+ * Parses s3://obp-server-data/usernames.json into a JS object
  */
-function readUsernamesFile() {
-    const usernamesData = fs.readFileSync('./api/data/usernames.json')
-    return JSON.parse(usernamesData)
+async function readUsernamesFile() {
+    const usernamesData = await getS3Object('obp-server-data', 'usernames.json')
+    const usernamesJSONString = await usernamesData?.transformToString()
+    return JSON.parse(usernamesJSONString)
 }
 
 /*
  * lookUpUserName()
  * Searches for the first name, first initial, and last name of an iNaturalist user in /api/data/usernames.json
  */
-function lookUpUserName(user) {
+async function lookUpUserName(user) {
     // Default to empty strings
     let firstName = '', firstInitial = '', lastName = ''
 
@@ -362,7 +362,7 @@ function lookUpUserName(user) {
     }
 
     // Get the known name data
-    const usernames = readUsernamesFile()
+    const usernames = await readUsernamesFile()
 
     // Attempt to extract the user's full name
     const userLogin = user['login']
@@ -448,10 +448,14 @@ function getFamily(identifications) {
  * readElevationFromFile()
  * Searches for the elevation value of a given coordinate in a given GeoTIFF file
  */
-async function readElevationFromFile(filePath, latitude, longitude) {
+async function readElevationFromFile(fileKey, latitude, longitude) {
     try {
+        // Fetch the given file from AWS S3
+        const fileStream = await getS3Object('obp-server-data', fileKey)
+        const fileData = await fileStream.transformToByteArray()
+
         // Read the given file's raster data using the geotiff package
-        const tiff = await fromFile(filePath)
+        const tiff = await fromArrayBuffer(fileData.buffer)
         const image = await tiff.getImage()
         const rasters = await image.readRasters()
         const data = rasters[0]
@@ -502,16 +506,11 @@ async function getElevation(latitude, longitude) {
         cardinalLongitude = 'e' + cardinalLongitude.padStart(3, '0')
     }
 
-    // Create the file path for the elevation data file in which the coordinates lie
-    const filePath = `./api/data/elevation/${cardinalLatitude}_${cardinalLongitude}_1arc_v3.tif`
-
-    // Check that the file exists, default to an empty string
-    if (!fs.existsSync(filePath)) {
-        return ''
-    }
+    // Create the file key for the elevation data file in which the coordinates lie
+    const fileKey = `elevation/${cardinalLatitude}_${cardinalLongitude}_1arc_v3.tif`
 
     // Get the elevation at the precise coordinate from the elevation data file
-    return await readElevationFromFile(filePath, parseFloat(latitude), parseFloat(longitude))
+    return await readElevationFromFile(fileKey, parseFloat(latitude), parseFloat(longitude))
 }
 
 /*
@@ -520,7 +519,7 @@ async function getElevation(latitude, longitude) {
  */
 async function formatObservation(observation, year) {
     // Parse user's name
-    const { firstName, firstInitial, lastName } = lookUpUserName(observation['user'])
+    const { firstName, firstInitial, lastName } = await lookUpUserName(observation['user'])
 
     // Parse country, state/province, and county
     const { country, stateProvince, county } =  lookUpPlaces(observation['place_ids'])
@@ -622,11 +621,13 @@ async function formatObservation(observation, year) {
  * formatObservations()
  * Formats raw iNaturalist observations and duplicates them by the number of bees collected
  */
-async function formatObservations(observations, year) {
+async function formatObservations(observations, year, updateFormattingProgress) {
     let formattedObservations = []
 
+    let i = 0
     for (const observation of observations) {
         const formattedObservation = await formatObservation(observation, year)
+        updateFormattingProgress(`${(100 * (i++) / observations.length).toFixed(2)}%`)
 
         // 'Specimen ID' is initially set to the number of bees collected
         // Now, duplicate observations a number of times equal to this value and overwrite 'Specimen ID' to index the duplications
@@ -864,7 +865,9 @@ async function main() {
 
                 const minDate = new Date(task.minDate)
                 const year = minDate.getUTCFullYear()
-                const formattedObservations = await formatObservations(observations, year)
+                const formattedObservations = await formatObservations(observations, year, async (percentage) => {
+                    await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations', percentage })
+                })
 
                 await updateTaskInProgress(taskId, { currentStep: 'Merging new observations with provided dataset' })
                 console.log('\tMerging new observations with provided dataset...')
@@ -891,11 +894,7 @@ async function main() {
     }
 }
 
-connectToDb().then(async () => {
-    // const client = new S3Client({ region: 'us-west-2', credentials: fromInstanceMetadata() })
-    // const command = new ListBucketsCommand({})
-    // const { Body } = await client.send(command)
-    // console.log('Buckets:', await Body.transformToString())
-
+connectToDb().then(() => {
+    connectToS3()
     main()
 })

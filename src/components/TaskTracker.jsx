@@ -8,12 +8,12 @@ const TaskTrackerContainer = styled.div``
 export default function TaskTracker({ queryResponse }) {
     const [ result, setResult ] = useState()
 
-    const serverAddress = `${process.env.SERVER_HOST || 'localhost'}${process.env.PORT ? ':' + process.env.PORT : ''}`
+    const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
 
     const { error, data: taskData } = useQuery({
         queryKey: ['taskData', queryResponse],
         queryFn: async () => {
-            const queryURL = `http://api.${serverAddress}${queryResponse.data.uri}`
+            const queryURL = `https://api.${serverAddress}${queryResponse.data.uri}`
             const res = await fetch(queryURL)
             const resJSON = await res.json()
 
@@ -27,7 +27,7 @@ export default function TaskTracker({ queryResponse }) {
     const { data: downloadURL } = useQuery({
         queryKey: ['resultData'],
         queryFn: async () => {
-            const queryURL = `http://api.${serverAddress}${result.uri}`
+            const queryURL = `https://api.${serverAddress}${result.uri}`
             const res = await axios.get(queryURL, { responseType: 'blob' })
             return URL.createObjectURL(res.data)
         },

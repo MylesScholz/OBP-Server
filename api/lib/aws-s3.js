@@ -1,11 +1,11 @@
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
-import { fromEnv } from '@aws-sdk/credential-providers'
+import { fromNodeProviderChain } from '@aws-sdk/credential-providers'
 import 'dotenv/config'
 
 let _client = null
 
 function connectToS3() {
-    _client = new S3Client({ region: 'us-west-2', credentials: fromEnv() })
+    _client = new S3Client({ region: 'us-west-2', credentials: fromNodeProviderChain() })
 }
 
 async function getS3Object(bucket, key) {
@@ -24,7 +24,11 @@ async function getS3Object(bucket, key) {
         
         return Body
     } catch (err) {
-        console.error(err)
+        if (err.Code === 'NoSuchKey') {
+            console.error('NoSuchKey:', err.Key)
+        } else {
+            console.error(err)
+        }
     }
 }
 

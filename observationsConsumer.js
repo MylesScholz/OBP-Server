@@ -247,9 +247,17 @@ async function pullObservations(task) {
 
 /*
  * readPlacesFile()
- * Parses /api/data/places.json into a JS object
+ * Parses /api/data/places.json into a JS object, fetching a copy from S3 if necessary
  */
-function readPlacesFile() {
+async function readPlacesFile() {
+    // If /api/data/places.json doesn't exist locally, download a base version from S3 and save it
+    if (!fs.existsSync('./api/data/places.json')) {
+        const s3PlacesData = await getS3Object('obp-server-data', 'places.json')
+        const s3PlacesString = await s3PlacesData?.transformToString()
+        fs.writeFileSync('./api/data/places.json', s3PlacesString ?? '{}')
+    }
+
+    // Read and parse /api/data/places.json
     const placesData = fs.readFileSync('./api/data/places.json')
     return JSON.parse(placesData)
 }
@@ -303,7 +311,7 @@ async function fetchPlaces(places) {
  */
 async function updatePlaces(observations) {
     // Get the current place data
-    const places = readPlacesFile()
+    const places = await readPlacesFile()
 
     // Compile a list of unknown places from the given observations
     const unknownPlaces = []
@@ -345,7 +353,7 @@ async function updatePlaces(observations) {
 async function readUsernamesFile() {
     const usernamesData = await getS3Object('obp-server-data', 'usernames.json')
     const usernamesJSONString = await usernamesData?.transformToString()
-    return JSON.parse(usernamesJSONString)
+    return JSON.parse(usernamesJSONString ?? '')
 }
 
 /*
@@ -382,7 +390,7 @@ async function lookUpUserName(user) {
  * lookUpPlaces()
  * Searches for country, state/province, and county names in /api/data/places.json
  */
-function lookUpPlaces(placeIds) {
+async function lookUpPlaces(placeIds) {
     // Default to empty strings
     let country = '', stateProvince = '', county = ''
 
@@ -392,7 +400,7 @@ function lookUpPlaces(placeIds) {
     }
 
     // Get the known place data
-    const places = readPlacesFile()
+    const places = await readPlacesFile()
 
     // Look up each place ID and set the appropriate output string
     for (const placeId of placeIds) {
@@ -522,7 +530,7 @@ async function formatObservation(observation, year) {
     const { firstName, firstInitial, lastName } = await lookUpUserName(observation['user'])
 
     // Parse country, state/province, and county
-    const { country, stateProvince, county } =  lookUpPlaces(observation['place_ids'])
+    const { country, stateProvince, county } =  await lookUpPlaces(observation['place_ids'])
 
     /* Formatted fields as constants for re-use */
 

@@ -10,6 +10,7 @@ import 'dotenv/config'
 import { connectToDb } from './api/lib/mongo.js'
 import { labelsQueueName } from './api/lib/rabbitmq.js'
 import { getTaskById, updateTaskInProgress, updateTaskResult } from './api/models/task.js'
+import { connectToS3, getS3Object } from './api/lib/aws-s3.js'
 
 const nRows = 25
 const nColumns = 10
@@ -91,6 +92,11 @@ async function addDataMatrix(page, text, basisX, basisY, dataMatrixLayout) {
         width: scaledDimensions.width,
         height: scaledDimensions.height
     })
+}
+
+async function getFontData(fontKey) {
+    const fontData = await getS3Object('obp-server-data', fontKey)
+    return await fontData?.transformToByteArray()
 }
 
 async function addLabel(page, observation, basisX, basisY, fonts) {
@@ -201,8 +207,8 @@ async function writePDFPage(doc, observations) {
     const page = doc.addPage(PageSizes.Letter)
 
     doc.registerFontkit(fontkit)
-    const gillSansData = fs.readFileSync('./api/data/fonts/Gill Sans MT.ttf')
-    const gillSansCondensedData = fs.readFileSync('./api/data/fonts/Gill Sans MT Condensed.ttf')
+    const gillSansData = await getFontData('fonts/Gill Sans MT.ttf')
+    const gillSansCondensedData = await getFontData('fonts/Gill Sans MT Condensed.ttf')
     const gillSansFont = await doc.embedFont(gillSansData)
     const gillSansCondensedFont = await doc.embedFont(gillSansCondensedData)
 
@@ -266,6 +272,7 @@ async function main() {
     }
 }
 
-connectToDb().then(async () => {
+connectToDb().then(() => {
+    connectToS3()
     main()
 })

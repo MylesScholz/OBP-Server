@@ -203,7 +203,7 @@ async function addLabel(page, observation, basisX, basisY, fonts) {
     await addDataMatrix(page, numberText, basisX, basisY, dataMatrixLayout)
 }
 
-async function writePDFPage(doc, observations) {
+async function writePDFPage(doc, observations, updateLabelsProgress) {
     const page = doc.addPage(PageSizes.Letter)
 
     doc.registerFontkit(fontkit)
@@ -220,6 +220,7 @@ async function writePDFPage(doc, observations) {
         const basisY = page.getHeight() - (verticalMargin + (currentRow * (labelHeight + verticalSpacing)))
 
         await addLabel(page, observations[i], basisX, basisY, { gillSansFont, gillSansCondensedFont })
+        updateLabelsProgress(i)
     }
 }
 
@@ -241,7 +242,7 @@ async function main() {
 
                 // TODO: starting and ending rows
 
-                const observations = readObservationsFile('./api/data' + task.dataset)
+                const observations = readObservationsFile('./api/data' + task.dataset.slice(4)) // task.dataset has a '/api' suffix, which should be removed
                 
                 const partitionSize = nRows * nColumns
                 const nPartitions = Math.floor(observations.length / partitionSize) + 1
@@ -252,7 +253,10 @@ async function main() {
                 const resultFileName = `${Crypto.randomUUID()}.pdf`
                 const doc = await PDFDocument.create()
                 for (let i = 0; i < nPartitions; i++) {
-                    await writePDFPage(doc, observations.slice(partitionStart, partitionEnd))
+                    await writePDFPage(doc, observations.slice(partitionStart, partitionEnd), async (labelsFinished) => {
+                        const percentage = `${(100 * (i * partitionSize + labelsFinished) / observations.length).toFixed(2)}%`
+                        await updateTaskInProgress(taskId, { currentStep: 'Generating labels from provided dataset', percentage })
+                    })
 
                     partitionStart = partitionEnd
                     partitionEnd = Math.min(partitionEnd + partitionSize, observations.length)
@@ -261,7 +265,7 @@ async function main() {
                 const docBuffer = await doc.save()
                 fs.writeFileSync(`./api/data/labels/${resultFileName}`, docBuffer)
 
-                await updateTaskResult(taskId, { uri: `/labels/${resultFileName}`, fileName: resultFileName })
+                await updateTaskResult(taskId, { uri: `/api/labels/${resultFileName}`, fileName: resultFileName })
                 console.log('Completed task', taskId)
                 labelsChannel.ack(msg)
             }

@@ -353,7 +353,7 @@ async function updatePlaces(observations) {
 async function readUsernamesFile() {
     const usernamesData = await getS3Object('obp-server-data', 'usernames.json')
     const usernamesJSONString = await usernamesData?.transformToString()
-    return JSON.parse(usernamesJSONString ?? '')
+    return JSON.parse(usernamesJSONString ?? '{}')
 }
 
 /*
@@ -880,7 +880,7 @@ async function main() {
                 await updateTaskInProgress(taskId, { currentStep: 'Merging new observations with provided dataset' })
                 console.log('\tMerging new observations with provided dataset...')
                 
-                const baseDataset = readObservationsFile('./api/data' + task.dataset)
+                const baseDataset = readObservationsFile('./api/data' + task.dataset.slice(4)) // task.dataset has a '/api' suffix, which should be removed
                 const mergedData = mergeData(baseDataset, formattedObservations)
 
                 const indexedData = indexData(mergedData, year)
@@ -891,7 +891,7 @@ async function main() {
                 const resultFileName = `${Crypto.randomUUID()}.csv`
                 writeObservationsFile(`./api/data/observations/${resultFileName}`, indexedData)
 
-                await updateTaskResult(taskId, { uri: `/observations/${resultFileName}`, fileName: resultFileName })
+                await updateTaskResult(taskId, { uri: `/api/observations/${resultFileName}`, fileName: resultFileName })
                 console.log('Completed task', taskId)
                 observationsChannel.ack(msg)
             }

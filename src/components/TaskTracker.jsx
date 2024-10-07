@@ -13,7 +13,7 @@ export default function TaskTracker({ queryResponse }) {
     const { error, data: taskData } = useQuery({
         queryKey: ['taskData', queryResponse],
         queryFn: async () => {
-            const queryURL = `https://api.${serverAddress}${queryResponse.data.uri}`
+            const queryURL = `http://${serverAddress}${queryResponse.data.uri}`
             const res = await fetch(queryURL)
             const resJSON = await res.json()
 
@@ -21,13 +21,13 @@ export default function TaskTracker({ queryResponse }) {
             return resJSON
         },
         refetchInterval: 1000,
-        enabled: !!queryResponse.data.uri && !result
+        enabled: !!queryResponse.data?.uri && !result
     })
 
     const { data: downloadURL } = useQuery({
         queryKey: ['resultData'],
         queryFn: async () => {
-            const queryURL = `https://api.${serverAddress}${result.uri}`
+            const queryURL = `http://${serverAddress}${result.uri}`
             const res = await axios.get(queryURL, { responseType: 'blob' })
             return URL.createObjectURL(res.data)
         },

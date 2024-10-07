@@ -1,4 +1,3 @@
-import vhost from 'vhost'
 import express from 'express'
 import morgan from 'morgan'
 import 'dotenv/config'
@@ -14,14 +13,13 @@ const app = express()
 // Router for API requests
 const apiRouter = express.Router()
 
-// Allows website to make API requests
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*')
-    next()
-})
-
+// Request logging
 app.use(morgan('dev'))
+
+// JSON request body parsing
 app.use(express.json())
+
+// Static serving
 app.use(express.static('public'))
 app.use(express.static('dist'))
 
@@ -30,7 +28,7 @@ apiRouter.use('/uploads', express.static('api/data/uploads'))
 apiRouter.use('/observations', express.static('api/data/observations'))
 apiRouter.use('/labels', express.static('api/data/labels'))
 apiRouter.use('/tasks', tasksRouter)
-app.use(vhost('api.*', apiRouter))
+app.use('/api', apiRouter)
 
 app.use('*', (req, res, next) => {
     res.status(404).send({

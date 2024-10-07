@@ -7,7 +7,7 @@ import { createTask, getTaskById, getTasks } from './models/task.js'
 const tasksRouter = Router()
 
 /*
- * POST /tasks/observations
+ * POST /api/tasks/observations
  * Creates a task to fetch data updates from iNaturalist.org and merge them into a provided dataset
  * Requires:
  * - req.file: a CSV base observation dataset
@@ -15,8 +15,8 @@ const tasksRouter = Router()
  * - req.body.minDate: the minimum date of observations to pull; must be in the same year as maxDate
  * - req.body.maxDate: the maximum date of observations to pull; must be in the same year as minDate
  * Outputs:
- * - Stores a copy of the uploaded base dataset in /api/data/uploads, accessible at the /uploads endpoint
- * - Creates a new CSV observation dataset in /api/data/observations, accessible at the /observations endpoint
+ * - Stores a copy of the uploaded base dataset in /api/data/uploads, accessible at the /api/uploads endpoint
+ * - Creates a new CSV observation dataset in /api/data/observations, accessible at the /api/observations endpoint
  */
 tasksRouter.post('/observations', upload.single('file'), async (req, res, next) => {
     // Check that required fields exist
@@ -29,7 +29,7 @@ tasksRouter.post('/observations', upload.single('file'), async (req, res, next) 
 
     try {
         // URI of the uploaded base dataset--not the file location
-        const datasetURI = `/uploads/${req.file.filename}`
+        const datasetURI = `/api/uploads/${req.file.filename}`
 
         // Parse sources argument and check basic validity
         const sources = req.body.sources.split(',')
@@ -64,7 +64,7 @@ tasksRouter.post('/observations', upload.single('file'), async (req, res, next) 
 
         // Return 'Accepted' response and HATEOAS link
         res.status(202).send({
-            uri: `/tasks/${task._id}`,
+            uri: `/api/tasks/${task._id}`,
             createdAt: task.createdAt
         })
     } catch (err) {
@@ -74,13 +74,13 @@ tasksRouter.post('/observations', upload.single('file'), async (req, res, next) 
 })
 
 /*
- * POST /tasks/labels
+ * POST /api/tasks/labels
  * Creates a task to create a PDF document of bee labels from a provided observation dataset
  * Requires:
  * - req.file: a CSV observations dataset from which to make labels
  * Outputs:
- * - Stores a copy of the uploaded base dataset in /api/data/uploads, accessible at the /uploads endpoint
- * - Creates a PDF document of bee labels in /api/data/labels, accessible at the /labels endpoint
+ * - Stores a copy of the uploaded base dataset in /api/data/uploads, accessible at the /api/uploads endpoint
+ * - Creates a PDF document of bee labels in /api/data/labels, accessible at the /api/labels endpoint
  */
 tasksRouter.post('/labels', upload.single('file'), async (req, res, next) => {
     // Check that required field exists
@@ -93,7 +93,7 @@ tasksRouter.post('/labels', upload.single('file'), async (req, res, next) => {
 
     try {
         // URI of the uploaded base dataset--not the file location
-        const datasetURI = `/uploads/${req.file.filename}`
+        const datasetURI = `/api/uploads/${req.file.filename}`
 
         // Create task and send its ID to the RabbitMQ server
         const { id: taskId } = await createTask('labels', datasetURI)
@@ -104,7 +104,7 @@ tasksRouter.post('/labels', upload.single('file'), async (req, res, next) => {
 
         // Return 'Accepted' response and HATEOAS link
         res.status(202).send({
-            uri: `/tasks/${task._id}`,
+            uri: `/api/tasks/${task._id}`,
             createdAt: task.createdAt
         })
     } catch (err) {
@@ -114,7 +114,7 @@ tasksRouter.post('/labels', upload.single('file'), async (req, res, next) => {
 })
 
 /*
- * GET /tasks
+ * GET /api/tasks
  * Returns a list of all current and previous tasks stored on the Mongo server
  */
 tasksRouter.get('/', async (req, res, next) => {
@@ -130,7 +130,7 @@ tasksRouter.get('/', async (req, res, next) => {
 })
 
 /*
- * GET /tasks/:id
+ * GET /api/tasks/:id
  * Returns a current or previous task on the Mongo server, referenced by ID
  */
 tasksRouter.get('/:id', async (req, res, next) => {

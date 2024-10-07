@@ -23,11 +23,11 @@ export default function TaskQueryBuilder({ setQueryResponse }) {
 
         // console.log([...formData.entries()])
 
-        const requestURL = `https://api.${serverAddress}/tasks/${taskType}`
+        const requestURL = `http://${serverAddress}/api/tasks/${taskType}`
         axios.postForm(requestURL, formData).then((res) => {
             setQueryResponse({ status: res.status, data: res.data })
         }).catch((err) => {
-            setQueryResponse({ status: err.response.status, data: err.response.data })
+            setQueryResponse({ status: err.response?.status, data: err.response?.data ?? { error: err.message } })
         })
     }
 

@@ -79,7 +79,7 @@ export default function TaskQueryBuilder({ queryResponse, setQueryResponse, resu
             <form onSubmit={ handleSubmit }>
                 <h2>Task Submission Form</h2>
 
-                <fieldset disabled={queryResponse && !result}>
+                <fieldset disabled={queryResponse && !queryResponse.data.error && !result}>
                     <div>
                         <label for='queryType'>Task Type:</label>
                         <select id='queryType' onChange={ (event) => setTaskType(event.target.value) }>

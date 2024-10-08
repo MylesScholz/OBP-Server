@@ -1,19 +1,29 @@
-import { useState } from 'react'
 import styled from '@emotion/styled'
 
-import TaskQueryBuilder from './components/TaskQueryBuilder.jsx'
-import TaskTracker from './components/TaskTracker.jsx'
+import TaskPanel from './components/TaskPanel.jsx'
 
-const AppContainer = styled.div``
+const AppContainer = styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 25px;
+
+    padding: 50px;
+
+    h1 {
+        margin: 0px;
+
+        font-size: 24pt;
+
+        white-space: nowrap;
+    }
+`
 
 function App() {
-    const [ queryResponse, setQueryResponse ] = useState({ status: '', data: {} })
-
     return (
         <AppContainer>
-            <h1>Welcome!</h1>
-            <TaskQueryBuilder setQueryResponse={setQueryResponse} />
-            <TaskTracker queryResponse={queryResponse} />
+            <h1>Oregon Bee Project Server</h1>
+            <TaskPanel />
         </AppContainer>
     )
 }

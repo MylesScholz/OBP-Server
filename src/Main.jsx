@@ -15,7 +15,15 @@ const router = createBrowserRouter([
     }
 ])
 
-const globalStyles = css``
+const globalStyles = css`
+    html {
+        font-family: 'Helvetica', sans-serif;
+    }
+
+    body {
+        margin: 0px;
+    }
+`
 
 ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>

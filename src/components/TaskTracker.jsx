@@ -75,6 +75,9 @@ export default function TaskTracker({ queryResponse, result, setResult }) {
                     { result && downloadURL &&
                         <a href={downloadURL} download={result.fileName}>Download Results</a>
                     }
+                    { taskData.task.warning &&
+                        <p>Warning: {taskData.task.warning.message}</p>
+                    }
                 </>
             }
             { !queryResponse?.data?.error && !queryError && !taskData?.task &&

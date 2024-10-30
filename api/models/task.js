@@ -80,6 +80,24 @@ async function updateTaskInProgress(id, progress) {
     }
 }
 
+async function updateTaskWarning(id, warning) {
+    const db = getDb()
+    const tasks = db.collection('tasks')
+
+    if (!ObjectId.isValid(id)) {
+        throw new Error('Invalid field \'id\'')
+    } else {
+        await tasks.updateOne(
+            { _id: new ObjectId(id) },
+            {
+                $set: {
+                    warning: warning
+                }
+            }
+        )
+    }
+}
+
 /*
  * updateTaskResult()
  * 'Ends' a task by providing a result and removing the 'progress' field
@@ -106,4 +124,4 @@ async function updateTaskResult(id, result) {
     }
 }
 
-export { clearTasks, createTask, getTaskById, getTasks, updateTaskInProgress, updateTaskResult }
+export { clearTasks, createTask, getTaskById, getTasks, updateTaskInProgress, updateTaskWarning, updateTaskResult }

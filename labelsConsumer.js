@@ -9,7 +9,7 @@ import 'dotenv/config'
 
 import { connectToDb } from './api/lib/mongo.js'
 import { labelsQueueName } from './api/lib/rabbitmq.js'
-import { getTaskById, updateTaskInProgress, updateTaskResult } from './api/models/task.js'
+import { getTaskById, updateTaskInProgress, updateTaskResult, updateTaskWarning } from './api/models/task.js'
 import { connectToS3, getS3Object } from './api/lib/aws-s3.js'
 
 const nRows = 25
@@ -38,6 +38,87 @@ function readObservationsFile(filePath) {
     return observations
 }
 
+function formatObservation(observation) {
+    const formattedObservation = {}
+
+    const country = observation['Country']
+    const stateProvince = observation['State']
+    const county = observation['County'] !== '' ? `:${observation['County']}Co` : ''
+    const place = observation['Abbreviated Location']
+    const latitude = observation['Dec. Lat.']
+    const longitude = observation['Dec. Long.']
+    const elevation = observation['Elevation']
+    const locationText = `${country}:${stateProvince}${county} ${place} ${latitude} ${longitude} ${elevation}m`
+    formattedObservation.location = locationText
+
+    const day = observation['Collection Day 1']
+    const month = observation['Month 1']
+    const year = observation['Year 1']
+    const sampleID = observation['Sample ID']
+    const specimenID = observation['Specimen ID']
+    const dateText = `${day}.${month}${year}-${sampleID}.${specimenID}`
+    formattedObservation.date = dateText
+
+    const firstInitial = observation['Collector - First Initial']
+    const lastName = observation['Collector - Last Name']
+    const nameText = `${firstInitial}${lastName}`
+    formattedObservation.name = nameText
+
+    const methodText = observation['Collection method']
+    formattedObservation.method = methodText
+
+    const numberText = observation['Observation No.']
+    formattedObservation.number = numberText
+
+    return formattedObservation
+}
+
+function formatObservations(observations, addWarningIndex) {
+    const requiredFields = [
+        'Country',
+        'State',
+        'Abbreviated Location',
+        'Dec. Lat.',
+        'Dec. Long.',
+        'Elevation',
+        'Collection Day 1',
+        'Month 1',
+        'Year 1',
+        'Sample ID',
+        'Specimen ID',
+        'Collector - First Initial',
+        'Collector - Last Name',
+        'Collection method',
+        'Observation No.'
+    ]
+
+    for (let i = 0; i < observations.length; i++) {
+        const observation = observations[i]
+        const formattedObservation = formatObservation(observation)
+
+        if (
+            requiredFields.some((field) => !observation[field]) ||
+            observation['Country'].length > 3 ||
+            observation['State'].length > 2 ||
+            observation['County'].length > 15 ||
+            observation['Abbreviated Location'].length > 22 ||
+            observation['Dec. Lat.'].length > 8 ||
+            observation['Dec. Long.'].length > 8 ||
+            observation['Elevation'].length > 5 ||
+            formattedObservation.location.length > 72 ||
+            formattedObservation.date.length > 30 ||
+            formattedObservation.name.length > 20 ||
+            observation['Collection method'].length > 15
+        ) {
+            addWarningIndex(i)
+        }
+
+        observations[i] = formattedObservation
+    }
+
+    return observations
+}
+
 function addTextBox(page, text, basisX, basisY, textBoxLayout) {
     // page.drawRectangle({
     //     x: basisX + textBoxLayout.x,
@@ -50,20 +131,33 @@ function addTextBox(page, text, basisX, basisY, textBoxLayout) {
     // })
 
     let fontSize = textBoxLayout.fontSize
-    let centerOffset = 0
+    let lineHeight = textBoxLayout.lineHeight
+    let yOffset = textBoxLayout.offset.y
     if (textBoxLayout.fit) {
-        while (textBoxLayout.font.widthOfTextAtSize(text, fontSize) > textBoxLayout.width && fontSize > 1) {
+        let singleLineWidth = textBoxLayout.font.widthOfTextAtSize(text, fontSize)
+        let approximateNumberOfLines = text.match(/ /g) ? Math.ceil(singleLineWidth / textBoxLayout.width) : 1
+        let singleLineHeight = textBoxLayout.font.heightAtSize(fontSize, { descender: true })
+        let approximateHeight = approximateNumberOfLines * singleLineHeight
+
+        while ((approximateNumberOfLines === 1 && singleLineWidth > textBoxLayout.width) || (approximateNumberOfLines > 1 && approximateHeight > textBoxLayout.height) && fontSize > 1) {
             fontSize -= 0.01
+            lineHeight = 0.85 * fontSize
+
+            singleLineWidth = textBoxLayout.font.widthOfTextAtSize(text, fontSize)
+            approximateNumberOfLines = text.match(/ /g) ? Math.ceil(singleLineWidth / textBoxLayout.width) : 1
+            singleLineHeight = textBoxLayout.font.heightAtSize(fontSize, { descender: true })
+            approximateHeight = approximateNumberOfLines * singleLineHeight
+
+            yOffset = approximateHeight - (0.8 * singleLineHeight) - textBoxLayout.height
         }
-        centerOffset = (textBoxLayout.height - fontSize) / 2
     }
 
     page.drawText(text, {
         x: basisX + textBoxLayout.x + textBoxLayout.offset.x,
-        y: basisY + textBoxLayout.y + textBoxLayout.height + textBoxLayout.offset.y + centerOffset,
+        y: basisY + textBoxLayout.y + textBoxLayout.height + yOffset,
         font: textBoxLayout.font,
         size: fontSize,
-        lineHeight: textBoxLayout.lineHeight,
+        lineHeight: lineHeight,
         rotate: degrees(textBoxLayout.rotation),
         maxWidth: textBoxLayout.width
     })
@@ -109,22 +203,15 @@ async function addLabel(page, observation, basisX, basisY, fonts) {
     //     opacity: 0
     // })
 
-    const country = observation['Country']
-    const stateProvince = observation['State']
-    const county = observation['County'] !== '' ? `:${observation['County']}Co` : ''
-    const place = observation['Abbreviated Location']
-    const latitude = observation['Dec. Lat.']
-    const longitude = observation['Dec. Long.']
-    const elevation = observation['Elevation']
-    const locationText = `${country}:${stateProvince}${county} ${place} ${latitude} ${longitude} ${elevation}m`
+    const locationText = observation.location ?? ''
     const locationLayout = {
         x: 0.005 * PostScriptPointsPerInch,
         y: 0.155 * PostScriptPointsPerInch,
-        width: 0.466 * PostScriptPointsPerInch,
+        width: 0.46 * PostScriptPointsPerInch,
         height: 0.151 * PostScriptPointsPerInch,
         font: fonts.gillSansCondensedFont,
-        fontSize: 4.5,
-        lineHeight: 3.75,
+        fontSize: 4,
+        lineHeight: 3.5,
         rotation: 0,
         offset: {
             x: 0,
@@ -133,16 +220,11 @@ async function addLabel(page, observation, basisX, basisY, fonts) {
     }
     addTextBox(page, locationText, basisX, basisY, locationLayout)
 
-    const day = observation['Collection Day 1']
-    const month = observation['Month 1']
-    const year = observation['Year 1']
-    const sampleID = observation['Sample ID']
-    const specimenID = observation['Specimen ID']
-    const dateText = `${day}.${month}${year}-${sampleID}.${specimenID}`
+    const dateText = observation.date ?? ''
     const dateLayout = {
         x: 0.005 * PostScriptPointsPerInch,
         y: 0.08 * PostScriptPointsPerInch,
-        width: 0.466 * PostScriptPointsPerInch,
+        width: 0.46 * PostScriptPointsPerInch,
         height: 0.07 * PostScriptPointsPerInch,
         font: fonts.gillSansCondensedFont,
         fontSize: 6,
@@ -156,28 +238,43 @@ async function addLabel(page, observation, basisX, basisY, fonts) {
     }
     addTextBox(page, dateText, basisX, basisY, dateLayout)
 
-    const firstInitial = observation['Collector - First Initial']
-    const lastName = observation['Collector - Last Name']
-    const method = observation['Collection method']
-    const nameText = `${firstInitial}${lastName} ${method}`
+    const nameText = observation.name ?? ''
     const nameLayout = {
         x: 0.005 * PostScriptPointsPerInch,
         y: 0.005 * PostScriptPointsPerInch,
-        width: 0.466 * PostScriptPointsPerInch,
+        width: 0.335 * PostScriptPointsPerInch,
         height: 0.07 * PostScriptPointsPerInch,
         font: fonts.gillSansFont,
         fontSize: 5,
-        lineHeight: 4.25,
+        lineHeight: 4.375,
         rotation: 0,
         offset: {
-            x: 0,
-            y: -4.25
+            x: 0.25,
+            y: -4
         },
         fit: true
     }
     addTextBox(page, nameText, basisX, basisY, nameLayout)
 
-    const numberText = observation['Observation No.']
+    const methodText = observation.method ?? ''
+    const methodLayout = {
+        x: 0.36 * PostScriptPointsPerInch,
+        y: 0.005 * PostScriptPointsPerInch,
+        width: 0.105 * PostScriptPointsPerInch,
+        height: 0.07 * PostScriptPointsPerInch,
+        font: fonts.gillSansFont,
+        fontSize: 5,
+        lineHeight: 4.375,
+        rotation: 0,
+        offset: {
+            x: 0,
+            y: -4
+        },
+        fit: true
+    }
+    addTextBox(page, methodText, basisX, basisY, methodLayout)
+
+    const numberText = observation.number ?? ''
     const numberLayout = {
         x: 0.661 * PostScriptPointsPerInch,
         y: 0.005 * PostScriptPointsPerInch,
@@ -188,7 +285,7 @@ async function addLabel(page, observation, basisX, basisY, fonts) {
         lineHeight: 5.25,
         rotation: 90,
         offset: {
-            x: 0,
+            x: -0.5,
             y: -5,
         }
     }
@@ -213,11 +310,11 @@ async function writePDFPage(doc, observations, updateLabelsProgress) {
     const gillSansCondensedFont = await doc.embedFont(gillSansCondensedData)
 
     for (let i = 0; i < observations.length; i++) {
-        const currentRow = Math.floor(i / nColumns)
+        const currentRow = nRows - Math.floor(i / nColumns) - 1
         const currentColumn = i % nColumns
 
         const basisX = horizontalMargin + (currentColumn * (labelWidth + horizontalSpacing))
-        const basisY = page.getHeight() - (verticalMargin + (currentRow * (labelHeight + verticalSpacing)))
+        const basisY = verticalMargin + (currentRow * (labelHeight + verticalSpacing))
 
         await addLabel(page, observations[i], basisX, basisY, { gillSansFont, gillSansCondensedFont })
         updateLabelsProgress(i)
@@ -240,10 +337,17 @@ async function main() {
                 await updateTaskInProgress(taskId, { currentStep: 'Generating labels from provided dataset' })
                 console.log('\tGenerating labels from provided dataset...')
 
-                // TODO: starting and ending rows
-
                 const observations = readObservationsFile('./api/data' + task.dataset.slice(4)) // task.dataset has a '/api' suffix, which should be removed
-                
+
+                const warnings = []
+                formatObservations(observations, (index) => {
+                    warnings.push(index)
+                })
+                if (warnings.length > 0) {
+                    const warningMessage = `Potentially incompatible data found in the following rows (0-indexed): [ ${warnings.join(', ')} ]`
+                    await updateTaskWarning(taskId, { message: warningMessage })
+                }
+
                 const partitionSize = nRows * nColumns
                 const nPartitions = Math.floor(observations.length / partitionSize) + 1
                 let partitionStart = 0

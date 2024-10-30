@@ -27,12 +27,29 @@ const TaskTrackerContainer = styled.div`
 `
 
 export default function TaskTracker({ queryResponse, result, setResult }) {
+    const [ selectedTaskId, setSelectedTaskId ] = useState()
+
     const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
 
-    const { error: queryError, data: taskData } = useQuery({
-        queryKey: ['taskData', queryResponse],
+    const { error: tasksQueryError, data: tasksData } = useQuery({
+        queryKey: ['tasksData', queryResponse],
         queryFn: async () => {
-            const queryURL = `http://${serverAddress}${queryResponse.data.uri}`
+            const queryURL = `http://${serverAddress}/api/tasks`
+            const res = await fetch(queryURL)
+            const resJSON = await res.json()
+
+            const queryResponseId = queryResponse?.data?.uri?.replace('/api/tasks/', '')
+            setSelectedTaskId(queryResponseId)
+            setResult(undefined)
+
+            return resJSON
+        }
+    })
+
+    const { error: selectedTaskQueryError, data: selectedTaskData } = useQuery({
+        queryKey: ['selectedTaskData', selectedTaskId],
+        queryFn: async () => {
+            const queryURL = `http://${serverAddress}/api/tasks/${selectedTaskId}`
             const res = await fetch(queryURL)
             const resJSON = await res.json()
 
@@ -40,7 +57,7 @@ export default function TaskTracker({ queryResponse, result, setResult }) {
             return resJSON
         },
         refetchInterval: 1000,
-        enabled: !!queryResponse?.data?.uri && !result
+        enabled: !!selectedTaskId && !result
     })
 
     const { data: downloadURL } = useQuery({
@@ -60,27 +77,38 @@ export default function TaskTracker({ queryResponse, result, setResult }) {
             { queryResponse?.data?.error &&
                 <p>Error: {queryResponse.status} {queryResponse.data.error}</p>
             }
-            { queryError &&
-                <p>Error: {queryError.message}</p>
+            { tasksQueryError &&
+                <p>Error: {tasksQueryError.message}</p>
             }
-            { taskData?.task &&
+            { selectedTaskQueryError &&
+                <p>Error: {selectedTaskQueryError.message}</p>
+            }
+            { tasksData?.tasks.length > 0 &&
+                <select onChange={ (event) => {
+                    setSelectedTaskId(event.target.value)
+                    setResult(undefined)
+                } }>
+                    {tasksData.tasks.map((t) => <option value={t._id} key={t._id} selected={t._id === selectedTaskId}>Task {t._id} ({t.type})</option>)}
+                </select>
+            }
+            { selectedTaskData?.task &&
                 <>
-                    <p>Task {taskData.task._id}: {taskData.task.status}</p>
-                    { taskData.task.status === 'Running' &&
+                    <p>Task {selectedTaskData.task._id}: {selectedTaskData.task.status}</p>
+                    { selectedTaskData.task.status === 'Running' &&
                         <>
-                            <p>Current Step: {taskData.task.progress.currentStep}</p>
-                            { taskData.task.progress.percentage && <p>{taskData.task.progress.percentage}</p> }
+                            <p>Current Step: {selectedTaskData.task.progress.currentStep}</p>
+                            { selectedTaskData.task.progress.percentage && <p>{selectedTaskData.task.progress.percentage}</p> }
                         </>
                     }
                     { result && downloadURL &&
                         <a href={downloadURL} download={result.fileName}>Download Results</a>
                     }
-                    { taskData.task.warning &&
-                        <p>Warning: {taskData.task.warning.message}</p>
+                    { selectedTaskData.task.warning &&
+                        <p>Warning: {selectedTaskData.task.warning.message}</p>
                     }
                 </>
             }
-            { !queryResponse?.data?.error && !queryError && !taskData?.task &&
+            { !queryResponse?.data?.error && !tasksQueryError && !selectedTaskQueryError && !selectedTaskData?.task &&
                 <p>There is no task in progress. Use the task submission form to start one.</p>
             }
         </TaskTrackerContainer>

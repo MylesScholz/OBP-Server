@@ -2,7 +2,10 @@ import Router from 'express'
 
 import upload from './lib/multer.js'
 import { getObservationsChannel, observationsQueueName, getLabelsChannel, labelsQueueName } from './lib/rabbitmq.js'
+import { limitFilesInDirectory } from './lib/utilities.js'
 import { createTask, getTaskById, getTasks } from './models/task.js'
+
+const MAX_UPLOADS = 10
 
 const tasksRouter = Router()
 
@@ -28,6 +31,9 @@ tasksRouter.post('/observations', upload.single('file'), async (req, res, next) 
     }
 
     try {
+        // If there are too many files in the uploads directory, find and delete the oldest one (by timestamp of last modification)
+        limitFilesInDirectory('./api/data/uploads', MAX_UPLOADS)
+
         // URI of the uploaded base dataset--not the file location
         const datasetURI = `/api/uploads/${req.file.filename}`
 
@@ -92,6 +98,9 @@ tasksRouter.post('/labels', upload.single('file'), async (req, res, next) => {
     }
 
     try {
+        // If there are too many files in the uploads directory, find and delete the oldest one (by timestamp of last modification)
+        limitFilesInDirectory('./api/data/uploads', MAX_UPLOADS)
+
         // URI of the uploaded base dataset--not the file location
         const datasetURI = `/api/uploads/${req.file.filename}`
 

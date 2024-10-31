@@ -8,8 +8,11 @@ import 'dotenv/config'
 
 import { connectToDb } from './api/lib/mongo.js'
 import { observationsQueueName } from './api/lib/rabbitmq.js'
-import { getTaskById, updateTaskInProgress, updateTaskResult } from './api/models/task.js'
+import { clearTasksWithoutFiles, getTaskById, updateTaskInProgress, updateTaskResult } from './api/models/task.js'
 import { connectToS3, getS3Object } from './api/lib/aws-s3.js'
+import { limitFilesInDirectory } from './api/lib/utilities.js'
+
+const MAX_OBSERVATIONS = 10
 
 const rabbitmqHost = process.env.RABBITMQ_HOST || 'localhost'
 const rabbitmqURL = `amqp://${rabbitmqHost}`
@@ -880,7 +883,7 @@ async function main() {
                 await updateTaskInProgress(taskId, { currentStep: 'Merging new observations with provided dataset' })
                 console.log('\tMerging new observations with provided dataset...')
                 
-                const baseDataset = readObservationsFile('./api/data' + task.dataset.slice(4)) // task.dataset has a '/api' suffix, which should be removed
+                const baseDataset = readObservationsFile('./api/data' + task.dataset.replace('/api', '')) // task.dataset has a '/api' suffix, which should be removed
                 const mergedData = mergeData(baseDataset, formattedObservations)
 
                 const indexedData = indexData(mergedData, year)
@@ -893,6 +896,10 @@ async function main() {
 
                 await updateTaskResult(taskId, { uri: `/api/observations/${resultFileName}`, fileName: resultFileName })
                 console.log('Completed task', taskId)
+
+                limitFilesInDirectory('./api/data/observations', MAX_OBSERVATIONS)
+                clearTasksWithoutFiles()
+
                 observationsChannel.ack(msg)
             }
         })

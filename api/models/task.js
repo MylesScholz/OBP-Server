@@ -1,11 +1,29 @@
-import { ObjectId } from "mongodb"
+import { ObjectId } from 'mongodb'
+import fs from 'fs'
+
 import { getDb } from "../lib/mongo.js"
 
 async function clearTasks() {
     const db = getDb()
-    const tasks = db.collection('tasks')
+    const collection = db.collection('tasks')
+
     // Delete all tasks
-    tasks.deleteMany({})
+    collection.deleteMany({})
+}
+
+async function clearTasksWithoutFiles() {
+    const db = getDb()
+    const collection = db.collection('tasks')
+
+    // Find tasks with missing files (dataset or result)
+    const tasks = await collection.find({}).toArray()
+    const taskIdsWithoutFiles = tasks
+        .filter((t) => (t.status !== 'Completed' && !fs.existsSync(t.dataset)) || (t.result && !fs.existsSync(`./api/data/${t.type}/${t.result.fileName}`)))
+        .map((t) => t._id)
+
+    // Delete tasks with missing files
+    const { deletedCount } = await collection.deleteMany({ _id: { $in: taskIdsWithoutFiles } })
+    // console.log(`Deleted ${deletedCount} files with missing data`)
 }
 
 async function createTask(type, dataset, sources, minDate, maxDate) {
@@ -26,8 +44,8 @@ async function createTask(type, dataset, sources, minDate, maxDate) {
     if (maxDate) task.maxDate = maxDate
 
     const db = getDb()
-    const tasks = db.collection('tasks')
-    const result = await tasks.insertOne(task)
+    const collection = db.collection('tasks')
+    const result = await collection.insertOne(task)
 
     return {
         id: result.insertedId
@@ -36,23 +54,23 @@ async function createTask(type, dataset, sources, minDate, maxDate) {
 
 async function getTaskById(id) {
     const db = getDb()
-    const tasks = db.collection('tasks')
+    const collection = db.collection('tasks')
 
     // Check ID argument before attempting query
     if (!ObjectId.isValid(id)) {
         throw new Error('Invalid field \'id\'')
     } else {
-        const result = await tasks.findOne({ _id: new ObjectId(id) })
+        const result = await collection.findOne({ _id: new ObjectId(id) })
         return result
     }
 }
 
 async function getTasks() {
     const db = getDb()
-    const tasks = db.collection('tasks')
+    const collection = db.collection('tasks')
 
     // Get all tasks
-    const result = await tasks.find({}).toArray()
+    const result = await collection.find({}).toArray()
     return result
 }
 
@@ -62,13 +80,13 @@ async function getTasks() {
  */
 async function updateTaskInProgress(id, progress) {
     const db = getDb()
-    const tasks = db.collection('tasks')
+    const collection = db.collection('tasks')
 
     // Check ID argument before attempting query
     if (!ObjectId.isValid(id)) {
         throw new Error('Invalid field \'id\'')
     } else {
-        await tasks.updateOne(
+        await collection.updateOne(
             { _id: new ObjectId(id) },
             {
                 $set: {
@@ -82,12 +100,12 @@ async function updateTaskInProgress(id, progress) {
 
 async function updateTaskWarning(id, warning) {
     const db = getDb()
-    const tasks = db.collection('tasks')
+    const collection = db.collection('tasks')
 
     if (!ObjectId.isValid(id)) {
         throw new Error('Invalid field \'id\'')
     } else {
-        await tasks.updateOne(
+        await collection.updateOne(
             { _id: new ObjectId(id) },
             {
                 $set: {
@@ -104,13 +122,13 @@ async function updateTaskWarning(id, warning) {
  */
 async function updateTaskResult(id, result) {
     const db = getDb()
-    const tasks = db.collection('tasks')
+    const collection = db.collection('tasks')
 
     // Check ID argument before attempting query
     if (!ObjectId.isValid(id)) {
         throw new Error('Invalid field \'id\'')
     } else {
-        await tasks.updateOne(
+        await collection.updateOne(
             { _id: new ObjectId(id) },
             {
                 $set: {
@@ -124,4 +142,4 @@ async function updateTaskResult(id, result) {
     }
 }
 
-export { clearTasks, createTask, getTaskById, getTasks, updateTaskInProgress, updateTaskWarning, updateTaskResult }
+export { clearTasks, clearTasksWithoutFiles, createTask, getTaskById, getTasks, updateTaskInProgress, updateTaskWarning, updateTaskResult }

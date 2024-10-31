@@ -9,8 +9,11 @@ import 'dotenv/config'
 
 import { connectToDb } from './api/lib/mongo.js'
 import { labelsQueueName } from './api/lib/rabbitmq.js'
-import { getTaskById, updateTaskInProgress, updateTaskResult, updateTaskWarning } from './api/models/task.js'
+import { clearTasksWithoutFiles, getTaskById, updateTaskInProgress, updateTaskResult, updateTaskWarning } from './api/models/task.js'
 import { connectToS3, getS3Object } from './api/lib/aws-s3.js'
+import { limitFilesInDirectory } from './api/lib/utilities.js'
+
+const MAX_LABELS = 10
 
 const nRows = 25
 const nColumns = 10
@@ -337,7 +340,7 @@ async function main() {
                 await updateTaskInProgress(taskId, { currentStep: 'Generating labels from provided dataset' })
                 console.log('\tGenerating labels from provided dataset...')
 
-                const observations = readObservationsFile('./api/data' + task.dataset.slice(4)) // task.dataset has a '/api' suffix, which should be removed
+                const observations = readObservationsFile('./api/data' + task.dataset.replace('/api', '')) // task.dataset has a '/api' suffix, which should be removed
 
                 const warnings = []
                 formatObservations(observations, (index) => {
@@ -371,6 +374,10 @@ async function main() {
 
                 await updateTaskResult(taskId, { uri: `/api/labels/${resultFileName}`, fileName: resultFileName })
                 console.log('Completed task', taskId)
+
+                limitFilesInDirectory('./api/data/labels', MAX_LABELS)
+                clearTasksWithoutFiles()
+
                 labelsChannel.ack(msg)
             }
         })

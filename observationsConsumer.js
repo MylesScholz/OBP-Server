@@ -91,7 +91,7 @@ const observationTemplate = {
     'disposition': 'confirmedPresent',
     'otherCatalogNumbers': '',
     'associatedTaxa': null,
-    'samplingProtocol': 'aerial net',
+    'samplingProtocol': null,
     'year': null,
     'month': null,
     'day': null,
@@ -291,7 +291,7 @@ async function fetchPlaces(places) {
     let partitionEnd = Math.min(partitionSize, places.length)
 
     // Fetch place data for each batch from iNaturalist.org and append it together
-    const results = []
+    let results = []
     for (let i = 0; i < nPartitions; i++) {
         const requestURL = `https://api.inaturalist.org/v1/places/${places.slice(partitionStart, partitionEnd).join(',')}`
 
@@ -299,7 +299,7 @@ async function fetchPlaces(places) {
             const res = await fetch(requestURL)
             if (res.ok) {
                 const resJSON = await res.json()
-                results.concat(resJSON['results'])
+                results = results.concat(resJSON['results'])
             } else {
                 console.error(`Bad response while fetching '${requestURL}':`, res)
             }
@@ -626,9 +626,11 @@ async function formatObservation(observation, year) {
     formattedObservation['bibliographicCitation'] = `Oregon Bee Atlas ${year}. Oregon State University, Corvallis, OR, USA.`
     formattedObservation['datasetName'] = `OBA-OSAC-${year}`
 
-    formattedObservation['recordedBy'] = `${firstName} ${lastName}`
+    formattedObservation['recordedBy'] = `${firstName}${firstName && lastName ? ' ' : ''}${lastName}`
 
-    formattedObservation['associatedTaxa'] = scientificName !== '' || family !== '' ? `foraging on : "${scientificName !== '' ? scientificName : family}"` : ''
+    formattedObservation['associatedTaxa'] = scientificName || family ? `foraging on : "${scientificName ?? family}"` : ''
+
+    formattedObservation['samplingProtocol'] = 'aerial net'
 
     formattedObservation['year'] = formattedYear
     formattedObservation['month'] = formattedMonth
@@ -700,6 +702,104 @@ async function* readObservationsFileChunks(filePath, chunkSize) {
     if (chunk.length > 0) {
         yield chunk
     }
+}
+
+async function fetchObservationsById(observationIds) {
+    // observationIds can be a very long list of IDs, so batch requests to avoid iNaturalist API refusal
+    const partitionSize = 50
+    const nPartitions = Math.floor(observationIds.length / partitionSize) + 1
+    let partitionStart = 0
+    let partitionEnd = Math.min(partitionSize, observationIds.length)
+
+    let results = []
+    for (let i = 0; i < nPartitions; i++) {
+        const requestURL = `https://api.inaturalist.org/v1/observations/${observationIds.slice(partitionStart, partitionEnd).join(',')}`
+
+        try {
+            const res = await fetch(requestURL)
+            if (res.ok) {
+                const resJSON = await res.json()
+                results = results.concat(resJSON['results'])
+            } else {
+                console.error(`Bad response while fetching '${requestURL}':`, res)
+            }
+        } catch (err) {
+            console.error(`ERROR while fetching ${requestURL}:`, err)
+        }
+
+        partitionStart = partitionEnd
+        partitionEnd = Math.min(partitionEnd + partitionSize, observationIds.length)
+    }
+
+    return results
+}
+
+function formatChunkRow(row, year) {
+    // The final field set should be a union of the standard template and the given row
+    const formattedRow = Object.assign({}, observationTemplate, row)
+
+    // If the Darwin Core fields are empty, fill them from the labels fields
+    formattedRow['bibliographicCitation'] = row['bibliographicCitation'] ?? `Oregon Bee Atlas ${year}. Oregon State University, Corvallis, OR, USA.`
+    formattedRow['datasetName'] = row['datasetName'] ?? `OBA-OSAC-${year}`
+
+    const firstName = row['Collector - First Name']
+    const lastName = row['Collector - Last Name']
+    formattedRow['recordedBy'] = row['recordedBy'] ?? `${firstName}${firstName && lastName ? ' ' : ''}${lastName}`
+
+    const family = row['Associated plant - family']
+    const scientificName = row['Associated plant - genus, species']
+    formattedRow['associatedTaxa'] = row['associatedTaxa'] ?? (scientificName || family ? `foraging on : "${scientificName ?? family}"` : '')
+
+    const method = row['Collection method'] === 'net' ? 'aerial net' : row['Collection method']
+    formattedRow['samplingProtocol'] = row['samplingProtocol'] ?? method
+
+    formattedRow['year'] = row['year'] ?? row['Year 1']
+    formattedRow['month'] = row['month'] ?? monthNumerals.indexOf(row['Month 1']) + 1
+    formattedRow['day'] = row['day'] ?? row['Collection Day 1']
+
+    formattedRow['country'] = row['country'] ?? row['Country']
+    formattedRow['stateProvince'] = row['stateProvince'] ?? row['State']
+    formattedRow['county'] = row['county'] ?? row['County']
+    formattedRow['locality'] = row['locality'] ?? row['Abbreviated Location']
+
+    formattedRow['decimalLatitude'] = row['decimalLatitude'] ?? row['Dec. Lat.']
+    formattedRow['decimalLongitude'] = row['decimalLongitude'] ?? row['Dec. Long.']
+
+    return formattedRow
+}
+
+async function formatChunk(chunk, year) {
+    const formattedChunk = chunk.map((row) => formatChunkRow(row, year))
+
+    let observationIds = chunk
+        .map((row) => row['Associated plant - Inaturalist URL']?.split('/')?.pop())
+        .filter((id) => !!id)
+    observationIds = [...new Set(observationIds)]
+    const observations = await fetchObservationsById(observationIds)
+
+    for (const row of formattedChunk) {
+        const matchingObservation = observations.find((observation) => observation['uri'] && (observation['uri'] === row['Associated plant - Inaturalist URL']))
+
+        // Look up and update the plant taxonomy
+        row['Associated plant - family'] = getFamily(matchingObservation?.identifications) ?? row['Associated plant - family']
+        row['Associated plant - genus, species'] = matchingObservation?.taxon?.name ?? row['Associated plant - genus, species']
+
+        // Update the location fields if any are missing or if the accuracy is better (smaller)
+        const prevAccuracy = parseInt(row['Lat/Long Accuracy'])
+        const newAccuracy = matchingObservation?.positional_accuracy
+        if (
+            !row['Dec. Lat.'] ||
+            !row['Dec. Long.'] ||
+            !prevAccuracy ||
+            (prevAccuracy && newAccuracy && newAccuracy < prevAccuracy)
+        ) {
+            row['Dec. Lat.'] = matchingObservation?.geojson?.coordinates?.at(1)?.toFixed(3)?.toString() ?? row['Dec. Lat.']
+            row['Dec. Long.'] = matchingObservation?.geojson?.coordinates?.at(0)?.toFixed(3)?.toString() ?? row['Dec. Long.']
+            row['Lat/Long Accuracy'] = newAccuracy?.toString() ?? row['Lat/Long Accuracy']
+        }
+    }
+
+    return formattedChunk
 }
 
 function isRowEmpty(row) {
@@ -788,76 +888,6 @@ function writeChunkToTempFile(chunk, tempFiles) {
     writeObservationsFile(tempFilePath, chunk)
 
     return tempFilePath
-}
-
-function equalIdentifiers(row1, row2) {
-    if (!row1 || !row2) {
-        return false
-    }
-
-    if (
-        row1['Observation No.'] !== '' &&
-        row1['Observation No.'] === row2['Observation No.']
-    ) {
-        return true
-    } else if (
-        row1['Associated plant - Inaturalist URL'] !== '' &&
-        row1['Associated plant - Inaturalist URL'] === row2['Associated plant - Inaturalist URL'] &&
-        row1['Sample ID'] === row2['Sample ID'] &&
-        row1['Specimen ID'] === row2['Specimen ID']
-    ) {
-        return true
-    } else if (
-        row1['iNaturalist Alias'] === row2['iNaturalist Alias'] &&
-        row1['Sample ID'] === row2['Sample ID'] &&
-        row1['Specimen ID'] === row2['Specimen ID'] &&
-        row1['Collection Day 1'] === row2['Collection Day 1'] &&
-        row1['Month 1'] === row2['Month 1'] &&
-        row1['Year 1'] === row2['Year 1']
-    ) {
-        return true
-    }
-
-    return false
-}
-
-function findRow(dataset, row) {
-    if (!dataset || !row) {
-        return -1
-    }
-
-    for (let i = 0; i < dataset.length; i++) {
-        if (equalIdentifiers(dataset[i], row)) {
-            return i
-        }
-    }
-
-    return -1
-}
-
-function mergeData(baseDataset, newObservations) {
-    const mergedData = baseDataset.slice(0)
-
-    for (const observation of newObservations) {
-        const index = findRow(mergedData, observation)
-
-        if (index === -1) {
-            mergedData.push(observation)
-        } else {
-            const header = Object.keys(observationTemplate)
-            const identifyingFields = ['Observation No.', 'Associated plant - Inaturalist URL', 'iNaturalist Alias', 'Sample ID', 'Specimen ID', 'Collection Day 1', 'Month 1', 'Year 1']
-
-            header.forEach((field) => {
-                if (!mergedData[index][field]) {
-                    mergedData[index][field] = ''
-                } else if (observation[field] && observation[field] !== '' && !identifyingFields.includes(field)) {
-                    mergedData[index][field] = observation[field]
-                }
-            })
-        }
-    }
-
-    return mergedData
 }
 
 function compareStrings(str1, str2) {
@@ -1018,7 +1048,7 @@ async function mergeTempFiles(tempFiles, outputFilePath, compareRows) {
     const filesQueue = [...tempFiles]
 
     while (filesQueue.length > 1) {
-        console.log("\t\tMerge queue:" + " X".repeat(filesQueue.length))
+        // console.log("\t\tMerge queue:" + " X".repeat(filesQueue.length))
 
         const batch = filesQueue.splice(0, Math.min(BATCH_SIZE, filesQueue.length))
 
@@ -1084,6 +1114,7 @@ async function indexData(filePath, year) {
 
         stringifier.write(row)
     }
+    stringifier.end()
 
     fs.renameSync(tempFilePath, filePath)
 }
@@ -1120,10 +1151,8 @@ async function main() {
                     await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations', percentage })
                 })
 
-                console.log(`\tFormatted ${formattedObservations.length} observations`)
-
-                await updateTaskInProgress(taskId, { currentStep: 'Merging new observations with provided dataset' })
-                console.log('\tMerging new observations with provided dataset...')
+                await updateTaskInProgress(taskId, { currentStep: 'Formatting provided dataset' })
+                console.log('\tFormatting provided dataset...')
 
                 const inputFilePath = './api/data' + task.dataset.replace('/api', '')    // task.dataset has a '/api' suffix, which should be removed
                 const outputFileName = `${Crypto.randomUUID()}.csv`
@@ -1133,11 +1162,16 @@ async function main() {
                 const tempFiles = []
 
                 for await (const chunk of readObservationsFileChunks(inputFilePath, CHUNK_SIZE)) {
-                    const sortedChunk = sortAndDedupeChunk(chunk, seenKeys)
+                    const formattedChunk = await formatChunk(chunk, year)
+
+                    const sortedChunk = sortAndDedupeChunk(formattedChunk, seenKeys)
                     if (sortedChunk) {
                         writeChunkToTempFile(sortedChunk, tempFiles)
                     }
                 }
+
+                await updateTaskInProgress(taskId, { currentStep: 'Merging new observations with provided dataset' })
+                console.log('\tMerging new observations with provided dataset...')
 
                 if (formattedObservations.length > 0) {
                     const sortedChunk = sortAndDedupeChunk(formattedObservations, seenKeys)

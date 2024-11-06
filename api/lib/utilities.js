@@ -4,7 +4,11 @@ import path from 'path'
 export function clearDirectory(directory) {
     let files = fs.readdirSync(directory)
     for (const file of files) {
-        fs.rmSync(path.join(directory, file))
+        try {
+            fs.rmSync(path.join(directory, file))
+        } catch (error) {
+            console.log('Error while clearing directory:', error)
+        }
     }
 }
 

@@ -1,24 +1,30 @@
 import Crypto from 'node:crypto'
 import fs from 'fs'
+import path from 'path'
 import amqp from 'amqplib'
-import { fromArrayBuffer } from 'geotiff'
-import { parse } from 'csv-parse/sync'
-import { stringify } from 'csv-stringify/sync'
+import { fromFile } from 'geotiff'
+import { parse } from 'csv-parse'
+import { stringify as stringifySync } from 'csv-stringify/sync'
 import 'dotenv/config'
 
 import { connectToDb } from './api/lib/mongo.js'
 import { observationsQueueName } from './api/lib/rabbitmq.js'
 import { clearTasksWithoutFiles, getTaskById, updateTaskInProgress, updateTaskResult } from './api/models/task.js'
 import { connectToS3, getS3Object } from './api/lib/aws-s3.js'
-import { limitFilesInDirectory } from './api/lib/utilities.js'
-
-const MAX_OBSERVATIONS = 10
+import { clearDirectory, limitFilesInDirectory } from './api/lib/utilities.js'
+import { stringify } from 'csv-stringify'
 
 const rabbitmqHost = process.env.RABBITMQ_HOST || 'localhost'
 const rabbitmqURL = `amqp://${rabbitmqHost}`
 
-/* Formatting Constants */
+/* Constants */
 
+// Limit on the number of output files stored on the server
+const MAX_OBSERVATIONS = 10
+// Limit on the number of observations read from a file at once
+const CHUNK_SIZE = 10000
+// Number of temporary files to merge together at once
+const BATCH_SIZE = 2
 // Template object for observations; static values are provided as strings, data-dependent values are set to null
 const observationTemplate = {
     'Error Flags': '',
@@ -455,6 +461,17 @@ function getFamily(identifications) {
     return ''
 }
 
+async function fetchElevationFile(fileKey) {
+    const filePath = './api/data/' + fileKey
+
+    if (!fs.existsSync(filePath)) {
+        const fileStream = await getS3Object('obp-server-data', fileKey)
+        const fileData = await fileStream.transformToByteArray()
+
+        fs.writeFileSync(filePath, fileData)
+    }
+}
+
 /*
  * readElevationFromFile()
  * Searches for the elevation value of a given coordinate in a given GeoTIFF file
@@ -462,11 +479,10 @@ function getFamily(identifications) {
 async function readElevationFromFile(fileKey, latitude, longitude) {
     try {
         // Fetch the given file from AWS S3
-        const fileStream = await getS3Object('obp-server-data', fileKey)
-        const fileData = await fileStream.transformToByteArray()
+        await fetchElevationFile(fileKey)
 
         // Read the given file's raster data using the geotiff package
-        const tiff = await fromArrayBuffer(fileData.buffer)
+        const tiff = await fromFile('./api/data/' + fileKey)
         const image = await tiff.getImage()
         const rasters = await image.readRasters()
         const data = rasters[0]
@@ -480,6 +496,10 @@ async function readElevationFromFile(fileKey, latitude, longitude) {
 
         // Look up the elevation value for the row and column, default to an empty string
         const elevation = data[column + rasters.width * row]
+
+        // Close the GeoTIFF file
+        tiff.close()
+
         return elevation?.toString() ?? ''
     } catch (err) {
         // Default to an empty string if the file reading fails (e.g., the file doesn't exist)
@@ -661,11 +681,113 @@ async function formatObservations(observations, year, updateFormattingProgress) 
     return formattedObservations
 }
 
-function readObservationsFile(filePath) {
-    const observationsBuffer = fs.readFileSync(filePath)
-    const observations = parse(observationsBuffer, { columns: true })
+async function* readObservationsFileChunks(filePath, chunkSize) {
+    const fileStream = fs.createReadStream(filePath, { encoding: 'utf-8' })
+    const parser = parse({ columns: true, skip_empty_lines: true, relax_quotes: true })
+    const csvStream = fileStream.pipe(parser)
 
-    return observations
+    let chunk = []
+
+    for await (const row of csvStream) {
+        chunk.push(row)
+
+        if (chunk.length >= chunkSize) {
+            yield chunk
+            chunk = []
+        }
+    }
+
+    if (chunk.length > 0) {
+        yield chunk
+    }
+}
+
+function isRowEmpty(row) {
+    for (const field of Object.keys(row)) {
+        if (row[field] && row[field] !== '') {
+            return false
+        }
+    }
+    return true
+}
+
+function generateRowKey(row) {
+    const urlField = 'Associated plant - Inaturalist URL'
+    const sampleIDField = 'Sample ID'
+    const specimenIDField = 'Specimen ID'
+    const aliasField = 'iNaturalist Alias'
+    const collectionDayField = 'Collection Day 1'
+    const collectionMonthField = 'Month 1'
+    const collectionYearField = 'Year 1'
+
+    let keyFields = []
+    if (row[urlField] && row[sampleIDField] && row[specimenIDField]) {
+        keyFields = [urlField, sampleIDField, specimenIDField]
+    } else if (
+        row[aliasField] &&
+        row[sampleIDField] &&
+        row [specimenIDField] &&
+        row[collectionDayField] &&
+        row[collectionMonthField] &&
+        row[collectionYearField]
+    ) {
+        keyFields = [aliasField, sampleIDField, specimenIDField, collectionDayField, collectionMonthField, collectionYearField]
+    }
+
+    const keyValues = keyFields.map((field) => String(row[field] || ''))
+
+    const compositeKey = Crypto.createHash('sha256')
+        .update(keyValues.join(','))
+        .digest('hex')
+    
+    return compositeKey
+}
+
+function sortAndDedupeChunk(chunk, seenKeys) {
+    const uniqueRows = []
+
+    for (const row of chunk) {
+        if (isRowEmpty(row)) {
+            continue
+        }
+
+        if (row['Observation No.']) {
+            const key = generateRowKey(row)
+            seenKeys.add(key)
+            uniqueRows.push(row)
+        }
+    }
+
+    for (const row of chunk) {
+        if (isRowEmpty(row)) {
+            continue
+        }
+
+        const key = generateRowKey(row)
+        if (!seenKeys.has(key)) {
+            seenKeys.add(key)
+            uniqueRows.push(row)
+        }
+    }
+
+    return uniqueRows.sort(compareRows)
+}
+
+function writeObservationsFile(filePath, observations) {
+    const header = Object.keys(observationTemplate)
+    const csv = stringifySync(observations, { header: true, columns: header })
+
+    fs.writeFileSync(filePath, csv)
+}
+
+function writeChunkToTempFile(chunk, tempFiles) {
+    const tempFileName = `${Crypto.randomUUID()}.csv`
+    const tempFilePath = path.join('./api/data/temp/', tempFileName)
+    tempFiles.push(tempFilePath)
+
+    writeObservationsFile(tempFilePath, chunk)
+
+    return tempFilePath
 }
 
 function equalIdentifiers(row1, row2) {
@@ -809,43 +931,161 @@ function compareRows(row1, row2) {
     return 0
 }
 
-function isRowEmpty(row) {
-    for (const field of Object.keys(row)) {
-        if (row[field] && row[field] !== '') {
-            return false
-        }
-    }
-    return true
+function createParser(filePath) {
+    const stream = fs.createReadStream(filePath, { encoding: 'utf-8' })
+    const parser = stream.pipe(parse({ columns: true, skip_empty_lines: true, relax_quotes: true }))
+
+    return { stream, parser }
 }
 
-function indexData(dataset, year) {
-    const sortedDataset = dataset.sort(compareRows)
+async function mergeTempFilesBatch(inputFiles, outputFile, compareRows) {
+    const readers = []
+    const currentRows = []
+
+    for (const filePath of inputFiles) {
+        try {
+            const { stream, parser } = createParser(filePath)
+            readers.push({ stream, parser })
+            
+            const iterator = parser[Symbol.asyncIterator]()
+            const { value: firstRow, done } = await iterator.next()
+
+            if (!done) {
+                currentRows.push({
+                    row: firstRow,
+                    iterator
+                })
+            } else {
+                currentRows.push({
+                    row: null,
+                    iterator
+                })
+            }
+        } catch (error) {
+            console.error(`Error opening file ${filePath}`)
+            readers.forEach(({ stream }) => stream.destroy())
+            throw error
+        }
+    }
+
+    const outputFileStream = fs.createWriteStream(outputFile, { encoding: 'utf-8' })
+    const stringifier = stringify({ header: true, columns: Object.keys(observationTemplate) })
+    stringifier.pipe(outputFileStream)
+
+    while (true) {
+        const validRows = currentRows
+            .map((item, index) => ({
+                row: item.row,
+                index
+            }))
+            .filter((item) => item.row !== null)
+
+        if (validRows.length === 0) break
+
+        const minRow = validRows.reduce((min, current) => compareRows(current.row, min.row) < 0 ? current : min)
+
+        stringifier.write(minRow.row)
+
+        try {
+            const { value: nextRow, done } = await currentRows[minRow.index].iterator.next()
+
+            if (!done) {
+                currentRows[minRow.index] = {
+                    row: nextRow,
+                    iterator: currentRows[minRow.index].iterator
+                }
+            } else {
+                currentRows[minRow.index] = {
+                    row: null,
+                    iterator: currentRows[minRow.index].iterator
+                }
+            }
+        } catch (error) {
+            currentRows[minRow.index] = {
+                row: null,
+                iterator: currentRows[minRow.index].iterator
+            }
+        }
+    }
+
+    stringifier.end()
+    readers.forEach(({ stream }) => stream.destroy())
+}
+
+async function mergeTempFiles(tempFiles, outputFilePath, compareRows) {
+    if (!tempFiles?.length) return
+
+    const filesQueue = [...tempFiles]
+
+    while (filesQueue.length > 1) {
+        console.log("\t\tMerge queue:" + " X".repeat(filesQueue.length))
+
+        const batch = filesQueue.splice(0, Math.min(BATCH_SIZE, filesQueue.length))
+
+        if (filesQueue.length === 0 && batch.length === tempFiles.length) {
+            await mergeTempFilesBatch(batch, outputFilePath, compareRows)
+        } else {
+            const mergedPath = path.join('./api/data/temp', `${Crypto.randomUUID()}.csv`)
+            await mergeTempFilesBatch(batch, mergedPath, compareRows)
+            filesQueue.push(mergedPath)
+            tempFiles.push(mergedPath)
+        }
+
+        for (const filePath of batch) {
+            fs.rmSync(filePath)
+            tempFiles.splice(tempFiles.indexOf(filePath), 1)
+        }
+    }
+}
+
+async function findLastObservationNumber(filePath) {
+    let lastObservationNumber = undefined
+    let lastObservationNumberIndex = -1
+    const { parser } = createParser(filePath)
+
+    let i = 0
+    for await (const row of parser) {
+        if (row['Observation No.']) {
+            const currentObservationNumber = parseInt(row['Observation No.'])
+            if (!isNaN(currentObservationNumber) && (!lastObservationNumber || currentObservationNumber > lastObservationNumber)) {
+                lastObservationNumber = currentObservationNumber
+                lastObservationNumberIndex = i
+            }
+        }
+        i++
+    }
+
+    return { lastObservationNumber, lastObservationNumberIndex }
+}
+
+async function indexData(filePath, year) {
+    const { lastObservationNumber, lastObservationNumberIndex } = await findLastObservationNumber(filePath)
 
     const argYearObservationNumber = year ? year.toString().slice(2) + '00000' : undefined
     const currentYearObservationNumber = (new Date()).getFullYear().toString().slice(2) + '00000'
     let nextObservationNumber = parseInt(argYearObservationNumber ?? currentYearObservationNumber)
 
-    const lastObservationNumberIndex = sortedDataset.findLastIndex((row) => row['Observation No.'] && row['Observation No.'] !== '')
-    if (sortedDataset[lastObservationNumberIndex]) {
-        const lastObservationNumber = parseInt(sortedDataset[lastObservationNumberIndex]['Observation No.'])
-        nextObservationNumber = !isNaN(lastObservationNumber) ? lastObservationNumber + 1 : nextObservationNumber
-    }
+    nextObservationNumber = !isNaN(lastObservationNumber) ? lastObservationNumber + 1 : nextObservationNumber
 
-    for (let i = lastObservationNumberIndex + 1; i < sortedDataset.length; i++) {
-        if (!isRowEmpty(sortedDataset[i])) {
-            sortedDataset[i]['Observation No.'] = nextObservationNumber.toString()
+    const { parser } = createParser(filePath)
+
+    const tempFilePath = `./api/data/temp/${Crypto.randomUUID()}.csv`
+    const outputFileStream = fs.createWriteStream(tempFilePath, { encoding: 'utf-8' })
+    const stringifier = stringify({ header: true, columns: Object.keys(observationTemplate) })
+    stringifier.pipe(outputFileStream)
+
+    for await (const row of parser) {
+        if (isRowEmpty(row)) continue
+
+        if (!row['Observation No.']) {
+            row['Observation No.'] = String(nextObservationNumber)
             nextObservationNumber++
         }
+
+        stringifier.write(row)
     }
 
-    return sortedDataset
-}
-
-function writeObservationsFile(filePath, observations) {
-    const header = Object.keys(observationTemplate)
-    const csv = stringify(observations, { header: true, columns: header })
-
-    fs.writeFileSync(filePath, csv)
+    fs.renameSync(tempFilePath, filePath)
 }
 
 async function main() {
@@ -880,25 +1120,47 @@ async function main() {
                     await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations', percentage })
                 })
 
+                console.log(`\tFormatted ${formattedObservations.length} observations`)
+
                 await updateTaskInProgress(taskId, { currentStep: 'Merging new observations with provided dataset' })
                 console.log('\tMerging new observations with provided dataset...')
-                
-                const baseDataset = readObservationsFile('./api/data' + task.dataset.replace('/api', '')) // task.dataset has a '/api' suffix, which should be removed
-                const mergedData = mergeData(baseDataset, formattedObservations)
 
-                const indexedData = indexData(mergedData, year)
+                const inputFilePath = './api/data' + task.dataset.replace('/api', '')    // task.dataset has a '/api' suffix, which should be removed
+                const outputFileName = `${Crypto.randomUUID()}.csv`
+                const outputFilePath = './api/data/observations/' + outputFileName
 
-                await updateTaskInProgress(taskId, { currentStep: 'Writing updated dataset to file' })
-                console.log('\tWriting updated dataset to file...')
+                const seenKeys = new Set()
+                const tempFiles = []
 
-                const resultFileName = `${Crypto.randomUUID()}.csv`
-                writeObservationsFile(`./api/data/observations/${resultFileName}`, indexedData)
+                for await (const chunk of readObservationsFileChunks(inputFilePath, CHUNK_SIZE)) {
+                    const sortedChunk = sortAndDedupeChunk(chunk, seenKeys)
+                    if (sortedChunk) {
+                        writeChunkToTempFile(sortedChunk, tempFiles)
+                    }
+                }
 
-                await updateTaskResult(taskId, { uri: `/api/observations/${resultFileName}`, fileName: resultFileName })
+                if (formattedObservations.length > 0) {
+                    const sortedChunk = sortAndDedupeChunk(formattedObservations, seenKeys)
+                    if (sortedChunk) {
+                        writeChunkToTempFile(sortedChunk, tempFiles)
+                    }
+                }
+
+                await mergeTempFiles(tempFiles, outputFilePath, compareRows)
+
+                await updateTaskInProgress(taskId, { currentStep: 'Indexing merged data' })
+                console.log('\tIndexing merged data...')
+
+                await indexData(outputFilePath, year)
+
+                await updateTaskResult(taskId, { uri: `/api/observations/${outputFileName}`, fileName: outputFileName })
                 console.log('Completed task', taskId)
 
                 limitFilesInDirectory('./api/data/observations', MAX_OBSERVATIONS)
                 clearTasksWithoutFiles()
+
+                clearDirectory('./api/data/elevation')
+                clearDirectory('./api/data/temp')
 
                 observationsChannel.ack(msg)
             }

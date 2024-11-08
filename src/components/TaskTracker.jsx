@@ -54,7 +54,7 @@ export default function TaskTracker({ queryResponse, result, setResult }) {
             const resJSON = await res.json()
 
             setResult(resJSON?.task?.result)
-            return resJSON
+            return { ...resJSON, status: res.status, statusText: res.statusText }
         },
         refetchInterval: 1000,
         enabled: !!selectedTaskId && !result
@@ -76,6 +76,9 @@ export default function TaskTracker({ queryResponse, result, setResult }) {
 
             { queryResponse?.data?.error &&
                 <p>Error: {queryResponse.status} {queryResponse.data.error}</p>
+            }
+            { selectedTaskData?.error &&
+                <p>Error {selectedTaskData.status}: {selectedTaskData.statusText}</p>
             }
             { tasksQueryError &&
                 <p>Error: {tasksQueryError.message}</p>
@@ -108,7 +111,7 @@ export default function TaskTracker({ queryResponse, result, setResult }) {
                     }
                 </>
             }
-            { !queryResponse?.data?.error && !tasksQueryError && !selectedTaskQueryError && !selectedTaskData?.task &&
+            { !queryResponse?.data?.error && !selectedTaskData?.error && !tasksQueryError && !selectedTaskQueryError && !selectedTaskData?.task &&
                 <p>There is no task in progress. Use the task submission form to start one.</p>
             }
         </TaskTrackerContainer>

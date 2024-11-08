@@ -793,9 +793,15 @@ async function formatChunk(chunk, year) {
             !prevAccuracy ||
             (prevAccuracy && newAccuracy && newAccuracy < prevAccuracy)
         ) {
-            row['Dec. Lat.'] = matchingObservation?.geojson?.coordinates?.at(1)?.toFixed(3)?.toString() ?? row['Dec. Lat.']
-            row['Dec. Long.'] = matchingObservation?.geojson?.coordinates?.at(0)?.toFixed(3)?.toString() ?? row['Dec. Long.']
+            const latitude = matchingObservation?.geojson?.coordinates?.at(1)?.toFixed(3)?.toString()
+            const longitude = matchingObservation?.geojson?.coordinates?.at(0)?.toFixed(3)?.toString()
+
+            row['Dec. Lat.'] = latitude ?? row['Dec. Lat.']
+            row['Dec. Long.'] = longitude ?? row['Dec. Long.']
             row['Lat/Long Accuracy'] = newAccuracy?.toString() ?? row['Lat/Long Accuracy']
+
+            row['decimalLatitude'] = latitude ?? row['Dec. Lat.']
+            row['decimalLongitude'] = longitude ?? row['Dec. Long.']
         }
     }
 

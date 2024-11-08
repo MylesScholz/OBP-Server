@@ -272,14 +272,6 @@ async function readPlacesFile() {
 }
 
 /*
- * writePlacesFile()
- * Writes a given places object into /api/data/places.json
- */
-function writePlacesFile(places) {
-    fs.writeFileSync('./api/data/places.json', JSON.stringify(places))
-}
-
-/*
  * fetchPlaces()
  * Makes API requests to iNaturalist.org to collect place data from a given list of place IDs
  */
@@ -312,6 +304,14 @@ async function fetchPlaces(places) {
     }
 
     return results
+}
+
+/*
+ * writePlacesFile()
+ * Writes a given places object into /api/data/places.json
+ */
+function writePlacesFile(places) {
+    fs.writeFileSync('./api/data/places.json', JSON.stringify(places))
 }
 
 /*
@@ -425,15 +425,6 @@ async function lookUpPlaces(placeIds) {
 }
 
 /*
- * getOFV()
- * Looks up the value of an iNaturalist observation field by name
- */
-function getOFV(ofvs, fieldName) {
-    const ofv = ofvs?.find((field) => field['name'] === fieldName)
-    return ofv?.value ?? ''
-}
-
-/*
  * getFamily()
  * Searches for a taxonomic family name in an observation's 'identifications' field
  */
@@ -459,6 +450,15 @@ function getFamily(identifications) {
 
     // Default to an empty string if the search reaches this point
     return ''
+}
+
+/*
+ * getOFV()
+ * Looks up the value of an iNaturalist observation field by name
+ */
+function getOFV(ofvs, fieldName) {
+    const ofv = ofvs?.find((field) => field['name'] === fieldName)
+    return ofv?.value ?? ''
 }
 
 async function fetchElevationFile(fileKey) {
@@ -704,36 +704,6 @@ async function* readObservationsFileChunks(filePath, chunkSize) {
     }
 }
 
-async function fetchObservationsById(observationIds) {
-    // observationIds can be a very long list of IDs, so batch requests to avoid iNaturalist API refusal
-    const partitionSize = 50
-    const nPartitions = Math.floor(observationIds.length / partitionSize) + 1
-    let partitionStart = 0
-    let partitionEnd = Math.min(partitionSize, observationIds.length)
-
-    let results = []
-    for (let i = 0; i < nPartitions; i++) {
-        const requestURL = `https://api.inaturalist.org/v1/observations/${observationIds.slice(partitionStart, partitionEnd).join(',')}`
-
-        try {
-            const res = await fetch(requestURL)
-            if (res.ok) {
-                const resJSON = await res.json()
-                results = results.concat(resJSON['results'])
-            } else {
-                console.error(`Bad response while fetching '${requestURL}':`, res)
-            }
-        } catch (err) {
-            console.error(`ERROR while fetching ${requestURL}:`, err)
-        }
-
-        partitionStart = partitionEnd
-        partitionEnd = Math.min(partitionEnd + partitionSize, observationIds.length)
-    }
-
-    return results
-}
-
 function formatChunkRow(row, year) {
     // The final field set should be a union of the standard template and the given row
     const formattedRow = Object.assign({}, observationTemplate, row)
@@ -766,6 +736,36 @@ function formatChunkRow(row, year) {
     formattedRow['decimalLongitude'] = row['decimalLongitude'] ?? row['Dec. Long.']
 
     return formattedRow
+}
+
+async function fetchObservationsById(observationIds) {
+    // observationIds can be a very long list of IDs, so batch requests to avoid iNaturalist API refusal
+    const partitionSize = 50
+    const nPartitions = Math.floor(observationIds.length / partitionSize) + 1
+    let partitionStart = 0
+    let partitionEnd = Math.min(partitionSize, observationIds.length)
+
+    let results = []
+    for (let i = 0; i < nPartitions; i++) {
+        const requestURL = `https://api.inaturalist.org/v1/observations/${observationIds.slice(partitionStart, partitionEnd).join(',')}`
+
+        try {
+            const res = await fetch(requestURL)
+            if (res.ok) {
+                const resJSON = await res.json()
+                results = results.concat(resJSON['results'])
+            } else {
+                console.error(`Bad response while fetching '${requestURL}':`, res)
+            }
+        } catch (err) {
+            console.error(`ERROR while fetching ${requestURL}:`, err)
+        }
+
+        partitionStart = partitionEnd
+        partitionEnd = Math.min(partitionEnd + partitionSize, observationIds.length)
+    }
+
+    return results
 }
 
 async function formatChunk(chunk, year) {
@@ -843,53 +843,6 @@ function generateRowKey(row) {
     return compositeKey
 }
 
-function sortAndDedupeChunk(chunk, seenKeys) {
-    const uniqueRows = []
-
-    for (const row of chunk) {
-        if (isRowEmpty(row)) {
-            continue
-        }
-
-        if (row['Observation No.']) {
-            const key = generateRowKey(row)
-            seenKeys.add(key)
-            uniqueRows.push(row)
-        }
-    }
-
-    for (const row of chunk) {
-        if (isRowEmpty(row)) {
-            continue
-        }
-
-        const key = generateRowKey(row)
-        if (!seenKeys.has(key)) {
-            seenKeys.add(key)
-            uniqueRows.push(row)
-        }
-    }
-
-    return uniqueRows.sort(compareRows)
-}
-
-function writeObservationsFile(filePath, observations) {
-    const header = Object.keys(observationTemplate)
-    const csv = stringifySync(observations, { header: true, columns: header })
-
-    fs.writeFileSync(filePath, csv)
-}
-
-function writeChunkToTempFile(chunk, tempFiles) {
-    const tempFileName = `${Crypto.randomUUID()}.csv`
-    const tempFilePath = path.join('./api/data/temp/', tempFileName)
-    tempFiles.push(tempFilePath)
-
-    writeObservationsFile(tempFilePath, chunk)
-
-    return tempFilePath
-}
-
 function compareStrings(str1, str2) {
     if (str1 === '' && str2 !== '') {
         return 1
@@ -959,6 +912,53 @@ function compareRows(row1, row2) {
     }
 
     return 0
+}
+
+function sortAndDedupeChunk(chunk, seenKeys) {
+    const uniqueRows = []
+
+    for (const row of chunk) {
+        if (isRowEmpty(row)) {
+            continue
+        }
+
+        if (row['Observation No.']) {
+            const key = generateRowKey(row)
+            seenKeys.add(key)
+            uniqueRows.push(row)
+        }
+    }
+
+    for (const row of chunk) {
+        if (isRowEmpty(row)) {
+            continue
+        }
+
+        const key = generateRowKey(row)
+        if (!seenKeys.has(key)) {
+            seenKeys.add(key)
+            uniqueRows.push(row)
+        }
+    }
+
+    return uniqueRows.sort(compareRows)
+}
+
+function writeObservationsFile(filePath, observations) {
+    const header = Object.keys(observationTemplate)
+    const csv = stringifySync(observations, { header: true, columns: header })
+
+    fs.writeFileSync(filePath, csv)
+}
+
+function writeChunkToTempFile(chunk, tempFiles) {
+    const tempFileName = `${Crypto.randomUUID()}.csv`
+    const tempFilePath = path.join('./api/data/temp/', tempFileName)
+    tempFiles.push(tempFilePath)
+
+    writeObservationsFile(tempFilePath, chunk)
+
+    return tempFilePath
 }
 
 function createParser(filePath) {

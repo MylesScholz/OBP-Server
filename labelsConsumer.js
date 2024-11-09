@@ -46,12 +46,12 @@ function formatObservation(observation) {
 
     const country = observation['Country']
     const stateProvince = observation['State']
-    const county = observation['County'] !== '' ? `:${observation['County']}Co` : ''
+    const county = observation['County'] ? `:${observation['County']}Co` : ''
     const place = observation['Abbreviated Location']
     const latitude = observation['Dec. Lat.']
     const longitude = observation['Dec. Long.']
-    const elevation = observation['Elevation']
-    const locationText = `${country}:${stateProvince}${county} ${place} ${latitude} ${longitude} ${elevation}m`
+    const elevation = observation['Elevation'] ? ` ${observation['Elevation']}m` : ''
+    const locationText = `${country}:${stateProvince}${county} ${place} ${latitude} ${longitude}${elevation}`
     formattedObservation.location = locationText
 
     const day = observation['Collection Day 1']
@@ -83,7 +83,6 @@ function formatObservations(observations, addWarningIndex) {
         'Abbreviated Location',
         'Dec. Lat.',
         'Dec. Long.',
-        'Elevation',
         'Collection Day 1',
         'Month 1',
         'Year 1',

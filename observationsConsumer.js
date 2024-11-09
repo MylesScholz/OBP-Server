@@ -116,6 +116,43 @@ const observationTemplate = {
     'specificEpithet': '',
     'taxonRank': ''
 }
+// A list of fields that should be flagged if empty
+const nonEmptyFields = [
+    'iNaturalist ID',
+    'iNaturalist Alias',
+    'Collector - First Name',
+    'Collector - First Initial',
+    'Collector - Last Name',
+    'Sample ID',
+    'Specimen ID',
+    'Collection Day 1',
+    'Month 1',
+    'Year 1',
+    'Time 1',
+    'Country',
+    'State',
+    'County',
+    'Location',
+    'Abbreviated Location',
+    'Dec. Lat.',
+    'Dec. Long.',
+    'Lat/Long Accuracy',
+    'Elevation',
+    'Associated plant - family',
+    'Associated plant - genus, species',
+    'Associated plant - Inaturalist URL',
+    'recordedBy',
+    'associatedTaxa',
+    'year',
+    'month',
+    'day',
+    'country',
+    'stateProvince',
+    'county',
+    'locality',
+    'decimalLatitude',
+    'decimalLongitude'
+]
 // Roman numerals 1 to 12
 const monthNumerals = [
     'I',
@@ -584,6 +621,9 @@ async function formatObservation(observation, year) {
     const formattedLatitude = observation.geojson?.coordinates?.at(1)?.toFixed(3)?.toString() ?? ''
     const formattedLongitude = observation.geojson?.coordinates?.at(0)?.toFixed(3)?.toString() ?? ''
 
+    // A list of fields to flag
+    const errorFields = []
+
     /* Final formatting */
 
     // Start from template observation object
@@ -608,6 +648,10 @@ async function formatObservation(observation, year) {
     formattedObservation['Country'] = countryAbbreviations[country] ?? country
     formattedObservation['State'] = stateProvinceAbbreviations[stateProvince] ?? stateProvince
     formattedObservation['County'] = county
+
+    // Flag 'Country' and 'State' if they are an unexpected value
+    if (!countryAbbreviations[country]) { errorFields.push('Country') }
+    if (!stateProvinceAbbreviations[stateProvince]) { errorFields.push('State') }
 
     formattedObservation['Location'] = formattedLocation
     formattedObservation['Abbreviated Location'] = formattedLocation
@@ -646,6 +690,9 @@ async function formatObservation(observation, year) {
 
     formattedObservation['decimalLatitude'] = formattedLatitude
     formattedObservation['decimalLongitude'] = formattedLongitude
+
+    // Set error flags as a semicolon-separated list of fields (empty fields and additional flags)
+    formattedObservation['Error Flags'] = nonEmptyFields.filter((field) => !formattedObservation[field]).concat(errorFields).join(';')
 
     return formattedObservation
 }
@@ -734,6 +781,9 @@ function formatChunkRow(row, year) {
 
     formattedRow['decimalLatitude'] = row['decimalLatitude'] ?? row['Dec. Lat.']
     formattedRow['decimalLongitude'] = row['decimalLongitude'] ?? row['Dec. Long.']
+
+    // Set error flags as a semicolon-separated list of empty fields
+    formattedRow['Error Flags'] = nonEmptyFields.filter((field) => !formattedRow[field]).join(';')
 
     return formattedRow
 }

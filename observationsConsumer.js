@@ -136,7 +136,6 @@ const nonEmptyFields = [
     'Abbreviated Location',
     'Dec. Lat.',
     'Dec. Long.',
-    'Lat/Long Accuracy',
     'Elevation',
     'Associated plant - family',
     'Associated plant - genus, species',
@@ -550,7 +549,7 @@ async function readElevationFromFile(fileKey, latitude, longitude) {
  */
 async function getElevation(latitude, longitude) {
     // Check that both latitude and longitude are provided and are parseable as floats
-    if (latitude === '' || longitude === '' || !parseFloat(latitude) || !parseFloat(longitude)) {
+    if (!latitude || !longitude || !parseFloat(latitude) || !parseFloat(longitude)) {
         return ''
     }
 
@@ -586,6 +585,20 @@ async function getElevation(latitude, longitude) {
  * Creates a fully formatted observation object from a raw iNaturalist observation
  */
 async function formatObservation(observation, year) {
+    // Start from template observation object
+    const formattedObservation = Object.assign({}, observationTemplate)
+
+    // Return empty template if no observation is provided
+    if (!observation) {
+        // Replace null values from the template with an empty string
+        Object.keys(formattedObservation).forEach((key) => !formattedObservation[key] ? formattedObservation[key] = '' : null)
+
+        // Set error flags for fields that should not be empty
+        formattedObservation['Error Flags'] = nonEmptyFields.filter((field) => !formattedObservation[field]).join(';')
+
+        return formattedObservation
+    }
+
     // Parse user's name
     const { firstName, firstInitial, lastName } = await lookUpUserName(observation['user'])
 
@@ -614,10 +627,12 @@ async function formatObservation(observation, year) {
     const formattedYear = !isNaN(observedYear) ? observedYear.toString() : ''
     const formattedHours  = !isNaN(observedHour) ? observedHour.toString().padStart(2, '0') : undefined
     const formattedMinutes = !isNaN(observedMinute) ? observedMinute.toString().padStart(2, '0') : undefined
-    const formattedTime = formattedHours && formattedMinutes ? `${formattedHours}:${formattedMinutes}` : ''
+    const formattedTime = (formattedHours && formattedMinutes) ? `${formattedHours}:${formattedMinutes}` : ''
     
-    // Format the location and coordinates
+    // Format the location
     const formattedLocation = observation.place_guess?.split(', ')?.at(0) ?? ''
+
+    // Format the coordinates
     const formattedLatitude = observation.geojson?.coordinates?.at(1)?.toFixed(3)?.toString() ?? ''
     const formattedLongitude = observation.geojson?.coordinates?.at(0)?.toFixed(3)?.toString() ?? ''
 
@@ -625,9 +640,6 @@ async function formatObservation(observation, year) {
     const errorFields = []
 
     /* Final formatting */
-
-    // Start from template observation object
-    const formattedObservation = Object.assign({}, observationTemplate)
 
     // Label fields
     formattedObservation['iNaturalist ID'] = observation.user?.id?.toString() ?? ''
@@ -649,16 +661,32 @@ async function formatObservation(observation, year) {
     formattedObservation['State'] = stateProvinceAbbreviations[stateProvince] ?? stateProvince
     formattedObservation['County'] = county
 
-    // Flag 'Country' and 'State' if they are an unexpected value
+    // Flag 'Country' and 'State' if they have an unexpected value
     if (!countryAbbreviations[country]) { errorFields.push('Country') }
     if (!stateProvinceAbbreviations[stateProvince]) { errorFields.push('State') }
 
     formattedObservation['Location'] = formattedLocation
     formattedObservation['Abbreviated Location'] = formattedLocation
 
+    // Flag 'Location', 'Abbreviated Location', and 'locality' if place_guess doesn't adhere to the standard format ('{short place name}, {state abbreviation}, {country abbreviation}')
+    const placeGuessSplit = observation.place_guess?.split(', ') ?? []
+    if (
+        placeGuessSplit.length !== 3 ||
+        !placeGuessSplit[0] ||
+        !Object.values(stateProvinceAbbreviations).includes(placeGuessSplit[1]) ||
+        !Object.values(countryAbbreviations).includes(placeGuessSplit[2])
+    ) {
+        errorFields.push('Location')
+        errorFields.push('Abbreviated Location')
+        errorFields.push('locality')
+    }
+
     formattedObservation['Dec. Lat.'] = formattedLatitude
     formattedObservation['Dec. Long.'] = formattedLongitude
     formattedObservation['Lat/Long Accuracy'] = observation.positional_accuracy?.toString() ?? ''
+
+    // Flag 'Lat/Long Accuracy' if positional_accuracy is greater than 250 meters
+    if (observation.positional_accuracy > 250) { errorFields.push('Lat/Long Accuracy') }
 
     formattedObservation['Elevation'] = await getElevation(formattedLatitude, formattedLongitude)
 
@@ -670,9 +698,9 @@ async function formatObservation(observation, year) {
     formattedObservation['bibliographicCitation'] = `Oregon Bee Atlas ${year}. Oregon State University, Corvallis, OR, USA.`
     formattedObservation['datasetName'] = `OBA-OSAC-${year}`
 
-    formattedObservation['recordedBy'] = `${firstName}${firstName && lastName ? ' ' : ''}${lastName}`
+    formattedObservation['recordedBy'] = `${firstName}${(firstName && lastName) ? ' ' : ''}${lastName}`
 
-    formattedObservation['associatedTaxa'] = scientificName || family ? `foraging on : "${scientificName ?? family}"` : ''
+    formattedObservation['associatedTaxa'] = (scientificName || family) ? `foraging on : "${scientificName || family}"` : ''
 
     formattedObservation['samplingProtocol'] = 'aerial net'
 
@@ -755,35 +783,44 @@ function formatChunkRow(row, year) {
     // The final field set should be a union of the standard template and the given row
     const formattedRow = Object.assign({}, observationTemplate, row)
 
+    // A list of fields to flag
+    const errorFields = []
+
     // If the Darwin Core fields are empty, fill them from the labels fields
-    formattedRow['bibliographicCitation'] = row['bibliographicCitation'] ?? `Oregon Bee Atlas ${year}. Oregon State University, Corvallis, OR, USA.`
-    formattedRow['datasetName'] = row['datasetName'] ?? `OBA-OSAC-${year}`
+    formattedRow['bibliographicCitation'] = row['bibliographicCitation'] || `Oregon Bee Atlas ${year}. Oregon State University, Corvallis, OR, USA.`
+    formattedRow['datasetName'] = row['datasetName'] || `OBA-OSAC-${year}`
 
     const firstName = row['Collector - First Name']
     const lastName = row['Collector - Last Name']
-    formattedRow['recordedBy'] = row['recordedBy'] ?? `${firstName}${firstName && lastName ? ' ' : ''}${lastName}`
+    formattedRow['recordedBy'] = row['recordedBy'] || `${firstName}${(firstName && lastName) ? ' ' : ''}${lastName}`
 
     const family = row['Associated plant - family']
     const scientificName = row['Associated plant - genus, species']
-    formattedRow['associatedTaxa'] = row['associatedTaxa'] ?? (scientificName || family ? `foraging on : "${scientificName ?? family}"` : '')
+    formattedRow['associatedTaxa'] = row['associatedTaxa'] || ((scientificName || family) ? `foraging on : "${scientificName || family}"` : '')
 
     const method = row['Collection method'] === 'net' ? 'aerial net' : row['Collection method']
-    formattedRow['samplingProtocol'] = row['samplingProtocol'] ?? method
+    formattedRow['samplingProtocol'] = row['samplingProtocol'] || method
 
-    formattedRow['year'] = row['year'] ?? row['Year 1']
-    formattedRow['month'] = row['month'] ?? monthNumerals.indexOf(row['Month 1']) + 1
-    formattedRow['day'] = row['day'] ?? row['Collection Day 1']
+    formattedRow['year'] = row['year'] || row['Year 1']
+    formattedRow['month'] = row['month'] || monthNumerals.indexOf(row['Month 1']) + 1
+    formattedRow['day'] = row['day'] || row['Collection Day 1']
 
-    formattedRow['country'] = row['country'] ?? row['Country']
-    formattedRow['stateProvince'] = row['stateProvince'] ?? row['State']
-    formattedRow['county'] = row['county'] ?? row['County']
-    formattedRow['locality'] = row['locality'] ?? row['Abbreviated Location']
+    formattedRow['country'] = row['country'] || row['Country']
+    formattedRow['stateProvince'] = row['stateProvince'] || row['State']
+    formattedRow['county'] = row['county'] || row['County']
 
-    formattedRow['decimalLatitude'] = row['decimalLatitude'] ?? row['Dec. Lat.']
-    formattedRow['decimalLongitude'] = row['decimalLongitude'] ?? row['Dec. Long.']
+    if (!Object.values(countryAbbreviations).includes(formattedRow['Country'])) { errorFields.push('Country') }
+    if (!Object.values(stateProvinceAbbreviations).includes(formattedRow['State'])) { errorFields.push('State') }
+
+    formattedRow['locality'] = row['locality'] || row['Abbreviated Location']
+
+    formattedRow['decimalLatitude'] = row['decimalLatitude'] || row['Dec. Lat.']
+    formattedRow['decimalLongitude'] = row['decimalLongitude'] || row['Dec. Long.']
+
+    if (parseInt(formattedRow['Lat/Long Accuracy']) > 250) { errorFields.push('Lat/Long Accuracy') }
 
     // Set error flags as a semicolon-separated list of empty fields
-    formattedRow['Error Flags'] = nonEmptyFields.filter((field) => !formattedRow[field]).join(';')
+    formattedRow['Error Flags'] = nonEmptyFields.filter((field) => !formattedRow[field]).concat(errorFields).join(';')
 
     return formattedRow
 }
@@ -818,6 +855,53 @@ async function fetchObservationsById(observationIds) {
     return results
 }
 
+async function updateChunkRow(row, observation) {
+    // Look up and update the plant taxonomy
+    const family = getFamily(observation?.identifications) || row['Associated plant - family']
+    const scientificName = observation?.taxon?.name || row['Associated plant - genus, species']
+    row['Associated plant - family'] = family
+    row['Associated plant - genus, species'] = scientificName
+    row['associatedTaxa'] = ((scientificName || family) ? `foraging on : "${scientificName || family}"` : '') || row['associatedTaxa']
+
+    // Update the coordinate fields if any are missing or if the accuracy is better (smaller)
+    const prevAccuracy = parseInt(row['Lat/Long Accuracy'])
+    const newAccuracy = observation?.positional_accuracy
+    if (
+        !row['Dec. Lat.'] ||
+        !row['Dec. Long.'] ||
+        (prevAccuracy && newAccuracy && newAccuracy < prevAccuracy)
+    ) {
+        const latitude = observation?.geojson?.coordinates?.at(1)?.toFixed(3)?.toString()
+        const longitude = observation?.geojson?.coordinates?.at(0)?.toFixed(3)?.toString()
+
+        row['Dec. Lat.'] = latitude || row['Dec. Lat.']
+        row['Dec. Long.'] = longitude || row['Dec. Long.']
+        row['Lat/Long Accuracy'] = newAccuracy?.toString() || row['Lat/Long Accuracy']
+
+        row['decimalLatitude'] = latitude || row['Dec. Lat.']
+        row['decimalLongitude'] = longitude || row['Dec. Long.']
+
+        row['Elevation'] = await getElevation(latitude, longitude) || row['Elevation']
+    }
+
+    let errorFlags = row['Error Flags']?.split(';') || []
+    const updatableFields = [
+        'Associated plant - family',
+        'Associated plant - genus, species',
+        'associatedTaxa',
+        'Dec. Lat.',
+        'Dec. Long.',
+        'Lat/Long Accuracy',
+        'decimalLatitude',
+        'decimalLongitude',
+        'Elevation'
+    ]
+    errorFlags = errorFlags.filter((field) => !updatableFields.includes(field) || !row[field])
+    if (parseInt(row['Lat/Long Accuracy']) > 250) { errorFlags.push('Lat/Long Accuracy') }
+
+    row['Error Flags'] = errorFlags.join(';')
+}
+
 async function formatChunk(chunk, year) {
     const formattedChunk = chunk.map((row) => formatChunkRow(row, year))
 
@@ -829,30 +913,7 @@ async function formatChunk(chunk, year) {
 
     for (const row of formattedChunk) {
         const matchingObservation = observations.find((observation) => observation['uri'] && (observation['uri'] === row['Associated plant - Inaturalist URL']))
-
-        // Look up and update the plant taxonomy
-        row['Associated plant - family'] = getFamily(matchingObservation?.identifications) ?? row['Associated plant - family']
-        row['Associated plant - genus, species'] = matchingObservation?.taxon?.name ?? row['Associated plant - genus, species']
-
-        // Update the location fields if any are missing or if the accuracy is better (smaller)
-        const prevAccuracy = parseInt(row['Lat/Long Accuracy'])
-        const newAccuracy = matchingObservation?.positional_accuracy
-        if (
-            !row['Dec. Lat.'] ||
-            !row['Dec. Long.'] ||
-            !prevAccuracy ||
-            (prevAccuracy && newAccuracy && newAccuracy < prevAccuracy)
-        ) {
-            const latitude = matchingObservation?.geojson?.coordinates?.at(1)?.toFixed(3)?.toString()
-            const longitude = matchingObservation?.geojson?.coordinates?.at(0)?.toFixed(3)?.toString()
-
-            row['Dec. Lat.'] = latitude ?? row['Dec. Lat.']
-            row['Dec. Long.'] = longitude ?? row['Dec. Long.']
-            row['Lat/Long Accuracy'] = newAccuracy?.toString() ?? row['Lat/Long Accuracy']
-
-            row['decimalLatitude'] = latitude ?? row['Dec. Lat.']
-            row['decimalLongitude'] = longitude ?? row['Dec. Long.']
-        }
+        await updateChunkRow(row, matchingObservation)
     }
 
     return formattedChunk
@@ -1099,14 +1160,14 @@ async function mergeTempFilesBatch(inputFiles, outputFile, compareRows) {
 }
 
 async function mergeTempFiles(tempFiles, outputFilePath, compareRows) {
-    if (!tempFiles?.length) return
+    if (!tempFiles) return
 
     const filesQueue = [...tempFiles]
 
-    while (filesQueue.length > 1) {
+    while (filesQueue.length > 0) {
         // console.log("\t\tMerge queue:" + " X".repeat(filesQueue.length))
 
-        const batch = filesQueue.splice(0, Math.min(BATCH_SIZE, filesQueue.length))
+        const batch = filesQueue.splice(0, BATCH_SIZE)
 
         if (filesQueue.length === 0 && batch.length === tempFiles.length) {
             await mergeTempFilesBatch(batch, outputFilePath, compareRows)

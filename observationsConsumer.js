@@ -237,6 +237,15 @@ const stateProvinceAbbreviations = {
     'Nunavut': 'NU',
     'Yukon': 'YT'
 }
+const streetSuffixRegexes = [
+    'R(?:oa)?d',                    // Road, Rd
+    'St(?:r(?:eet)?)?',             // Street, Str, St
+    'Av(?:e(?:nue)?)?',             // Avenue, Ave, Av
+    'Dr(?:ive)?',                   // Drive, Dr
+    'Blvd|Boulevard',               // Boulevard, Blvd
+    'C(?:our)?t',                   // Court, Ct
+    'Ln|Lane'                       // Lane, Ln
+].map((regex) => new RegExp(`(?<![^,.\\s])${regex}(?![^,.\\s])`, 'i'))
 
 /*
  * fetchObservations()
@@ -457,6 +466,7 @@ async function lookUpPlaces(placeIds) {
         if (place?.at(0) === '20') county = place[1] ?? ''
     }
 
+    county = county.replace(/(?<![^,.\s])Co(?:unty)?\.?(?![^,.\s])+/ig, '')
     return { country, stateProvince, county }
 }
 
@@ -506,6 +516,11 @@ async function fetchElevationFile(fileKey) {
 
         fs.writeFileSync(filePath, fileData)
     }
+}
+
+function includesStreetSuffix(string) {
+    if (!string || typeof string !== 'string') { return false }
+    return streetSuffixRegexes.some((regex) => regex.test(string))
 }
 
 /*
@@ -630,7 +645,7 @@ async function formatObservation(observation, year) {
     const formattedTime = (formattedHours && formattedMinutes) ? `${formattedHours}:${formattedMinutes}` : ''
     
     // Format the location
-    const formattedLocation = observation.place_guess?.split(', ')?.at(0) ?? ''
+    const formattedLocation = observation.place_guess?.split(/,\s*/)?.at(0)?.replace(/(?<![^,.\s])Co(?:unty)?\.?(?![^,.\s])+/ig, '') ?? ''
 
     // Format the coordinates
     const formattedLatitude = observation.geojson?.coordinates?.at(1)?.toFixed(3)?.toString() ?? ''
@@ -668,14 +683,8 @@ async function formatObservation(observation, year) {
     formattedObservation['Location'] = formattedLocation
     formattedObservation['Abbreviated Location'] = formattedLocation
 
-    // Flag 'Location', 'Abbreviated Location', and 'locality' if place_guess doesn't adhere to the standard format ('{short place name}, {state abbreviation}, {country abbreviation}')
-    const placeGuessSplit = observation.place_guess?.split(', ') ?? []
-    if (
-        placeGuessSplit.length !== 3 ||
-        !placeGuessSplit[0] ||
-        !Object.values(stateProvinceAbbreviations).includes(placeGuessSplit[1]) ||
-        !Object.values(countryAbbreviations).includes(placeGuessSplit[2])
-    ) {
+    // Flag 'Location', 'Abbreviated Location', and 'locality' if formattedLocation contains any street suffixes
+    if (includesStreetSuffix(formattedLocation)) {
         errorFields.push('Location')
         errorFields.push('Abbreviated Location')
         errorFields.push('locality')
@@ -807,10 +816,12 @@ function formatChunkRow(row, year) {
 
     formattedRow['country'] = row['country'] || row['Country']
     formattedRow['stateProvince'] = row['stateProvince'] || row['State']
-    formattedRow['county'] = row['county'] || row['County']
 
     if (!Object.values(countryAbbreviations).includes(formattedRow['Country'])) { errorFields.push('Country') }
     if (!Object.values(stateProvinceAbbreviations).includes(formattedRow['State'])) { errorFields.push('State') }
+
+    const county = row['county'] || row['County']
+    formattedRow['county'] = county.replace(/(?<![^,.\s])Co(?:unty)?\.?(?![^,.\s])+/ig, '')
 
     formattedRow['locality'] = row['locality'] || row['Abbreviated Location']
 
@@ -818,6 +829,10 @@ function formatChunkRow(row, year) {
     formattedRow['decimalLongitude'] = row['decimalLongitude'] || row['Dec. Long.']
 
     if (parseInt(formattedRow['Lat/Long Accuracy']) > 250) { errorFields.push('Lat/Long Accuracy') }
+
+    if (includesStreetSuffix(formattedRow['Location'])) { errorFields.push('Location') }
+    if (includesStreetSuffix(formattedRow['Abbreviated Location'])) { errorFields.push('Abbreviated Location') }
+    if (includesStreetSuffix(formattedRow['locality'])) { errorFields.push('locality') }
 
     // Set error flags as a semicolon-separated list of empty fields
     formattedRow['Error Flags'] = nonEmptyFields.filter((field) => !formattedRow[field]).concat(errorFields).join(';')

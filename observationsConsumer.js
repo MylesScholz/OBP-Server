@@ -14,14 +14,14 @@ import { connectToS3, getS3Object } from './api/lib/aws-s3.js'
 import { clearDirectory, limitFilesInDirectory } from './api/lib/utilities.js'
 import { stringify } from 'csv-stringify'
 
+/* Constants */
+
 const rabbitmqHost = process.env.RABBITMQ_HOST || 'localhost'
 const rabbitmqURL = `amqp://${rabbitmqHost}`
 
-/* Constants */
-
-// Limit on the number of output files stored on the server
+// Maximum number of output files stored on the server
 const MAX_OBSERVATIONS = 10
-// Limit on the number of observations read from a file at once
+// Maximum number of observations to read from a file at once
 const CHUNK_SIZE = 10000
 // Number of temporary files to merge together at once
 const BATCH_SIZE = 2
@@ -237,6 +237,7 @@ const stateProvinceAbbreviations = {
     'Nunavut': 'NU',
     'Yukon': 'YT'
 }
+// A list of RegExps to detect street suffixes in the 'Location', 'Abbreviated Location', and 'locality' fields
 const streetSuffixRegexes = [
     'R(?:oa)?d',                    // Road, Rd
     'St(?:r(?:eet)?)?',             // Street, Str, St
@@ -466,6 +467,7 @@ async function lookUpPlaces(placeIds) {
         if (place?.at(0) === '20') county = place[1] ?? ''
     }
 
+    // Remove 'County' or 'Co' from the county field (case insensitive) before returning all values
     county = county.replace(/(?<![^,.\s])Co(?:unty)?\.?(?![^,.\s])+/ig, '')
     return { country, stateProvince, county }
 }
@@ -507,6 +509,10 @@ function getOFV(ofvs, fieldName) {
     return ofv?.value ?? ''
 }
 
+/*
+ * fetchElevationFile()
+ * Downloads a specific elevation file from S3 if it is not already available locally
+ */
 async function fetchElevationFile(fileKey) {
     const filePath = './api/data/' + fileKey
 
@@ -518,6 +524,10 @@ async function fetchElevationFile(fileKey) {
     }
 }
 
+/*
+ * includesStreetSuffix()
+ * A boolean function that returns whether a given string contains a street suffix (Road, Rd, Street, St, etc.)
+ */
 function includesStreetSuffix(string) {
     if (!string || typeof string !== 'string') { return false }
     return streetSuffixRegexes.some((regex) => regex.test(string))
@@ -529,7 +539,7 @@ function includesStreetSuffix(string) {
  */
 async function readElevationFromFile(fileKey, latitude, longitude) {
     try {
-        // Fetch the given file from AWS S3
+        // Fetch the given file from AWS S3 if necessary
         await fetchElevationFile(fileKey)
 
         // Read the given file's raster data using the geotiff package
@@ -651,7 +661,7 @@ async function formatObservation(observation, year) {
     const formattedLatitude = observation.geojson?.coordinates?.at(1)?.toFixed(3)?.toString() ?? ''
     const formattedLongitude = observation.geojson?.coordinates?.at(0)?.toFixed(3)?.toString() ?? ''
 
-    // A list of fields to flag
+    // A list of fields to flag in addition to the non-empty fields
     const errorFields = []
 
     /* Final formatting */
@@ -728,7 +738,7 @@ async function formatObservation(observation, year) {
     formattedObservation['decimalLatitude'] = formattedLatitude
     formattedObservation['decimalLongitude'] = formattedLongitude
 
-    // Set error flags as a semicolon-separated list of fields (empty fields and additional flags)
+    // Set error flags as a semicolon-separated list of fields (non-empty fields and additional flags)
     formattedObservation['Error Flags'] = nonEmptyFields.filter((field) => !formattedObservation[field]).concat(errorFields).join(';')
 
     return formattedObservation
@@ -767,32 +777,44 @@ async function formatObservations(observations, year, updateFormattingProgress) 
     return formattedObservations
 }
 
+/*
+ * readObservationsFileChunks()
+ * A generator function that reads a given observations CSV file into memory in chunks of a given size
+ */
 async function* readObservationsFileChunks(filePath, chunkSize) {
+    // Create the read stream and pipe it to a CSV parser
     const fileStream = fs.createReadStream(filePath, { encoding: 'utf-8' })
     const parser = parse({ columns: true, skip_empty_lines: true, relax_quotes: true })
     const csvStream = fileStream.pipe(parser)
 
+    // Iterate through the whole file (should yield before reading everything at once)
     let chunk = []
-
     for await (const row of csvStream) {
+        // Add the current row to the chunk
         chunk.push(row)
 
+        // If the chunk is large enough, yield it and reset the chunk for the next call
         if (chunk.length >= chunkSize) {
             yield chunk
             chunk = []
         }
     }
 
+    // Yield any remaining rows (a partial chunk)
     if (chunk.length > 0) {
         yield chunk
     }
 }
 
+/*
+ * formatChunkRow()
+ * Fully formats an observation object from a pre-existing row
+ */
 function formatChunkRow(row, year) {
     // The final field set should be a union of the standard template and the given row
     const formattedRow = Object.assign({}, observationTemplate, row)
 
-    // A list of fields to flag
+    // A list of fields to flag in addition to the non-empty fields
     const errorFields = []
 
     // If the Darwin Core fields are empty, fill them from the labels fields
@@ -817,9 +839,11 @@ function formatChunkRow(row, year) {
     formattedRow['country'] = row['country'] || row['Country']
     formattedRow['stateProvince'] = row['stateProvince'] || row['State']
 
+    // Flag 'Country' and 'State' if they have an unexpected value
     if (!Object.values(countryAbbreviations).includes(formattedRow['Country'])) { errorFields.push('Country') }
     if (!Object.values(stateProvinceAbbreviations).includes(formattedRow['State'])) { errorFields.push('State') }
 
+    // Remove 'County' or 'Co' from the county field (case insensitive)
     const county = row['county'] || row['County']
     formattedRow['county'] = county.replace(/(?<![^,.\s])Co(?:unty)?\.?(?![^,.\s])+/ig, '')
 
@@ -828,18 +852,24 @@ function formatChunkRow(row, year) {
     formattedRow['decimalLatitude'] = row['decimalLatitude'] || row['Dec. Lat.']
     formattedRow['decimalLongitude'] = row['decimalLongitude'] || row['Dec. Long.']
 
+    // Flag 'Lat/Long Accuracy' if it is greater than 250 meters
     if (parseInt(formattedRow['Lat/Long Accuracy']) > 250) { errorFields.push('Lat/Long Accuracy') }
 
+    // Flag 'Location', 'Abbreviated Location', and 'Locality' if they contain street suffixes, respectively
     if (includesStreetSuffix(formattedRow['Location'])) { errorFields.push('Location') }
     if (includesStreetSuffix(formattedRow['Abbreviated Location'])) { errorFields.push('Abbreviated Location') }
     if (includesStreetSuffix(formattedRow['locality'])) { errorFields.push('locality') }
 
-    // Set error flags as a semicolon-separated list of empty fields
+    // Set error flags as a semicolon-separated list of fields (non-empty fields and additional flags)
     formattedRow['Error Flags'] = nonEmptyFields.filter((field) => !formattedRow[field]).concat(errorFields).join(';')
 
     return formattedRow
 }
 
+/*
+ * fetchObservationsById()
+ * Fetches a list of observations from iNaturalist by their individual IDs
+ */
 async function fetchObservationsById(observationIds) {
     // observationIds can be a very long list of IDs, so batch requests to avoid iNaturalist API refusal
     const partitionSize = 50
@@ -847,10 +877,12 @@ async function fetchObservationsById(observationIds) {
     let partitionStart = 0
     let partitionEnd = Math.min(partitionSize, observationIds.length)
 
+    // Gather results until all partitions are complete
     let results = []
     for (let i = 0; i < nPartitions; i++) {
         const requestURL = `https://api.inaturalist.org/v1/observations/${observationIds.slice(partitionStart, partitionEnd).join(',')}`
 
+        // Fetch and concatenate the data, catching errors
         try {
             const res = await fetch(requestURL)
             if (res.ok) {
@@ -863,6 +895,7 @@ async function fetchObservationsById(observationIds) {
             console.error(`ERROR while fetching ${requestURL}:`, err)
         }
 
+        // Update the partition markers
         partitionStart = partitionEnd
         partitionEnd = Math.min(partitionEnd + partitionSize, observationIds.length)
     }
@@ -870,7 +903,13 @@ async function fetchObservationsById(observationIds) {
     return results
 }
 
+/*
+ * updateChunkRow()
+ * Updates specific values (location and taxonomy) in a formatted row from its corresponding iNaturalist observation
+ */
 async function updateChunkRow(row, observation) {
+    if (!row || !observation) { return }
+
     // Look up and update the plant taxonomy
     const family = getFamily(observation?.identifications) || row['Associated plant - family']
     const scientificName = observation?.taxon?.name || row['Associated plant - genus, species']
@@ -896,9 +935,11 @@ async function updateChunkRow(row, observation) {
         row['decimalLatitude'] = latitude || row['Dec. Lat.']
         row['decimalLongitude'] = longitude || row['Dec. Long.']
 
+        // Update the elevation in case the location changed
         row['Elevation'] = await getElevation(latitude, longitude) || row['Elevation']
     }
 
+    // Deconstruct, update, and reconstruct the 'Error Flags' field based on the new data
     let errorFlags = row['Error Flags']?.split(';') || []
     const updatableFields = [
         'Associated plant - family',
@@ -911,29 +952,43 @@ async function updateChunkRow(row, observation) {
         'decimalLongitude',
         'Elevation'
     ]
+    // Allow the flags of unupdated fields to pass and allow the flags of updated fields that are still empty to pass
     errorFlags = errorFlags.filter((field) => !updatableFields.includes(field) || !row[field])
     if (parseInt(row['Lat/Long Accuracy']) > 250) { errorFlags.push('Lat/Long Accuracy') }
-
+    // Reconstruct the 'Error Flags' field
     row['Error Flags'] = errorFlags.join(';')
 }
 
+/*
+ * formatChunk()
+ * Formats and updates a chunk of pre-existing observation data
+ */
 async function formatChunk(chunk, year) {
+    // Apply standard formatting
     const formattedChunk = chunk.map((row) => formatChunkRow(row, year))
 
+    // Fetch the iNaturalist observations for rows that have an iNaturalist URL
     let observationIds = chunk
         .map((row) => row['Associated plant - Inaturalist URL']?.split('/')?.pop())
         .filter((id) => !!id)
     observationIds = [...new Set(observationIds)]
     const observations = await fetchObservationsById(observationIds)
 
+    // Update rows with the new data from iNaturalist
     for (const row of formattedChunk) {
+        // Find the corresponding iNaturalist observation for the current row by matching the iNaturalist URL
         const matchingObservation = observations.find((observation) => observation['uri'] && (observation['uri'] === row['Associated plant - Inaturalist URL']))
+        // Update the row data
         await updateChunkRow(row, matchingObservation)
     }
 
     return formattedChunk
 }
 
+/*
+ * isRowEmpty()
+ * A boolean function that returns whether a row has all blank entries
+ */
 function isRowEmpty(row) {
     for (const field of Object.keys(row)) {
         if (row[field] && row[field] !== '') {
@@ -943,6 +998,10 @@ function isRowEmpty(row) {
     return true
 }
 
+/*
+ * generateRowKey()
+ * Creates a unique key string for a given formatted observation row
+ */
 function generateRowKey(row) {
     const urlField = 'Associated plant - Inaturalist URL'
     const sampleIDField = 'Sample ID'
@@ -952,6 +1011,9 @@ function generateRowKey(row) {
     const collectionMonthField = 'Month 1'
     const collectionYearField = 'Year 1'
 
+    // Which key fields to use depend on which are available:
+    // First, use iNaturalist URL, sample ID, and specimen ID
+    // Then, use iNaturalist alias, collection day, month, and year, sample ID, and specimen ID
     let keyFields = []
     if (row[urlField] && row[sampleIDField] && row[specimenIDField]) {
         keyFields = [urlField, sampleIDField, specimenIDField]
@@ -966,8 +1028,10 @@ function generateRowKey(row) {
         keyFields = [aliasField, sampleIDField, specimenIDField, collectionDayField, collectionMonthField, collectionYearField]
     }
 
+    // Get a list of the corresponding values for the key fields
     const keyValues = keyFields.map((field) => String(row[field] || ''))
 
+    // Combine and hash the key values into a single unique key string
     const compositeKey = Crypto.createHash('sha256')
         .update(keyValues.join(','))
         .digest('hex')
@@ -975,6 +1039,10 @@ function generateRowKey(row) {
     return compositeKey
 }
 
+/*
+ * compareStrings()
+ * A comparison function for strings that places empty strings last
+ */
 function compareStrings(str1, str2) {
     if (str1 === '' && str2 !== '') {
         return 1
@@ -987,6 +1055,10 @@ function compareStrings(str1, str2) {
     return (str1 > str2) - (str1 < str2)
 }
 
+/*
+ * compareNumericStrings()
+ * A comparison function for strings that are parseable as numbers; places empty strings last
+ */
 function compareNumericStrings(str1, str2) {
     if (str1 === '' && str2 !== '') {
         return 1
@@ -1005,6 +1077,17 @@ function compareNumericStrings(str1, str2) {
     }
 }
 
+/*
+ * compareRows()
+ * A custom comparison function for formatted observation rows; sorts in the following order with empty strings last
+ * 1. Observation No.
+ * 2. Collector - Last Name
+ * 3. Collector - First Name
+ * 4. Month 1
+ * 5. Collection Day 1
+ * 6. Sample ID
+ * 7. Specimen ID
+ */
 function compareRows(row1, row2) {
     const observationNumberComparison = compareNumericStrings(row1['Observation No.'], row2['Observation No.'])
     if (observationNumberComparison !== 0) {
@@ -1046,36 +1129,53 @@ function compareRows(row1, row2) {
     return 0
 }
 
+/*
+ * sortAndDedupeChunk()
+ * Sorts a chunk of observvation data and removes duplicate entries
+ */
 function sortAndDedupeChunk(chunk, seenKeys) {
+    // The resulting chunk of unique, sorted data
     const uniqueRows = []
 
+    // First, add rows with observation numbers since these are presumed to be unique
     for (const row of chunk) {
         if (isRowEmpty(row)) {
             continue
         }
 
         if (row['Observation No.']) {
+            // Create a key for this row and add it to the set of seen keys
             const key = generateRowKey(row)
             seenKeys.add(key)
+            // Add the row to the output
             uniqueRows.push(row)
         }
     }
 
+    // Next, add other rows if they are unique
     for (const row of chunk) {
         if (isRowEmpty(row)) {
             continue
         }
 
+        // Create a key for this row and check that it hasn't been seen yet
         const key = generateRowKey(row)
         if (!seenKeys.has(key)) {
+            // Record the row's key as seen
             seenKeys.add(key)
+            // Add the row to the output
             uniqueRows.push(row)
         }
     }
 
+    // Sort the output using the custom comparison function for formatted rows
     return uniqueRows.sort(compareRows)
 }
 
+/*
+ * writeObservationsFile()
+ * Writes a list of observation objects to a CSV file at the given file path
+ */
 function writeObservationsFile(filePath, observations) {
     const header = Object.keys(observationTemplate)
     const csv = stringifySync(observations, { header: true, columns: header })
@@ -1083,7 +1183,12 @@ function writeObservationsFile(filePath, observations) {
     fs.writeFileSync(filePath, csv)
 }
 
+/*
+ * writeChunkToTempFile()
+ * Creates a temporary file for a chunk of observation data and writes to it
+ */
 function writeChunkToTempFile(chunk, tempFiles) {
+    // Generate a unique file path in the temporary files directory
     const tempFileName = `${Crypto.randomUUID()}.csv`
     const tempFilePath = path.join('./api/data/temp/', tempFileName)
     tempFiles.push(tempFilePath)
@@ -1093,6 +1198,10 @@ function writeChunkToTempFile(chunk, tempFiles) {
     return tempFilePath
 }
 
+/*
+ * createParser()
+ * Opens a read stream and linked CSV parser for a given file path
+ */
 function createParser(filePath) {
     const stream = fs.createReadStream(filePath, { encoding: 'utf-8' })
     const parser = stream.pipe(parse({ columns: true, skip_empty_lines: true, relax_quotes: true }))
@@ -1100,6 +1209,10 @@ function createParser(filePath) {
     return { stream, parser }
 }
 
+/*
+ * mergeTempFilesBatch()
+ * Combines a batch of observation files into a single, sorted output file using a given comparison function
+ */
 async function mergeTempFilesBatch(inputFiles, outputFile, compareRows) {
     const readers = []
     const currentRows = []
@@ -1174,6 +1287,10 @@ async function mergeTempFilesBatch(inputFiles, outputFile, compareRows) {
     readers.forEach(({ stream }) => stream.destroy())
 }
 
+/*
+ * mergeTempFiles()
+ * Merges a list of temporary files containing chunked observation data into a single, sorted file using a given comparison function
+ */
 async function mergeTempFiles(tempFiles, outputFilePath, compareRows) {
     if (!tempFiles) return
 
@@ -1200,6 +1317,10 @@ async function mergeTempFiles(tempFiles, outputFilePath, compareRows) {
     }
 }
 
+/*
+ * findLastObservationNumber()
+ * Searches through a given observations file for the largest observation number (and its index)
+ */
 async function findLastObservationNumber(filePath) {
     let lastObservationNumber = undefined
     let lastObservationNumberIndex = -1
@@ -1220,8 +1341,12 @@ async function findLastObservationNumber(filePath) {
     return { lastObservationNumber, lastObservationNumberIndex }
 }
 
+/*
+ * indexData()
+ * Automatically fills in the 'Observation No.' field for a given observations file
+ */
 async function indexData(filePath, year) {
-    const { lastObservationNumber, lastObservationNumberIndex } = await findLastObservationNumber(filePath)
+    const { lastObservationNumber } = await findLastObservationNumber(filePath)
 
     const argYearObservationNumber = year ? year.toString().slice(2) + '00000' : undefined
     const currentYearObservationNumber = (new Date()).getFullYear().toString().slice(2) + '00000'
@@ -1251,6 +1376,10 @@ async function indexData(filePath, year) {
     fs.renameSync(tempFilePath, filePath)
 }
 
+/*
+ * main()
+ * Listens for tasks on a RabbitMQ queue; pulls iNaturalist data, merges it with a provided dataset, and formats and indexes the combined data
+ */
 async function main() {
     try {
         const connection = await amqp.connect(rabbitmqURL)
@@ -1293,6 +1422,7 @@ async function main() {
                 const seenKeys = new Set()
                 const tempFiles = []
 
+                // Separate the provided dataset into chunks and store them in temporary files; also, format and update the data
                 for await (const chunk of readObservationsFileChunks(inputFilePath, CHUNK_SIZE)) {
                     const formattedChunk = await formatChunk(chunk, year)
 
@@ -1305,6 +1435,7 @@ async function main() {
                 await updateTaskInProgress(taskId, { currentStep: 'Merging new observations with provided dataset' })
                 console.log('\tMerging new observations with provided dataset...')
 
+                // Create a chunk for the new data from iNaturalist
                 if (formattedObservations.length > 0) {
                     const sortedChunk = sortAndDedupeChunk(formattedObservations, seenKeys)
                     if (sortedChunk) {
@@ -1312,6 +1443,7 @@ async function main() {
                     }
                 }
 
+                // Merge all chunks into the output file
                 await mergeTempFiles(tempFiles, outputFilePath, compareRows)
 
                 await updateTaskInProgress(taskId, { currentStep: 'Indexing merged data' })
@@ -1337,6 +1469,7 @@ async function main() {
     }
 }
 
+// Connect to the Mongo Server and Amazon S3 before running the main process
 connectToDb().then(() => {
     connectToS3()
     main()

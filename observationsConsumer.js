@@ -1214,17 +1214,23 @@ function createParser(filePath) {
  * Combines a batch of observation files into a single, sorted output file using a given comparison function
  */
 async function mergeTempFilesBatch(inputFiles, outputFile, compareRows) {
+    // A list of open read streams and CSV parsers (open pair for each file in the batch)
     const readers = []
+    // The current "top" rows from the open files in the batch
     const currentRows = []
 
+    // Open each file in the batch
     for (const filePath of inputFiles) {
         try {
+            // Create the read stream and CSV parser
             const { stream, parser } = createParser(filePath)
             readers.push({ stream, parser })
             
+            // Get the first row
             const iterator = parser[Symbol.asyncIterator]()
             const { value: firstRow, done } = await iterator.next()
 
+            // If not at the end of the file, add the row to currentRows
             if (!done) {
                 currentRows.push({
                     row: firstRow,
@@ -1237,17 +1243,21 @@ async function mergeTempFilesBatch(inputFiles, outputFile, compareRows) {
                 })
             }
         } catch (error) {
+            // Log the error and rethrow it; there is no way to gracefully recover
             console.error(`Error opening file ${filePath}`)
             readers.forEach(({ stream }) => stream.destroy())
             throw error
         }
     }
 
+    // Open a write stream and stringifier for the output file
     const outputFileStream = fs.createWriteStream(outputFile, { encoding: 'utf-8' })
     const stringifier = stringify({ header: true, columns: Object.keys(observationTemplate) })
     stringifier.pipe(outputFileStream)
 
+    // Repeatedly write the "minimum" row of currentRows to the output file until there are none left
     while (true) {
+        // Record the index of each row within currentRows; filter out empty rows (e.g., from reaching the end of an open file)
         const validRows = currentRows
             .map((item, index) => ({
                 row: item.row,
@@ -1255,15 +1265,21 @@ async function mergeTempFilesBatch(inputFiles, outputFile, compareRows) {
             }))
             .filter((item) => item.row !== null)
 
+        // Break the loop if there are no more rows
         if (validRows.length === 0) break
 
+        // Find the row (in validRows) that has the minimum "value" using the given comparison function
         const minRow = validRows.reduce((min, current) => compareRows(current.row, min.row) < 0 ? current : min)
 
+        // Write the minimum row to the output file
         stringifier.write(minRow.row)
 
+        // Fetch the next row from the file which had the minimum row
         try {
+            // Use the index in currentRows to get the iterator for the file that contained the minimum row; use the iterator to read the next row
             const { value: nextRow, done } = await currentRows[minRow.index].iterator.next()
 
+            // Update currentRows to replace the minimum row with the next row, unless the end of the file was reached
             if (!done) {
                 currentRows[minRow.index] = {
                     row: nextRow,
@@ -1276,6 +1292,7 @@ async function mergeTempFilesBatch(inputFiles, outputFile, compareRows) {
                 }
             }
         } catch (error) {
+            // In case of an error, stop reading the file
             currentRows[minRow.index] = {
                 row: null,
                 iterator: currentRows[minRow.index].iterator
@@ -1283,6 +1300,7 @@ async function mergeTempFilesBatch(inputFiles, outputFile, compareRows) {
         }
     }
 
+    // Close the stringifier and read streams
     stringifier.end()
     readers.forEach(({ stream }) => stream.destroy())
 }
@@ -1292,24 +1310,33 @@ async function mergeTempFilesBatch(inputFiles, outputFile, compareRows) {
  * Merges a list of temporary files containing chunked observation data into a single, sorted file using a given comparison function
  */
 async function mergeTempFiles(tempFiles, outputFilePath, compareRows) {
+    // Return immediately if there are no files to merge
     if (!tempFiles) return
 
+    // Make a queue out of the given list of temporary files
     const filesQueue = [...tempFiles]
 
+    // Merge batches of files from the queue until there are none left
     while (filesQueue.length > 0) {
         // console.log("\t\tMerge queue:" + " X".repeat(filesQueue.length))
 
+        // Dequeue BATCH_SIZE files to merge
         const batch = filesQueue.splice(0, BATCH_SIZE)
 
+        // If the files queue is empty and the batch contains all of the remaining temporary files, this is the last iteration
         if (filesQueue.length === 0 && batch.length === tempFiles.length) {
+            // Merge into the output file on the last iteration
             await mergeTempFilesBatch(batch, outputFilePath, compareRows)
         } else {
+            // Otherwise, merge into a new temporary file
             const mergedPath = path.join('./api/data/temp', `${Crypto.randomUUID()}.csv`)
             await mergeTempFilesBatch(batch, mergedPath, compareRows)
+            // Add the new file to the queue and the list of temporary files
             filesQueue.push(mergedPath)
             tempFiles.push(mergedPath)
         }
 
+        // Clean up files from the batch
         for (const filePath of batch) {
             fs.rmSync(filePath)
             tempFiles.splice(tempFiles.indexOf(filePath), 1)
@@ -1324,11 +1351,15 @@ async function mergeTempFiles(tempFiles, outputFilePath, compareRows) {
 async function findLastObservationNumber(filePath) {
     let lastObservationNumber = undefined
     let lastObservationNumberIndex = -1
+
+    // Open a CSV parser for the given file path
     const { parser } = createParser(filePath)
 
+    // Search linearly for the highest 'Observation No.'
     let i = 0
     for await (const row of parser) {
         if (row['Observation No.']) {
+            // Parse 'Observation No.' as an integer and update lastObservationNumber/lastObservationNumberIndex
             const currentObservationNumber = parseInt(row['Observation No.'])
             if (!isNaN(currentObservationNumber) && (!lastObservationNumber || currentObservationNumber > lastObservationNumber)) {
                 lastObservationNumber = currentObservationNumber
@@ -1346,14 +1377,18 @@ async function findLastObservationNumber(filePath) {
  * Automatically fills in the 'Observation No.' field for a given observations file
  */
 async function indexData(filePath, year) {
+    // Search for the highest observation number in the given file
     const { lastObservationNumber } = await findLastObservationNumber(filePath)
 
+    // Construct a default observation number from the given year and from the current year; use the argument-based one first
     const argYearObservationNumber = year ? year.toString().slice(2) + '00000' : undefined
     const currentYearObservationNumber = (new Date()).getFullYear().toString().slice(2) + '00000'
     let nextObservationNumber = parseInt(argYearObservationNumber ?? currentYearObservationNumber)
 
+    // If an observation number was found in the given file, set the next observation number to one greater
     nextObservationNumber = !isNaN(lastObservationNumber) ? lastObservationNumber + 1 : nextObservationNumber
 
+    // Create an input CSV parser and an output stringifier for a temporary file
     const { parser } = createParser(filePath)
 
     const tempFilePath = `./api/data/temp/${Crypto.randomUUID()}.csv`
@@ -1361,6 +1396,7 @@ async function indexData(filePath, year) {
     const stringifier = stringify({ header: true, columns: Object.keys(observationTemplate) })
     stringifier.pipe(outputFileStream)
 
+    // Add each non-empty row from the input file to the temporary output file; fill in the observation number if empty
     for await (const row of parser) {
         if (isRowEmpty(row)) continue
 
@@ -1373,6 +1409,7 @@ async function indexData(filePath, year) {
     }
     stringifier.end()
 
+    // Move the temporary output file to the input file path (overwrites the original file and renames the temporary file)
     fs.renameSync(tempFilePath, filePath)
 }
 

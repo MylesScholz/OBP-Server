@@ -563,10 +563,14 @@ async function fetchElevationFile(fileKey) {
 
     if (!fs.existsSync(filePath)) {
         const fileStream = await getS3Object('obp-server-data', fileKey)
-        const fileData = await fileStream.transformToByteArray()
+        const fileData = await fileStream?.transformToByteArray()
 
-        fs.writeFileSync(filePath, fileData)
+        if (fileData) {
+            fs.writeFileSync(filePath, fileData)
+        }
     }
+
+    return filePath
 }
 
 /*
@@ -585,10 +589,10 @@ function includesStreetSuffix(string) {
 async function readElevationFromFile(fileKey, latitude, longitude) {
     try {
         // Fetch the given file from AWS S3 if necessary
-        await fetchElevationFile(fileKey)
+        const filePath = await fetchElevationFile(fileKey)
 
         // Read the given file's raster data using the geotiff package
-        const tiff = await fromFile('./api/data/' + fileKey)
+        const tiff = await fromFile(filePath)
         const image = await tiff.getImage()
         const rasters = await image.readRasters()
         const data = rasters[0]

@@ -16,23 +16,66 @@ import { stringify } from 'csv-stringify'
 
 /* Constants */
 
+// RabbitMQ connection URL
 const rabbitmqHost = process.env.RABBITMQ_HOST || 'localhost'
 const rabbitmqURL = `amqp://${rabbitmqHost}`
-
 // Maximum number of output files stored on the server
 const MAX_OBSERVATIONS = 10
 // Maximum number of observations to read from a file at once
 const CHUNK_SIZE = 10000
 // Number of temporary files to merge together at once
 const BATCH_SIZE = 2
+// Field names
+const ERROR_FLAGS = 'Error Flags'
+const OBSERVATION_NO = 'Observation No.'
+const INATURALIST_ID = 'iNaturalist ID'
+const INATURALIST_ALIAS = 'iNaturalist Alias'
+const FIRST_NAME = 'Collector - First Name'
+const FIRST_INITIAL = 'Collector - First Initial'
+const LAST_NAME = 'Collector - Last Name'
+const SAMPLE_ID = 'Sample ID'
+const SPECIMEN_ID = 'Specimen ID'
+const OBA_DAY = 'Collection Day 1'
+const OBA_MONTH = 'Month 1'
+const OBA_YEAR = 'Year 1'
+const OBA_TIME = 'Time 1'
+const OBA_COUNTRY = 'Country'
+const OBA_STATE = 'State'
+const OBA_COUNTY = 'County'
+const OBA_LOCATION = 'Location'
+const OBA_ABBR_LOCATION = 'Abbreviated Location'
+const OBA_LATITUDE = 'Dec. Lat.'
+const OBA_LONGITUDE = 'Dec. Long.'
+const ACCURACY = 'Lat/Long Accuracy'
+const ELEVATION = 'Elevation'
+const COLLECTION_METHOD = 'Collection method'
+const FAMILY = 'Associated plant - family'
+const SCIENTIFIC_NAME = 'Associated plant - genus, species'
+const INATURALIST_URL = 'Associated plant - Inaturalist URL'
+const CITATION = 'bibliographicCitation'
+const DATASET_NAME = 'datasetName'
+const RECORDED_BY = 'recordedBy'
+const ASSOCIATED_TAXA = 'associatedTaxa'
+const SAMPLING_PROTOCOL = 'samplingProtocol'
+const DARWIN_YEAR = 'year'
+const DARWIN_MONTH = 'month'
+const DARWIN_DAY = 'day'
+const VERBATIM_DATE = 'verbatimEventDate'
+const FIELD_NOTES = 'fieldNotes'
+const DARWIN_COUNTRY = 'country'
+const DARWIN_STATE = 'stateProvince'
+const DARWIN_COUNTY = 'county'
+const DARWIN_LOCATION = 'locality'
+const DARWIN_LATITUDE = 'decimalLatitude'
+const DARWIN_LONGITUDE = 'decimalLongitude'
 // Template object for observations; static values are provided as strings, data-dependent values are set to null
 const observationTemplate = {
-    'Error Flags': '',
+    'Error Flags': null,
     'Verified': '',
     'Date Added': '',
     'Date Label Print': '',
     'Date Label Sent': '',
-    'Observation No.': '',
+    'Observation No.': null,
     'Voucher No.': '',
     'iNaturalist ID': null,
     'iNaturalist Alias': null,
@@ -237,7 +280,9 @@ const stateProvinceAbbreviations = {
     'Nunavut': 'NU',
     'Yukon': 'YT'
 }
-// A list of RegExps to detect street suffixes in the 'Location', 'Abbreviated Location', and 'locality' fields
+// A RegExp for 'County' or 'Co' or 'Co.'
+const countyRegex = new RegExp(/(?<![^,.\s])Co(?:unty)?\.?(?![^,.\s])+/ig)
+// A list of RegExps to detect street suffixes in the OBA_LOCATION, OBA_ABBR_LOCATION, and DARWIN_LOCATION fields
 const streetSuffixRegexes = [
     'R(?:oa)?d',                    // Road, Rd
     'St(?:r(?:eet)?)?',             // Street, Str, St
@@ -468,7 +513,7 @@ async function lookUpPlaces(placeIds) {
     }
 
     // Remove 'County' or 'Co' from the county field (case insensitive) before returning all values
-    county = county.replace(/(?<![^,.\s])Co(?:unty)?\.?(?![^,.\s])+/ig, '')
+    county = county.replace(countyRegex, '')
     return { country, stateProvince, county }
 }
 
@@ -619,7 +664,7 @@ async function formatObservation(observation, year) {
         Object.keys(formattedObservation).forEach((key) => !formattedObservation[key] ? formattedObservation[key] = '' : null)
 
         // Set error flags for fields that should not be empty
-        formattedObservation['Error Flags'] = nonEmptyFields.filter((field) => !formattedObservation[field]).join(';')
+        formattedObservation[ERROR_FLAGS] = nonEmptyFields.filter((field) => !formattedObservation[field]).join(';')
 
         return formattedObservation
     }
@@ -655,7 +700,7 @@ async function formatObservation(observation, year) {
     const formattedTime = (formattedHours && formattedMinutes) ? `${formattedHours}:${formattedMinutes}` : ''
     
     // Format the location
-    const formattedLocation = observation.place_guess?.split(/,\s*/)?.at(0)?.replace(/(?<![^,.\s])Co(?:unty)?\.?(?![^,.\s])+/ig, '') ?? ''
+    const formattedLocation = observation.place_guess?.split(/,\s*/)?.at(0)?.replace(countyRegex, '') ?? ''
 
     // Format the coordinates
     const formattedLatitude = observation.geojson?.coordinates?.at(1)?.toFixed(3)?.toString() ?? ''
@@ -667,79 +712,79 @@ async function formatObservation(observation, year) {
     /* Final formatting */
 
     // Label fields
-    formattedObservation['iNaturalist ID'] = observation.user?.id?.toString() ?? ''
-    formattedObservation['iNaturalist Alias'] = observation.user?.login ?? ''
+    formattedObservation[INATURALIST_ID] = observation.user?.id?.toString() ?? ''
+    formattedObservation[INATURALIST_ALIAS] = observation.user?.login ?? ''
 
-    formattedObservation['Collector - First Name'] = firstName
-    formattedObservation['Collector - First Initial'] = firstInitial
-    formattedObservation['Collector - Last Name'] = lastName
+    formattedObservation[FIRST_NAME] = firstName
+    formattedObservation[FIRST_INITIAL] = firstInitial
+    formattedObservation[LAST_NAME] = lastName
 
-    formattedObservation['Sample ID'] = getOFV(observation['ofvs'], 'Sample ID.')
-    formattedObservation['Specimen ID'] = getOFV(observation['ofvs'], 'Number of bees collected')
+    formattedObservation[SAMPLE_ID] = getOFV(observation['ofvs'], 'Sample ID.')
+    formattedObservation[SPECIMEN_ID] = getOFV(observation['ofvs'], 'Number of bees collected')
 
-    formattedObservation['Collection Day 1'] = formattedDay
-    formattedObservation['Month 1'] = monthNumerals[observedMonth] ?? ''
-    formattedObservation['Year 1'] = formattedYear
-    formattedObservation['Time 1'] = formattedTime
+    formattedObservation[OBA_DAY] = formattedDay
+    formattedObservation[OBA_MONTH] = monthNumerals[observedMonth] ?? ''
+    formattedObservation[OBA_YEAR] = formattedYear
+    formattedObservation[OBA_TIME] = formattedTime
 
-    formattedObservation['Country'] = countryAbbreviations[country] ?? country
-    formattedObservation['State'] = stateProvinceAbbreviations[stateProvince] ?? stateProvince
-    formattedObservation['County'] = county
+    formattedObservation[OBA_COUNTRY] = countryAbbreviations[country] ?? country
+    formattedObservation[OBA_STATE] = stateProvinceAbbreviations[stateProvince] ?? stateProvince
+    formattedObservation[OBA_COUNTY] = county
 
-    // Flag 'Country' and 'State' if they have an unexpected value
-    if (!countryAbbreviations[country]) { errorFields.push('Country') }
-    if (!stateProvinceAbbreviations[stateProvince]) { errorFields.push('State') }
+    // Flag OBA_COUNTRY and OBA_STATE if they have an unexpected value
+    if (!countryAbbreviations[country]) { errorFields.push(OBA_COUNTRY) }
+    if (!stateProvinceAbbreviations[stateProvince]) { errorFields.push(OBA_STATE) }
 
-    formattedObservation['Location'] = formattedLocation
-    formattedObservation['Abbreviated Location'] = formattedLocation
+    formattedObservation[OBA_LOCATION] = formattedLocation
+    formattedObservation[OBA_ABBR_LOCATION] = formattedLocation
 
-    // Flag 'Location', 'Abbreviated Location', and 'locality' if formattedLocation contains any street suffixes
+    // Flag OBA_LOCATION, OBA_ABBR_LOCATION, and DARWIN_LOCATION if formattedLocation contains any street suffixes
     if (includesStreetSuffix(formattedLocation)) {
-        errorFields.push('Location')
-        errorFields.push('Abbreviated Location')
-        errorFields.push('locality')
+        errorFields.push(OBA_LOCATION)
+        errorFields.push(OBA_ABBR_LOCATION)
+        errorFields.push(DARWIN_LOCATION)
     }
 
-    formattedObservation['Dec. Lat.'] = formattedLatitude
-    formattedObservation['Dec. Long.'] = formattedLongitude
-    formattedObservation['Lat/Long Accuracy'] = observation.positional_accuracy?.toString() ?? ''
+    formattedObservation[OBA_LATITUDE] = formattedLatitude
+    formattedObservation[OBA_LONGITUDE] = formattedLongitude
+    formattedObservation[ACCURACY] = observation.positional_accuracy?.toString() ?? ''
 
-    // Flag 'Lat/Long Accuracy' if positional_accuracy is greater than 250 meters
-    if (observation.positional_accuracy > 250) { errorFields.push('Lat/Long Accuracy') }
+    // Flag ACCURACY if positional_accuracy is greater than 250 meters
+    if (observation.positional_accuracy > 250) { errorFields.push(ACCURACY) }
 
-    formattedObservation['Elevation'] = await getElevation(formattedLatitude, formattedLongitude)
+    formattedObservation[ELEVATION] = await getElevation(formattedLatitude, formattedLongitude)
 
-    formattedObservation['Associated plant - family'] = family
-    formattedObservation['Associated plant - genus, species'] = scientificName
-    formattedObservation['Associated plant - Inaturalist URL'] = observation['uri'] ?? ''
+    formattedObservation[FAMILY] = family
+    formattedObservation[SCIENTIFIC_NAME] = scientificName
+    formattedObservation[INATURALIST_URL] = observation['uri'] ?? ''
 
     // Darwin Core fields
-    formattedObservation['bibliographicCitation'] = `Oregon Bee Atlas ${year}. Oregon State University, Corvallis, OR, USA.`
-    formattedObservation['datasetName'] = `OBA-OSAC-${year}`
+    formattedObservation[CITATION] = `Oregon Bee Atlas ${year}. Oregon State University, Corvallis, OR, USA.`
+    formattedObservation[DATASET_NAME] = `OBA-OSAC-${year}`
 
-    formattedObservation['recordedBy'] = `${firstName}${(firstName && lastName) ? ' ' : ''}${lastName}`
+    formattedObservation[RECORDED_BY] = `${firstName}${(firstName && lastName) ? ' ' : ''}${lastName}`
 
-    formattedObservation['associatedTaxa'] = (scientificName || family) ? `foraging on : "${scientificName || family}"` : ''
+    formattedObservation[ASSOCIATED_TAXA] = (scientificName || family) ? `foraging on : "${scientificName || family}"` : ''
 
-    formattedObservation['samplingProtocol'] = 'aerial net'
+    formattedObservation[SAMPLING_PROTOCOL] = 'aerial net'
 
-    formattedObservation['year'] = formattedYear
-    formattedObservation['month'] = formattedMonth
-    formattedObservation['day'] = formattedDay
-    formattedObservation['verbatimEventDate'] = observation['observed_on_string'] ?? ''
+    formattedObservation[DARWIN_YEAR] = formattedYear
+    formattedObservation[DARWIN_MONTH] = formattedMonth
+    formattedObservation[DARWIN_DAY] = formattedDay
+    formattedObservation[VERBATIM_DATE] = observation['observed_on_string'] ?? ''
 
-    formattedObservation['fieldNotes'] = observation['description'] ?? ''
+    formattedObservation[FIELD_NOTES] = observation['description'] ?? ''
 
-    formattedObservation['country'] = country
-    formattedObservation['stateProvince'] = stateProvince
-    formattedObservation['county'] = county
-    formattedObservation['locality'] = formattedLocation
+    formattedObservation[DARWIN_COUNTRY] = country
+    formattedObservation[DARWIN_STATE] = stateProvince
+    formattedObservation[DARWIN_COUNTY] = county
+    formattedObservation[DARWIN_LOCATION] = formattedLocation
 
-    formattedObservation['decimalLatitude'] = formattedLatitude
-    formattedObservation['decimalLongitude'] = formattedLongitude
+    formattedObservation[DARWIN_LATITUDE] = formattedLatitude
+    formattedObservation[DARWIN_LONGITUDE] = formattedLongitude
 
     // Set error flags as a semicolon-separated list of fields (non-empty fields and additional flags)
-    formattedObservation['Error Flags'] = nonEmptyFields.filter((field) => !formattedObservation[field]).concat(errorFields).join(';')
+    formattedObservation[ERROR_FLAGS] = nonEmptyFields.filter((field) => !formattedObservation[field]).concat(errorFields).join(';')
 
     return formattedObservation
 }
@@ -756,15 +801,15 @@ async function formatObservations(observations, year, updateFormattingProgress) 
         const formattedObservation = await formatObservation(observation, year)
         updateFormattingProgress(`${(100 * (i++) / observations.length).toFixed(2)}%`)
 
-        // 'Specimen ID' is initially set to the number of bees collected
-        // Now, duplicate observations a number of times equal to this value and overwrite 'Specimen ID' to index the duplications
-        if (formattedObservation['Specimen ID'] !== '') {
+        // SPECIMEN_ID is initially set to the number of bees collected
+        // Now, duplicate observations a number of times equal to this value and overwrite SPECIMEN_ID to index the duplications
+        if (formattedObservation[SPECIMEN_ID] !== '') {
             try {
-                const beesCollected = parseInt(formattedObservation['Specimen ID'])
+                const beesCollected = parseInt(formattedObservation[SPECIMEN_ID])
 
                 for (let i = 1; i < beesCollected + 1; i++) {
                     const duplicateObservation = Object.assign({}, formattedObservation)
-                    duplicateObservation['Specimen ID'] = i.toString()
+                    duplicateObservation[SPECIMEN_ID] = i.toString()
 
                     formattedObservations.push(duplicateObservation)
                 }
@@ -818,50 +863,50 @@ function formatChunkRow(row, year) {
     const errorFields = []
 
     // If the Darwin Core fields are empty, fill them from the labels fields
-    formattedRow['bibliographicCitation'] = row['bibliographicCitation'] || `Oregon Bee Atlas ${year}. Oregon State University, Corvallis, OR, USA.`
-    formattedRow['datasetName'] = row['datasetName'] || `OBA-OSAC-${year}`
+    formattedRow[CITATION] = row[CITATION] || `Oregon Bee Atlas ${year}. Oregon State University, Corvallis, OR, USA.`
+    formattedRow[DATASET_NAME] = row[DATASET_NAME] || `OBA-OSAC-${year}`
 
-    const firstName = row['Collector - First Name']
-    const lastName = row['Collector - Last Name']
-    formattedRow['recordedBy'] = row['recordedBy'] || `${firstName}${(firstName && lastName) ? ' ' : ''}${lastName}`
+    const firstName = row[FIRST_NAME]
+    const lastName = row[LAST_NAME]
+    formattedRow[RECORDED_BY] = row[RECORDED_BY] || `${firstName}${(firstName && lastName) ? ' ' : ''}${lastName}`
 
-    const family = row['Associated plant - family']
-    const scientificName = row['Associated plant - genus, species']
-    formattedRow['associatedTaxa'] = row['associatedTaxa'] || ((scientificName || family) ? `foraging on : "${scientificName || family}"` : '')
+    const family = row[FAMILY]
+    const scientificName = row[SCIENTIFIC_NAME]
+    formattedRow[ASSOCIATED_TAXA] = row[ASSOCIATED_TAXA] || ((scientificName || family) ? `foraging on : "${scientificName || family}"` : '')
 
-    const method = row['Collection method'] === 'net' ? 'aerial net' : row['Collection method']
-    formattedRow['samplingProtocol'] = row['samplingProtocol'] || method
+    const method = row[COLLECTION_METHOD] === 'net' ? 'aerial net' : row[COLLECTION_METHOD]
+    formattedRow[SAMPLING_PROTOCOL] = row[SAMPLING_PROTOCOL] || method
 
-    formattedRow['year'] = row['year'] || row['Year 1']
-    formattedRow['month'] = row['month'] || monthNumerals.indexOf(row['Month 1']) + 1
-    formattedRow['day'] = row['day'] || row['Collection Day 1']
+    formattedRow[DARWIN_YEAR] = row[DARWIN_YEAR] || row[OBA_YEAR]
+    formattedRow[DARWIN_MONTH] = row[DARWIN_MONTH] || monthNumerals.indexOf(row[OBA_MONTH]) + 1
+    formattedRow[DARWIN_DAY] = row[DARWIN_DAY] || row[OBA_DAY]
 
-    formattedRow['country'] = row['country'] || row['Country']
-    formattedRow['stateProvince'] = row['stateProvince'] || row['State']
+    formattedRow[DARWIN_COUNTRY] = row[DARWIN_COUNTRY] || row[OBA_COUNTRY]
+    formattedRow[DARWIN_STATE] = row[DARWIN_STATE] || row[OBA_STATE]
 
-    // Flag 'Country' and 'State' if they have an unexpected value
-    if (!Object.values(countryAbbreviations).includes(formattedRow['Country'])) { errorFields.push('Country') }
-    if (!Object.values(stateProvinceAbbreviations).includes(formattedRow['State'])) { errorFields.push('State') }
+    // Flag OBA_COUNTRY and OBA_STATE if they have an unexpected value
+    if (!Object.values(countryAbbreviations).includes(formattedRow[OBA_COUNTRY])) { errorFields.push(OBA_COUNTRY) }
+    if (!Object.values(stateProvinceAbbreviations).includes(formattedRow[OBA_STATE])) { errorFields.push(OBA_STATE) }
 
     // Remove 'County' or 'Co' from the county field (case insensitive)
-    const county = row['county'] || row['County']
-    formattedRow['county'] = county.replace(/(?<![^,.\s])Co(?:unty)?\.?(?![^,.\s])+/ig, '')
+    const county = row[DARWIN_COUNTY] || row[OBA_COUNTY]
+    formattedRow[DARWIN_COUNTY] = county.replace(countyRegex, '')
 
-    formattedRow['locality'] = row['locality'] || row['Abbreviated Location']
+    formattedRow[DARWIN_LOCATION] = row[DARWIN_LOCATION] || row[OBA_ABBR_LOCATION]
 
-    formattedRow['decimalLatitude'] = row['decimalLatitude'] || row['Dec. Lat.']
-    formattedRow['decimalLongitude'] = row['decimalLongitude'] || row['Dec. Long.']
+    formattedRow[DARWIN_LATITUDE] = row[DARWIN_LATITUDE] || row[OBA_LATITUDE]
+    formattedRow[DARWIN_LONGITUDE] = row[DARWIN_LONGITUDE] || row[OBA_LONGITUDE]
 
-    // Flag 'Lat/Long Accuracy' if it is greater than 250 meters
-    if (parseInt(formattedRow['Lat/Long Accuracy']) > 250) { errorFields.push('Lat/Long Accuracy') }
+    // Flag ACCURACY if it is greater than 250 meters
+    if (parseInt(formattedRow[ACCURACY]) > 250) { errorFields.push(ACCURACY) }
 
-    // Flag 'Location', 'Abbreviated Location', and 'Locality' if they contain street suffixes, respectively
-    if (includesStreetSuffix(formattedRow['Location'])) { errorFields.push('Location') }
-    if (includesStreetSuffix(formattedRow['Abbreviated Location'])) { errorFields.push('Abbreviated Location') }
-    if (includesStreetSuffix(formattedRow['locality'])) { errorFields.push('locality') }
+    // Flag OBA_LOCATION, OBA_ABBR_LOCATION, and DARWIN_LOCATION if they contain street suffixes, respectively
+    if (includesStreetSuffix(formattedRow[OBA_LOCATION])) { errorFields.push(OBA_LOCATION) }
+    if (includesStreetSuffix(formattedRow[OBA_ABBR_LOCATION])) { errorFields.push(OBA_ABBR_LOCATION) }
+    if (includesStreetSuffix(formattedRow[DARWIN_LOCATION])) { errorFields.push(DARWIN_LOCATION) }
 
     // Set error flags as a semicolon-separated list of fields (non-empty fields and additional flags)
-    formattedRow['Error Flags'] = nonEmptyFields.filter((field) => !formattedRow[field]).concat(errorFields).join(';')
+    formattedRow[ERROR_FLAGS] = nonEmptyFields.filter((field) => !formattedRow[field]).concat(errorFields).join(';')
 
     return formattedRow
 }
@@ -911,52 +956,54 @@ async function updateChunkRow(row, observation) {
     if (!row || !observation) { return }
 
     // Look up and update the plant taxonomy
-    const family = getFamily(observation?.identifications) || row['Associated plant - family']
-    const scientificName = observation?.taxon?.name || row['Associated plant - genus, species']
-    row['Associated plant - family'] = family
-    row['Associated plant - genus, species'] = scientificName
-    row['associatedTaxa'] = ((scientificName || family) ? `foraging on : "${scientificName || family}"` : '') || row['associatedTaxa']
+    const family = getFamily(observation?.identifications) || row[FAMILY]
+    const scientificName = observation?.taxon?.name || row[SCIENTIFIC_NAME]
+    row[FAMILY] = family
+    row[SCIENTIFIC_NAME] = scientificName
+    row[ASSOCIATED_TAXA] = ((scientificName || family) ? `foraging on : "${scientificName || family}"` : '') || row[ASSOCIATED_TAXA]
 
     // Update the coordinate fields if any are missing or if the accuracy is better (smaller)
-    const prevAccuracy = parseInt(row['Lat/Long Accuracy'])
+    const prevAccuracy = parseInt(row[ACCURACY])
     const newAccuracy = observation?.positional_accuracy
     if (
-        !row['Dec. Lat.'] ||
-        !row['Dec. Long.'] ||
+        !row[OBA_LATITUDE] ||
+        !row[OBA_LONGITUDE] ||
+        !row[DARWIN_LATITUDE] ||
+        !row[DARWIN_LONGITUDE] ||
         (prevAccuracy && newAccuracy && newAccuracy < prevAccuracy)
     ) {
         const latitude = observation?.geojson?.coordinates?.at(1)?.toFixed(3)?.toString()
         const longitude = observation?.geojson?.coordinates?.at(0)?.toFixed(3)?.toString()
 
-        row['Dec. Lat.'] = latitude || row['Dec. Lat.']
-        row['Dec. Long.'] = longitude || row['Dec. Long.']
-        row['Lat/Long Accuracy'] = newAccuracy?.toString() || row['Lat/Long Accuracy']
+        row[OBA_LATITUDE] = latitude || row[OBA_LATITUDE]
+        row[OBA_LONGITUDE] = longitude || row[OBA_LONGITUDE]
+        row[ACCURACY] = newAccuracy?.toString() || row[ACCURACY]
 
-        row['decimalLatitude'] = latitude || row['Dec. Lat.']
-        row['decimalLongitude'] = longitude || row['Dec. Long.']
+        row[DARWIN_LATITUDE] = latitude || row[DARWIN_LATITUDE]
+        row[DARWIN_LONGITUDE] = longitude || row[DARWIN_LONGITUDE]
 
         // Update the elevation in case the location changed
-        row['Elevation'] = await getElevation(latitude, longitude) || row['Elevation']
+        row[ELEVATION] = await getElevation(latitude, longitude) || row[ELEVATION]
     }
 
-    // Deconstruct, update, and reconstruct the 'Error Flags' field based on the new data
-    let errorFlags = row['Error Flags']?.split(';') || []
+    // Deconstruct, update, and reconstruct the ERROR_FLAGS field based on the new data
+    let errorFlags = row[ERROR_FLAGS]?.split(';') || []
     const updatableFields = [
-        'Associated plant - family',
-        'Associated plant - genus, species',
-        'associatedTaxa',
-        'Dec. Lat.',
-        'Dec. Long.',
-        'Lat/Long Accuracy',
-        'decimalLatitude',
-        'decimalLongitude',
-        'Elevation'
+        FAMILY,
+        SCIENTIFIC_NAME,
+        ASSOCIATED_TAXA,
+        OBA_LATITUDE,
+        OBA_LONGITUDE,
+        ACCURACY,
+        DARWIN_LATITUDE,
+        DARWIN_LONGITUDE,
+        ELEVATION
     ]
     // Allow the flags of unupdated fields to pass and allow the flags of updated fields that are still empty to pass
     errorFlags = errorFlags.filter((field) => !updatableFields.includes(field) || !row[field])
-    if (parseInt(row['Lat/Long Accuracy']) > 250) { errorFlags.push('Lat/Long Accuracy') }
-    // Reconstruct the 'Error Flags' field
-    row['Error Flags'] = errorFlags.join(';')
+    if (parseInt(row[ACCURACY]) > 250) { errorFlags.push(ACCURACY) }
+    // Reconstruct the ERROR_FLAGS field
+    row[ERROR_FLAGS] = errorFlags.join(';')
 }
 
 /*
@@ -969,7 +1016,7 @@ async function formatChunk(chunk, year) {
 
     // Fetch the iNaturalist observations for rows that have an iNaturalist URL
     let observationIds = chunk
-        .map((row) => row['Associated plant - Inaturalist URL']?.split('/')?.pop())
+        .map((row) => row[INATURALIST_URL]?.split('/')?.pop())
         .filter((id) => !!id)
     observationIds = [...new Set(observationIds)]
     const observations = await fetchObservationsById(observationIds)
@@ -977,7 +1024,7 @@ async function formatChunk(chunk, year) {
     // Update rows with the new data from iNaturalist
     for (const row of formattedChunk) {
         // Find the corresponding iNaturalist observation for the current row by matching the iNaturalist URL
-        const matchingObservation = observations.find((observation) => observation['uri'] && (observation['uri'] === row['Associated plant - Inaturalist URL']))
+        const matchingObservation = observations.find((observation) => observation['uri'] && (observation['uri'] === row[INATURALIST_URL]))
         // Update the row data
         await updateChunkRow(row, matchingObservation)
     }
@@ -1003,29 +1050,21 @@ function isRowEmpty(row) {
  * Creates a unique key string for a given formatted observation row
  */
 function generateRowKey(row) {
-    const urlField = 'Associated plant - Inaturalist URL'
-    const sampleIDField = 'Sample ID'
-    const specimenIDField = 'Specimen ID'
-    const aliasField = 'iNaturalist Alias'
-    const collectionDayField = 'Collection Day 1'
-    const collectionMonthField = 'Month 1'
-    const collectionYearField = 'Year 1'
-
     // Which key fields to use depend on which are available:
     // First, use iNaturalist URL, sample ID, and specimen ID
     // Then, use iNaturalist alias, collection day, month, and year, sample ID, and specimen ID
     let keyFields = []
-    if (row[urlField] && row[sampleIDField] && row[specimenIDField]) {
-        keyFields = [urlField, sampleIDField, specimenIDField]
+    if (row[INATURALIST_URL] && row[SAMPLE_ID] && row[SPECIMEN_ID]) {
+        keyFields = [INATURALIST_URL, SAMPLE_ID, SPECIMEN_ID]
     } else if (
-        row[aliasField] &&
-        row[sampleIDField] &&
-        row [specimenIDField] &&
-        row[collectionDayField] &&
-        row[collectionMonthField] &&
-        row[collectionYearField]
+        row[INATURALIST_ALIAS] &&
+        row[SAMPLE_ID] &&
+        row [SPECIMEN_ID] &&
+        row[OBA_DAY] &&
+        row[OBA_MONTH] &&
+        row[OBA_YEAR]
     ) {
-        keyFields = [aliasField, sampleIDField, specimenIDField, collectionDayField, collectionMonthField, collectionYearField]
+        keyFields = [INATURALIST_ALIAS, SAMPLE_ID, SPECIMEN_ID, OBA_DAY, OBA_MONTH, OBA_YEAR]
     }
 
     // Get a list of the corresponding values for the key fields
@@ -1080,48 +1119,48 @@ function compareNumericStrings(str1, str2) {
 /*
  * compareRows()
  * A custom comparison function for formatted observation rows; sorts in the following order with empty strings last
- * 1. Observation No.
- * 2. Collector - Last Name
- * 3. Collector - First Name
- * 4. Month 1
- * 5. Collection Day 1
- * 6. Sample ID
- * 7. Specimen ID
+ * 1. OBSERVATION_NO
+ * 2. LAST_NAME
+ * 3. FIRST_NAME
+ * 4. OBA_MONTH
+ * 5. OBA_DAY
+ * 6. SAMPLE_ID
+ * 7. SPECIMEN_ID
  */
 function compareRows(row1, row2) {
-    const observationNumberComparison = compareNumericStrings(row1['Observation No.'], row2['Observation No.'])
+    const observationNumberComparison = compareNumericStrings(row1[OBSERVATION_NO], row2[OBSERVATION_NO])
     if (observationNumberComparison !== 0) {
         return observationNumberComparison
     }
 
-    const lastNameComparison = compareStrings(row1['Collector - Last Name'], row2['Collector - Last Name'])
+    const lastNameComparison = compareStrings(row1[LAST_NAME], row2[LAST_NAME])
     if (lastNameComparison !== 0) {
         return lastNameComparison
     }
 
-    const firstNameComparison = compareStrings(row1['Collector - First Name'], row2['Collector - First Name'])
+    const firstNameComparison = compareStrings(row1[FIRST_NAME], row2[FIRST_NAME])
     if (firstNameComparison !== 0) {
         return firstNameComparison
     }
 
-    const month1 = monthNumerals.indexOf(row1['Month 1'])
-    const month2 = monthNumerals.indexOf(row2['Month 1'])
+    const month1 = monthNumerals.indexOf(row1[OBA_MONTH])
+    const month2 = monthNumerals.indexOf(row2[OBA_MONTH])
     const monthComparison = (month1 > month2) - (month1 < month2)
     if (monthComparison !== 0) {
         return monthComparison
     }
 
-    const dayComparison = compareNumericStrings(row1['Collection Day 1'], row2['Collection Day 1'])
+    const dayComparison = compareNumericStrings(row1[OBA_DAY], row2[OBA_DAY])
     if (dayComparison !== 0) {
         return dayComparison
     }
 
-    const sampleIDComparison = compareNumericStrings(row1['Sample ID'], row2['Sample ID'])
+    const sampleIDComparison = compareNumericStrings(row1[SAMPLE_ID], row2[SAMPLE_ID])
     if (sampleIDComparison !== 0) {
         return sampleIDComparison
     }
 
-    const specimenIDComparison = compareNumericStrings(row1['Specimen ID'], row2['Specimen ID'])
+    const specimenIDComparison = compareNumericStrings(row1[SPECIMEN_ID], row2[SPECIMEN_ID])
     if (specimenIDComparison !== 0) {
         return specimenIDComparison
     }
@@ -1143,7 +1182,7 @@ function sortAndDedupeChunk(chunk, seenKeys) {
             continue
         }
 
-        if (row['Observation No.']) {
+        if (row[OBSERVATION_NO]) {
             // Create a key for this row and add it to the set of seen keys
             const key = generateRowKey(row)
             seenKeys.add(key)
@@ -1355,12 +1394,12 @@ async function findLastObservationNumber(filePath) {
     // Open a CSV parser for the given file path
     const { parser } = createParser(filePath)
 
-    // Search linearly for the highest 'Observation No.'
+    // Search linearly for the highest OBSERVATION_NO
     let i = 0
     for await (const row of parser) {
-        if (row['Observation No.']) {
-            // Parse 'Observation No.' as an integer and update lastObservationNumber/lastObservationNumberIndex
-            const currentObservationNumber = parseInt(row['Observation No.'])
+        if (row[OBSERVATION_NO]) {
+            // Parse OBSERVATION_NO as an integer and update lastObservationNumber/lastObservationNumberIndex
+            const currentObservationNumber = parseInt(row[OBSERVATION_NO])
             if (!isNaN(currentObservationNumber) && (!lastObservationNumber || currentObservationNumber > lastObservationNumber)) {
                 lastObservationNumber = currentObservationNumber
                 lastObservationNumberIndex = i
@@ -1374,7 +1413,7 @@ async function findLastObservationNumber(filePath) {
 
 /*
  * indexData()
- * Automatically fills in the 'Observation No.' field for a given observations file
+ * Automatically fills in the OBSERVATION_NO field for a given observations file
  */
 async function indexData(filePath, year) {
     // Search for the highest observation number in the given file
@@ -1400,8 +1439,8 @@ async function indexData(filePath, year) {
     for await (const row of parser) {
         if (isRowEmpty(row)) continue
 
-        if (!row['Observation No.']) {
-            row['Observation No.'] = String(nextObservationNumber)
+        if (!row[OBSERVATION_NO]) {
+            row[OBSERVATION_NO] = String(nextObservationNumber)
             nextObservationNumber++
         }
 

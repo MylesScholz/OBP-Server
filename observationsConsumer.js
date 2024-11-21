@@ -448,7 +448,7 @@ async function updatePlaces(observations) {
 
 /*
  * readUsernamesFile()
- * Parses s3://obp-server-data/usernames.json into a JS object
+ * Parses s3://obp-server-data/usernames.json into an object
  */
 async function readUsernamesFile() {
     const usernamesData = await getS3Object('obp-server-data', 'usernames.json')

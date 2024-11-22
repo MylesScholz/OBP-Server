@@ -15,9 +15,15 @@ const mongoAuthDbName = process.env.MONGO_AUTH_DB || mongoDbName
 
 const mongoURL = `mongodb://${mongoUser}:${mongoPassword}@${mongoHost}:${mongoPort}/${mongoAuthDbName}`
 
+// Persistent Mongo database
 let _db = null
+// Database closing function to be defined when the connection is created
 let _closeDbConnection = null
 
+/*
+ * connectToDb()
+ * Creates a persistent connection to the Mongo database specified by the environment variables
+ */
 async function connectToDb() {
     console.log(`Connecting to ${mongoURL}...`)
 
@@ -29,10 +35,18 @@ async function connectToDb() {
     }
 }
 
+/*
+ * getDb()
+ * Returns the persistent Mongo database
+ */
 function getDb() {
     return _db
 }
 
+/*
+ * closeDbConnection()
+ * Closes the client connection to the Mongo Server
+ */
 function closeDbConnection() {
     _closeDbConnection()
 }

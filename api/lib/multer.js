@@ -8,6 +8,7 @@ const fileTypes = {
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'csv'
 }
 
+// Multer object for processing uploads; only allows CSV files and assigns a random, unique file name
 const upload = multer({
     storage: multer.diskStorage({
         destination: `./api/data/uploads`,

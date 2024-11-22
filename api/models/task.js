@@ -3,6 +3,10 @@ import fs from 'fs'
 
 import { getDb } from "../lib/mongo.js"
 
+/*
+ * clearTasks()
+ * Deletes all tasks
+ */
 async function clearTasks() {
     const db = getDb()
     const collection = db.collection('tasks')
@@ -11,6 +15,10 @@ async function clearTasks() {
     collection.deleteMany({})
 }
 
+/*
+ * clearTasksWithoutFiles()
+ * Deletes all tasks with non-existent 'dataset' or 'result' files
+ */
 async function clearTasksWithoutFiles() {
     const db = getDb()
     const collection = db.collection('tasks')
@@ -26,6 +34,10 @@ async function clearTasksWithoutFiles() {
     // console.log(`Deleted ${deletedCount} files with missing data`)
 }
 
+/*
+ * createTask()
+ * Inserts a new task with the given properties
+ */
 async function createTask(type, dataset, sources, minDate, maxDate) {
     // Limit 'type' argument to either 'observations' or 'labels'
     if (type !== 'observations' && type !== 'labels') {
@@ -52,6 +64,10 @@ async function createTask(type, dataset, sources, minDate, maxDate) {
     }
 }
 
+/*
+ * getTaskById()
+ * Finds a specific task by its Mongo ID
+ */
 async function getTaskById(id) {
     const db = getDb()
     const collection = db.collection('tasks')
@@ -65,6 +81,10 @@ async function getTaskById(id) {
     }
 }
 
+/*
+ * getTasks()
+ * Finds all tasks
+ */
 async function getTasks() {
     const db = getDb()
     const collection = db.collection('tasks')
@@ -98,6 +118,10 @@ async function updateTaskInProgress(id, progress) {
     }
 }
 
+/*
+ * updateTaskWarning()
+ * Sends a warning message for the given task
+ */
 async function updateTaskWarning(id, warning) {
     const db = getDb()
     const collection = db.collection('tasks')

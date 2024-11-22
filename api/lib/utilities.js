@@ -1,8 +1,15 @@
 import fs from 'fs'
 import path from 'path'
 
-export function clearDirectory(directory) {
+/*
+ * clearDirectory()
+ * Deletes all files in a given directory, but not the directory itself (non-recursive)
+ */
+function clearDirectory(directory) {
+    // Read the list of files in the given directory
     let files = fs.readdirSync(directory)
+
+    // 'rm' each file
     for (const file of files) {
         try {
             fs.rmSync(path.join(directory, file))
@@ -12,15 +19,29 @@ export function clearDirectory(directory) {
     }
 }
 
-export function limitFilesInDirectory(directory, maxFiles) {
+/*
+ * limitFilesInDirectory()
+ * Limits the number of files in a given directory to a given number; deletes the least recently edited file if over the limit
+ */
+function limitFilesInDirectory(directory, maxFiles) {
+    // Read the list of files in the given directory
     let files = fs.readdirSync(directory)
+
+    // Delete the least recently edited file while over the limit
     while (files.length > maxFiles) {
+        // Use 'stat' to find when the file was last edited
+        // Filter to only files (not directories)
+        // And find the least recently edited file
         const oldestFile = files
             .map((f) => [path.join(directory, f), fs.statSync(path.join(directory, f))])
             .filter((f) => f[1].isFile())
             .reduce((oldest, current) => current[1].mtimeMs < oldest[1].mtimeMs ? current : oldest)
         
+        // 'rm' the least recently edited file
         fs.rmSync(oldestFile[0])
+        // Reread the list of files in the directory
         files = fs.readdirSync(directory)
     }
 }
+
+export { clearDirectory, limitFilesInDirectory }

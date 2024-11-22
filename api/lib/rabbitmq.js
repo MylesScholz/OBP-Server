@@ -12,6 +12,10 @@ let _observationsChannel = null
 const labelsQueueName = 'labels'
 let _labelsChannel = null
 
+/*
+ * connectToRabbitMQ()
+ * Creates a connection to the RabbitMQ server specified by the environment variables; also, establishes channels and queues
+ */
 async function connectToRabbitMQ() {
     const connection = await amqp.connect(rabbitmqURL)
 
@@ -26,10 +30,18 @@ async function connectToRabbitMQ() {
     _observationsChannel.purgeQueue(labelsQueueName)
 }
 
+/*
+ * getObservationsChannel()
+ * Returns the channel for observations tasks
+ */
 function getObservationsChannel() {
     return _observationsChannel
 }
 
+/*
+ * getLabelsChannel()
+ * Returns the channel for labels tasks
+ */
 function getLabelsChannel() {
     return _labelsChannel
 }

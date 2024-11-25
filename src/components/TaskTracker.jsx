@@ -43,7 +43,8 @@ export default function TaskTracker({ queryResponse, result, setResult }) {
             setResult(undefined)
 
             return resJSON
-        }
+        },
+        refetchOnMount: "always",
     })
 
     const { error: selectedTaskQueryError, data: selectedTaskData } = useQuery({
@@ -56,8 +57,9 @@ export default function TaskTracker({ queryResponse, result, setResult }) {
             setResult(resJSON?.task?.result)
             return { ...resJSON, status: res.status, statusText: res.statusText }
         },
-        refetchInterval: 1000,
-        enabled: !!selectedTaskId && !result
+        refetchInterval: (result ? false : 1000),
+        refetchOnMount: "always",
+        enabled: !!selectedTaskId
     })
 
     const { data: downloadURL } = useQuery({
@@ -67,8 +69,15 @@ export default function TaskTracker({ queryResponse, result, setResult }) {
             const res = await axios.get(queryURL, { responseType: 'blob' })
             return URL.createObjectURL(res.data)
         },
+        refetchOnMount: "always",
         enabled: !!result
     })
+
+    // console.log('queryResponse:', queryResponse)
+    // console.log('tasksData:', tasksData)
+    // console.log('selectedTaskData:', selectedTaskData)
+    // console.log('downloadURL:', downloadURL)
+    // console.log('selectedTaskId:', selectedTaskId)
 
     return (
         <TaskTrackerContainer>
@@ -86,11 +95,12 @@ export default function TaskTracker({ queryResponse, result, setResult }) {
             { selectedTaskQueryError &&
                 <p>Error: {selectedTaskQueryError.message}</p>
             }
-            { tasksData?.tasks.length > 0 &&
+            { tasksData?.tasks &&
                 <select onChange={ (event) => {
                     setSelectedTaskId(event.target.value)
                     setResult(undefined)
                 } }>
+                    <option value='' disabled selected={!selectedTaskId}>Select a task...</option>
                     {tasksData.tasks.map((t) => <option value={t._id} key={t._id} selected={t._id === selectedTaskId}>Task {t._id} ({t.type})</option>)}
                 </select>
             }

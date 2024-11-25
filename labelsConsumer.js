@@ -215,8 +215,8 @@ function addTextBox(page, text, basisX, basisY, textBoxLayout) {
         // The width (in PostScript points) of the text at fontSize with no line wrapping
         let singleLineWidth = textBoxLayout.font.widthOfTextAtSize(text, fontSize)
         // Guess the number of lines the text will wrap to when constrained to textBoxLayout.width
-        const spaces = text.match(/ /g)?.length + 1 ?? 0
-        let approximateNumberOfLines = Math.min(spaces, Math.ceil(singleLineWidth / textBoxLayout.width))
+        const spaces = text.match(/ /g)?.length || 0
+        let approximateNumberOfLines = Math.min(spaces + 1, Math.ceil(singleLineWidth / textBoxLayout.width))
         // The height (in PostScript points) of a single line of text at fontSize
         let singleLineHeight = textBoxLayout.font.heightAtSize(fontSize, { descender: true })
         // The approximate height of the text with wrapping

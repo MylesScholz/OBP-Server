@@ -1,5 +1,6 @@
 import express from 'express'
 import morgan from 'morgan'
+import cors from 'cors'
 import 'dotenv/config'
 
 import tasksRouter from './api/tasks.js'
@@ -13,6 +14,9 @@ const port = process.env.PORT || '8080'
 const app = express()
 // Router for API requests
 const apiRouter = express.Router()
+
+// Enable all Cross-Origin Resource Sharing (CORS), including pre-flight requests
+app.use(cors())
 
 // Request logging
 app.use(morgan('dev'))

@@ -4,6 +4,7 @@ import path from 'path'
 import amqp from 'amqplib'
 import { fromFile } from 'geotiff'
 import { parse } from 'csv-parse'
+import { stringify } from 'csv-stringify'
 import { stringify as stringifySync } from 'csv-stringify/sync'
 import 'dotenv/config'
 
@@ -12,7 +13,6 @@ import { observationsQueueName } from './api/lib/rabbitmq.js'
 import { clearTasksWithoutFiles, getTaskById, updateTaskInProgress, updateTaskResult } from './api/models/task.js'
 import { connectToS3, getS3Object } from './api/lib/aws-s3.js'
 import { clearDirectory, limitFilesInDirectory } from './api/lib/utilities.js'
-import { stringify } from 'csv-stringify'
 
 /* Constants */
 

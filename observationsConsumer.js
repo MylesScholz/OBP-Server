@@ -11,7 +11,6 @@ import 'dotenv/config'
 import { connectToDb } from './api/lib/mongo.js'
 import { observationsQueueName } from './api/lib/rabbitmq.js'
 import { clearTasksWithoutFiles, getTaskById, updateTaskInProgress, updateTaskResult } from './api/models/task.js'
-import { connectToS3, getS3Object } from './api/lib/aws-s3.js'
 import { clearDirectory, limitFilesInDirectory } from './api/lib/utilities.js'
 
 /* Constants */
@@ -347,19 +346,17 @@ async function pullObservations(task) {
 
 /*
  * readPlacesFile()
- * Parses /api/data/places.json into a JS object, fetching a copy from S3 if necessary
+ * Parses /api/data/places.json into a JS object
  */
 async function readPlacesFile() {
-    // If /api/data/places.json doesn't exist locally, download a base version from S3 and save it
+    // If /api/data/places.json doesn't exist locally, create a base version and save it
     if (!fs.existsSync('./api/data/places.json')) {
-        const s3PlacesData = await getS3Object('obp-server-data', 'places.json')
-        const s3PlacesString = await s3PlacesData?.transformToString()
-        fs.writeFileSync('./api/data/places.json', s3PlacesString ?? '{}')
+        fs.writeFileSync('./api/data/places.json', '{}')
     }
 
     // Read and parse /api/data/places.json
     const placesData = fs.readFileSync('./api/data/places.json')
-    return JSON.parse(placesData)
+    return JSON.parse(placesData || '{}')
 }
 
 /*
@@ -448,12 +445,17 @@ async function updatePlaces(observations) {
 
 /*
  * readUsernamesFile()
- * Parses s3://obp-server-data/usernames.json into an object
+ * Parses /api/data/usernames.json into a JS object
  */
 async function readUsernamesFile() {
-    const usernamesData = await getS3Object('obp-server-data', 'usernames.json')
-    const usernamesJSONString = await usernamesData?.transformToString()
-    return JSON.parse(usernamesJSONString ?? '{}')
+    // If /api/data/usernames.json doesn't exist locally, create a base version and save it
+    if (!fs.existsSync('./api/data/usernames.json')) {
+        fs.writeFileSync('./api/data/usernames.json', '{}')
+    }
+    
+    // Read and parse /api/data/usernames.json
+    const usernamesData = fs.readFileSync('./api/data/usernames.json')
+    return JSON.parse(usernamesData || '{}')
 }
 
 /*
@@ -555,25 +557,6 @@ function getOFV(ofvs, fieldName) {
 }
 
 /*
- * fetchElevationFile()
- * Downloads a specific elevation file from S3 if it is not already available locally
- */
-async function fetchElevationFile(fileKey) {
-    const filePath = './api/data/' + fileKey
-
-    if (!fs.existsSync(filePath)) {
-        const fileStream = await getS3Object('obp-server-data', fileKey)
-        const fileData = await fileStream?.transformToByteArray()
-
-        if (fileData) {
-            fs.writeFileSync(filePath, fileData)
-        }
-    }
-
-    return filePath
-}
-
-/*
  * includesStreetSuffix()
  * A boolean function that returns whether a given string contains a street suffix (Road, Rd, Street, St, etc.)
  */
@@ -588,8 +571,8 @@ function includesStreetSuffix(string) {
  */
 async function readElevationFromFile(fileKey, latitude, longitude) {
     try {
-        // Fetch the given file from AWS S3 if necessary
-        const filePath = await fetchElevationFile(fileKey)
+        // Local path for the elevation file
+        const filePath = './api/data/' + fileKey
 
         // Read the given file's raster data using the geotiff package
         const tiff = await fromFile(filePath)
@@ -1549,8 +1532,7 @@ async function main() {
     }
 }
 
-// Connect to the Mongo Server and Amazon S3 before running the main process
+// Connect to the Mongo Server before running the main process
 connectToDb().then(() => {
-    connectToS3()
     main()
 })

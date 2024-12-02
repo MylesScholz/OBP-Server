@@ -10,7 +10,6 @@ import 'dotenv/config'
 import { connectToDb } from './api/lib/mongo.js'
 import { labelsQueueName } from './api/lib/rabbitmq.js'
 import { clearTasksWithoutFiles, getTaskById, updateTaskInProgress, updateTaskResult, updateTaskWarning } from './api/models/task.js'
-import { connectToS3, getS3Object } from './api/lib/aws-s3.js'
 import { limitFilesInDirectory } from './api/lib/utilities.js'
 
 /* Constants */
@@ -296,30 +295,11 @@ async function addDataMatrix(page, text, basisX, basisY, dataMatrixLayout) {
 }
 
 /*
- * fetchFontFile()
- * Downloads the given font file from S3 if it is not available locally
- */
-async function fetchFontFile(fileKey) {
-    const filePath = './api/data/' + fileKey
-
-    if (!fs.existsSync(filePath)) {
-        const fileStream = await getS3Object('obp-server-data', fileKey)
-        const fileData = await fileStream?.transformToByteArray()
-
-        if (fileData) {
-            fs.writeFileSync(filePath, fileData)
-        }
-    }
-
-    return filePath
-}
-
-/*
  * getFontData()
- * Reads a given font file, fetching it from S3 if necessary
+ * Reads a given font file from the local disk
  */
 async function getFontData(fileKey) {
-    const filePath = await fetchFontFile(fileKey)
+    const filePath = './api/data/' + fileKey
 
     return fs.readFileSync(filePath)
 }
@@ -558,6 +538,5 @@ async function main() {
 }
 
 connectToDb().then(() => {
-    connectToS3()
     main()
 })

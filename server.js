@@ -54,12 +54,9 @@ connectToDb().then(async () => {
     clearDirectory('./api/data/uploads')
     clearDirectory('./api/data/observations')
     clearDirectory('./api/data/labels')
-    clearDirectory('./api/data/elevation')
     clearDirectory('./api/data/temp')
 
     await connectToRabbitMQ()
-
-    // TODO: clear ./api/data folders
 
     app.listen(port, () => {
         console.log('Listening on port ' + port + '...')

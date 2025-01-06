@@ -2,7 +2,9 @@
 docker_commands.txt
 
 # API Data
-api/data/
+api/data/elevation
+api/data/usernames.json
+api/data/places.json
 
 # Logs
 logs

@@ -122,7 +122,7 @@ function formatObservation(observation) {
     const month2 = observation[OBA_MONTH_2]
     const duration = `-${day2}.${month2}`
     // Sample and specimen IDs
-    const sampleID = observation[SAMPLE_ID]
+    const sampleID = observation[SAMPLE_ID].replace('-', '')
     const specimenID = observation[SPECIMEN_ID]
     const dateText = `${day1}.${month1}${(day2 && month2) ? duration : ''}${year}-${sampleID}.${specimenID}`
     formattedObservation.date = dateText
@@ -168,15 +168,15 @@ function formatObservations(observations, addWarningID) {
             warningFields.some((field) => !observation[field]) ||
             observation[OBA_COUNTRY].length > 3 ||
             observation[OBA_STATE].length > 2 ||
-            observation[OBA_COUNTY].length > 15 ||
-            observation[OBA_ABBR_LOCATION].length > 22 ||
+            observation[OBA_COUNTY].length > 9 ||
+            observation[OBA_ABBR_LOCATION].length > 18 ||
             observation[OBA_LATITUDE].length > 8 ||
             observation[OBA_LONGITUDE].length > 8 ||
             observation[ELEVATION].length > 5 ||
             formattedObservation.location.length > 72 ||
             formattedObservation.date.length > 30 ||
             formattedObservation.name.length > 20 ||
-            observation[COLLECTION_METHOD].length > 15
+            observation[COLLECTION_METHOD].length > 5
         ) {
             addWarningID(observation[OBSERVATION_NO])
         }
@@ -232,7 +232,7 @@ function addTextBox(page, text, basisX, basisY, textBoxLayout) {
             // Decrement the font size
             fontSize -= 0.01
             // For the Gill Sans font, the line height should be ~85% of the font size
-            lineHeight = 0.85 * fontSize
+            lineHeight = fontSize
 
             // Recalculate the approximate height and width of the text for the new font size
             singleLineWidth = textBoxLayout.font.widthOfTextAtSize(text, fontSize)
@@ -241,7 +241,7 @@ function addTextBox(page, text, basisX, basisY, textBoxLayout) {
             approximateHeight = approximateNumberOfLines * singleLineHeight
 
             // Adjust the text offset to prevent text overflow
-            yOffset = approximateHeight - (0.8 * singleLineHeight) - textBoxLayout.height
+            yOffset = (textBoxLayout.height - approximateHeight) * -0.5 - singleLineHeight * 0.8
         }
     }
 
@@ -323,16 +323,16 @@ async function addLabel(page, observation, basisX, basisY, fonts) {
     const locationText = observation.location ?? ''
     const locationLayout = {
         x: 0.005 * PostScriptPointsPerInch,
-        y: 0.155 * PostScriptPointsPerInch,
+        y: 0.145 * PostScriptPointsPerInch,
         width: 0.46 * PostScriptPointsPerInch,
-        height: 0.151 * PostScriptPointsPerInch,
-        font: fonts.gillSansCondensedFont,
-        fontSize: 4,
-        lineHeight: 3.5,
+        height: 0.161 * PostScriptPointsPerInch,
+        font: fonts.oxygenMonoFont,
+        fontSize: 3,
+        lineHeight: 3,
         rotation: 0,
         offset: {
             x: 0,
-            y: -3.25,
+            y: -2.3,
         }
     }
     // Add the location field to the page
@@ -342,16 +342,16 @@ async function addLabel(page, observation, basisX, basisY, fonts) {
     const dateText = observation.date ?? ''
     const dateLayout = {
         x: 0.005 * PostScriptPointsPerInch,
-        y: 0.08 * PostScriptPointsPerInch,
+        y: 0.075 * PostScriptPointsPerInch,
         width: 0.46 * PostScriptPointsPerInch,
         height: 0.07 * PostScriptPointsPerInch,
-        font: fonts.gillSansCondensedFont,
-        fontSize: 6,
-        lineHeight: 5.25,
+        font: fonts.oxygenMonoFont,
+        fontSize: 5,
+        lineHeight: 5,
         rotation: 0,
         offset: {
             x: 0,
-            y: -4.5
+            y: -0.056 * PostScriptPointsPerInch
         },
         fit: true
     }
@@ -365,13 +365,13 @@ async function addLabel(page, observation, basisX, basisY, fonts) {
         y: 0.005 * PostScriptPointsPerInch,
         width: 0.335 * PostScriptPointsPerInch,
         height: 0.07 * PostScriptPointsPerInch,
-        font: fonts.gillSansFont,
+        font: fonts.oxygenMonoFont,
         fontSize: 5,
-        lineHeight: 4.375,
+        lineHeight: 5,
         rotation: 0,
         offset: {
-            x: 0.25,
-            y: -4
+            x: 0,
+            y: -0.056 * PostScriptPointsPerInch
         },
         fit: true
     }
@@ -385,13 +385,13 @@ async function addLabel(page, observation, basisX, basisY, fonts) {
         y: 0.005 * PostScriptPointsPerInch,
         width: 0.105 * PostScriptPointsPerInch,
         height: 0.07 * PostScriptPointsPerInch,
-        font: fonts.gillSansFont,
+        font: fonts.oxygenMonoFont,
         fontSize: 5,
-        lineHeight: 4.375,
+        lineHeight: 5,
         rotation: 0,
         offset: {
             x: 0,
-            y: -4
+            y: -0.056 * PostScriptPointsPerInch
         },
         fit: true
     }
@@ -405,12 +405,12 @@ async function addLabel(page, observation, basisX, basisY, fonts) {
         y: 0.005 * PostScriptPointsPerInch,
         width: labelHeight - 0.01 * PostScriptPointsPerInch,
         height: 0.07 * PostScriptPointsPerInch,
-        font: fonts.gillSansFont,
-        fontSize: 6,
-        lineHeight: 5.25,
+        font: fonts.oxygenMonoFont,
+        fontSize: 4.5,
+        lineHeight: 4.5,
         rotation: 90,
         offset: {
-            x: -0.5,
+            x: -0.75,
             y: -5,
         }
     }
@@ -438,10 +438,8 @@ async function writePDFPage(doc, observations, updateLabelsProgress) {
 
     // Register and embed the fonts
     doc.registerFontkit(fontkit)
-    const gillSansData = await getFontData('fonts/Gill Sans MT.ttf')
-    const gillSansCondensedData = await getFontData('fonts/Gill Sans MT Condensed.ttf')
-    const gillSansFont = await doc.embedFont(gillSansData)
-    const gillSansCondensedFont = await doc.embedFont(gillSansCondensedData)
+    const oxygenMonoData = await getFontData('fonts/OxygenMono-Regular.ttf')
+    const oxygenMonoFont = await doc.embedFont(oxygenMonoData)
 
     // Add a label for each formatted observation in rows and columns
     for (let i = 0; i < observations.length; i++) {
@@ -454,7 +452,7 @@ async function writePDFPage(doc, observations, updateLabelsProgress) {
         const basisY = verticalMargin + (currentRow * (labelHeight + verticalSpacing))
 
         // Add the label
-        await addLabel(page, observations[i], basisX, basisY, { gillSansFont, gillSansCondensedFont })
+        await addLabel(page, observations[i], basisX, basisY, { oxygenMonoFont })
 
         // Provide a progress update
         updateLabelsProgress(i)

@@ -22,6 +22,8 @@ const rabbitmqURL = `amqp://${rabbitmqHost}`
 const MAX_LABELS = 10
 
 // Data field names
+const ERROR_FLAGS = 'Error Flags'
+const DATE_LABEL_PRINT = 'Date Label Print'
 const OBSERVATION_NO = 'Observation No.'
 const FIRST_INITIAL = 'Collector - First Initial'
 const LAST_NAME = 'Collector - Last Name'
@@ -134,7 +136,12 @@ function formatObservation(observation) {
     formattedObservation.name = nameText
 
     // Collection method field
-    const methodText = observation[COLLECTION_METHOD]
+    const methodAbbreviations = {
+        'net': 'net',
+        'vane trap': 'VT',
+        'blue vane trap': 'BVT'
+    }
+    const methodText = methodAbbreviations[observation[COLLECTION_METHOD]] ?? observation[COLLECTION_METHOD]
     formattedObservation.method = methodText
 
     // Observation number field
@@ -155,8 +162,8 @@ function formatObservations(observations, addWarningID) {
         ELEVATION
     ]
 
-    // Filter out observations that have any falsy requiredFields
-    const formattedObservations = observations.filter((observation) => !requiredFields.some((field) => !observation[field]))
+    // Filter out observations that have any falsy requiredFields or that have been printed already
+    const formattedObservations = observations.filter((observation) => !observation[ERROR_FLAGS] && !observation[DATE_LABEL_PRINT] && requiredFields.every((field) => observation[field]))
 
     // Format and add warnings to the remaining observations
     for (let i = 0; i < formattedObservations.length; i++) {
@@ -173,8 +180,6 @@ function formatObservations(observations, addWarningID) {
             observation[OBA_LATITUDE].length > 8 ||
             observation[OBA_LONGITUDE].length > 8 ||
             observation[ELEVATION].length > 5 ||
-            formattedObservation.location.length > 72 ||
-            formattedObservation.date.length > 30 ||
             formattedObservation.name.length > 20 ||
             observation[COLLECTION_METHOD].length > 5
         ) {

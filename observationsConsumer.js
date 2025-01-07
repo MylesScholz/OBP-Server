@@ -51,8 +51,6 @@ const COLLECTION_METHOD = 'Collection method'
 const FAMILY = 'Associated plant - family'
 const SCIENTIFIC_NAME = 'Associated plant - genus, species'
 const INATURALIST_URL = 'Associated plant - Inaturalist URL'
-const CITATION = 'bibliographicCitation'
-const DATASET_NAME = 'datasetName'
 const RECORDED_BY = 'recordedBy'
 const ASSOCIATED_TAXA = 'associatedTaxa'
 const SAMPLING_PROTOCOL = 'samplingProtocol'
@@ -118,12 +116,12 @@ const observationTemplate = {
     'language': 'en',
     'license': 'http://creativecommons.org/licenses/by-nc-sa/3.0/',
     'rightsHolder': 'Oregon State University',
-    'bibliographicCitation': null,
+    'bibliographicCitation': '',
     'institutionID': 'https://www.gbif.org/grscicoll/institution/f23b6ebc-db50-482b-a923-f26b5cd8d2d1',
     'datasetID': 'DOI: http://dx.doi.org/10.5399/osu/cat_osac.5.1.4647',
     'institutionCode': 'OSAC',
     'collectionCode': 'osac',
-    'datasetName': null,
+    'datasetName': '',
     'ownerInstitutionCode': 'OSAC',
     'basisOfRecord': 'preservedSpecimen',
     'occurrenceID': '',
@@ -160,39 +158,32 @@ const observationTemplate = {
 }
 // A list of fields that should be flagged if empty
 const nonEmptyFields = [
-    'iNaturalist ID',
-    'iNaturalist Alias',
-    'Collector - First Name',
-    'Collector - First Initial',
-    'Collector - Last Name',
-    'Sample ID',
-    'Specimen ID',
-    'Collection Day 1',
-    'Month 1',
-    'Year 1',
-    'Time 1',
-    'Country',
-    'State',
-    'County',
-    'Location',
-    'Abbreviated Location',
-    'Dec. Lat.',
-    'Dec. Long.',
-    'Elevation',
-    'Associated plant - family',
-    'Associated plant - genus, species',
-    'Associated plant - Inaturalist URL',
-    'recordedBy',
-    'associatedTaxa',
-    'year',
-    'month',
-    'day',
-    'country',
-    'stateProvince',
-    'county',
-    'locality',
-    'decimalLatitude',
-    'decimalLongitude'
+    FIRST_NAME,
+    FIRST_INITIAL,
+    LAST_NAME,
+    SAMPLE_ID,
+    SPECIMEN_ID,
+    OBA_DAY,
+    OBA_MONTH,
+    OBA_YEAR,
+    OBA_COUNTRY,
+    OBA_STATE,
+    OBA_COUNTY,
+    OBA_LOCATION,
+    OBA_ABBR_LOCATION,
+    OBA_LATITUDE,
+    OBA_LONGITUDE,
+    ELEVATION,
+    RECORDED_BY,
+    DARWIN_YEAR,
+    DARWIN_MONTH,
+    DARWIN_DAY,
+    DARWIN_COUNTRY,
+    DARWIN_STATE,
+    DARWIN_COUNTY,
+    DARWIN_LOCATION,
+    DARWIN_LATITUDE,
+    DARWIN_LONGITUDE
 ]
 // Roman numerals 1 to 12
 const monthNumerals = [
@@ -212,7 +203,8 @@ const monthNumerals = [
 // Abbreviations for countries keyed by how iNaturalist refers to them
 const countryAbbreviations = {
     'United States': 'USA',
-    'Canada': 'CA'
+    'Canada': 'CA',
+    'CAN': 'CA'
 }
 // Abbreviations for all states and provinces; not all of these are expected in the actual data
 const stateProvinceAbbreviations = {
@@ -641,7 +633,7 @@ async function getElevation(latitude, longitude) {
  * formatObservation()
  * Creates a fully formatted observation object from a raw iNaturalist observation
  */
-async function formatObservation(observation, year) {
+async function formatObservation(observation) {
     // Start from template observation object
     const formattedObservation = Object.assign({}, observationTemplate)
 
@@ -746,9 +738,6 @@ async function formatObservation(observation, year) {
     formattedObservation[INATURALIST_URL] = observation['uri'] ?? ''
 
     // Darwin Core fields
-    formattedObservation[CITATION] = `Oregon Bee Atlas ${year}. Oregon State University, Corvallis, OR, USA.`
-    formattedObservation[DATASET_NAME] = `OBA-OSAC-${year}`
-
     formattedObservation[RECORDED_BY] = `${firstName}${(firstName && lastName) ? ' ' : ''}${lastName}`
 
     formattedObservation[ASSOCIATED_TAXA] = (scientificName || family) ? `foraging on : "${scientificName || family}"` : ''
@@ -780,12 +769,12 @@ async function formatObservation(observation, year) {
  * formatObservations()
  * Formats raw iNaturalist observations and duplicates them by the number of bees collected
  */
-async function formatObservations(observations, year, updateFormattingProgress) {
+async function formatObservations(observations, updateFormattingProgress) {
     let formattedObservations = []
 
     let i = 0
     for (const observation of observations) {
-        const formattedObservation = await formatObservation(observation, year)
+        const formattedObservation = await formatObservation(observation)
         updateFormattingProgress(`${(100 * (i++) / observations.length).toFixed(2)}%`)
 
         // SPECIMEN_ID is initially set to the number of bees collected
@@ -842,7 +831,7 @@ async function* readObservationsFileChunks(filePath, chunkSize) {
  * formatChunkRow()
  * Fully formats an observation object from a pre-existing row
  */
-function formatChunkRow(row, year) {
+function formatChunkRow(row) {
     // The final field set should be a union of the standard template and the given row
     const formattedRow = Object.assign({}, observationTemplate, row)
 
@@ -850,9 +839,6 @@ function formatChunkRow(row, year) {
     const errorFields = []
 
     // If the Darwin Core fields are empty, fill them from the labels fields
-    formattedRow[CITATION] = row[CITATION] || `Oregon Bee Atlas ${year}. Oregon State University, Corvallis, OR, USA.`
-    formattedRow[DATASET_NAME] = row[DATASET_NAME] || `OBA-OSAC-${year}`
-
     const firstName = row[FIRST_NAME]
     const lastName = row[LAST_NAME]
     formattedRow[RECORDED_BY] = row[RECORDED_BY] || `${firstName}${(firstName && lastName) ? ' ' : ''}${lastName}`
@@ -997,9 +983,9 @@ async function updateChunkRow(row, observation) {
  * formatChunk()
  * Formats and updates a chunk of pre-existing observation data
  */
-async function formatChunk(chunk, year) {
+async function formatChunk(chunk) {
     // Apply standard formatting
-    const formattedChunk = chunk.map((row) => formatChunkRow(row, year))
+    const formattedChunk = chunk.map((row) => formatChunkRow(row))
 
     // Fetch the iNaturalist observations for rows that have an iNaturalist URL
     let observationIds = chunk
@@ -1469,9 +1455,7 @@ async function main() {
                 await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations' })
                 console.log('\tFormatting new observations...')
 
-                const minDate = new Date(task.minDate)
-                const year = minDate.getUTCFullYear()
-                const formattedObservations = await formatObservations(observations, year, async (percentage) => {
+                const formattedObservations = await formatObservations(observations, async (percentage) => {
                     await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations', percentage })
                 })
 
@@ -1487,7 +1471,7 @@ async function main() {
 
                 // Separate the provided dataset into chunks and store them in temporary files; also, format and update the data
                 for await (const chunk of readObservationsFileChunks(inputFilePath, CHUNK_SIZE)) {
-                    const formattedChunk = await formatChunk(chunk, year)
+                    const formattedChunk = await formatChunk(chunk)
 
                     const sortedChunk = sortAndDedupeChunk(formattedChunk, seenKeys)
                     if (sortedChunk) {
@@ -1512,6 +1496,7 @@ async function main() {
                 await updateTaskInProgress(taskId, { currentStep: 'Indexing merged data' })
                 console.log('\tIndexing merged data...')
 
+                const year = (new Date()).getUTCFullYear()
                 await indexData(outputFilePath, year)
 
                 await updateTaskResult(taskId, { uri: `/api/observations/${outputFileName}`, fileName: outputFileName })
@@ -1520,7 +1505,6 @@ async function main() {
                 limitFilesInDirectory('./api/data/observations', MAX_OBSERVATIONS)
                 clearTasksWithoutFiles()
 
-                clearDirectory('./api/data/elevation')
                 clearDirectory('./api/data/temp')
 
                 observationsChannel.ack(msg)

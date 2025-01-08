@@ -307,16 +307,19 @@ async function fetchObservations(sourceId, minDate, maxDate, page) {
  * pullSourceObservations()
  * Pulls observations from iNaturalist.org page-by-page for a given source project over a given period
  */
-async function pullSourceObservations(sourceId, minDate, maxDate) {
+async function pullSourceObservations(sourceId, minDate, maxDate, updatePullSourceProgress) {
     let response = await fetchObservations(sourceId, minDate, maxDate, 1)
     let results = response?.results ?? []
 
     const totalResults = parseInt(response?.total_results ?? '0')
     let totalPages = Math.floor(totalResults / 200) + 1
 
+    updatePullSourceProgress(100 / totalPages)
+
     for (let i = 2; i < totalPages + 1; i++) {
         response = await fetchObservations(sourceId, minDate, maxDate, i)
         results = results.concat(response?.results ?? [])
+        updatePullSourceProgress(100 * (i - 1) / totalPages)
     }
 
     return results
@@ -326,11 +329,16 @@ async function pullSourceObservations(sourceId, minDate, maxDate) {
  * pullObservations()
  * Pulls all observations specified in a given task
  */
-async function pullObservations(task) {
+async function pullObservations(task, updatePullProgress) {
     let observations = []
 
+    let i = 0
     for (const sourceId of task.sources) {
-        observations = observations.concat(await pullSourceObservations(sourceId, task.minDate, task.maxDate))
+        const sourceObservations = await pullSourceObservations(sourceId, task.minDate, task.maxDate, async (percentage) => {
+            updatePullProgress(`${((100 * i + percentage) / task.sources.length).toFixed(2)}%`)
+        })
+        observations = observations.concat(sourceObservations)
+        i++
     }
 
     return observations
@@ -1358,30 +1366,51 @@ async function mergeTempFiles(tempFiles, outputFilePath, compareRows) {
 
 /*
  * findLastObservationNumber()
- * Searches through a given observations file for the largest observation number (and its index)
+ * Searches through a given observations file for the largest observation number
  */
 async function findLastObservationNumber(filePath) {
     let lastObservationNumber = undefined
-    let lastObservationNumberIndex = -1
 
     // Open a CSV parser for the given file path
     const { parser } = createParser(filePath)
 
     // Search linearly for the highest OBSERVATION_NO
-    let i = 0
     for await (const row of parser) {
         if (row[OBSERVATION_NO]) {
-            // Parse OBSERVATION_NO as an integer and update lastObservationNumber/lastObservationNumberIndex
-            const currentObservationNumber = parseInt(row[OBSERVATION_NO])
+            // Parse OBSERVATION_NO as an integer and update lastObservationNumber
+            const currentObservationNumber = row[OBSERVATION_NO]
             if (!isNaN(currentObservationNumber) && (!lastObservationNumber || currentObservationNumber > lastObservationNumber)) {
                 lastObservationNumber = currentObservationNumber
-                lastObservationNumberIndex = i
             }
         }
-        i++
     }
 
-    return { lastObservationNumber, lastObservationNumberIndex }
+    return lastObservationNumber?.toString()
+}
+
+/*
+ * incrementObservationNumber()
+ * Takes a given observation number as a string and returns the next in the sequence, maintaining the year prefix
+ */
+function incrementObservationNumber(observationNumber) {
+    // Catch invalid observation numbers
+    if (!observationNumber || isNaN(observationNumber)) return ''
+
+    // Convert the observation number to a string if it is not one
+    if (typeof observationNumber !== 'string') {
+        observationNumber = observationNumber.toString()
+    }
+
+    // Split the given number at the second character
+    const prefix = observationNumber.slice(0, 2)
+    const suffix = observationNumber.slice(2)
+
+    // Convert the suffix to an integer, increment it, and parse it back to a string of fixed length
+    let nextSuffix = parseInt(suffix)
+    nextSuffix = (++nextSuffix).toString().padStart(suffix.length, '0')
+
+    // Return the concatenated prefix and new suffix
+    return prefix + nextSuffix
 }
 
 /*
@@ -1390,15 +1419,14 @@ async function findLastObservationNumber(filePath) {
  */
 async function indexData(filePath, year) {
     // Search for the highest observation number in the given file
-    const { lastObservationNumber } = await findLastObservationNumber(filePath)
+    const lastObservationNumber = await findLastObservationNumber(filePath)
 
-    // Construct a default observation number from the given year and from the current year; use the argument-based one first
-    const argYearObservationNumber = year ? year.toString().slice(2) + '00000' : undefined
-    const currentYearObservationNumber = (new Date()).getFullYear().toString().slice(2) + '00000'
-    let nextObservationNumber = parseInt(argYearObservationNumber ?? currentYearObservationNumber)
+    // Construct a default observation number from the given year
+    const yearPrefix = year.toString().slice(2)
+    let nextObservationNumber = yearPrefix + '000000'
 
-    // If an observation number was found in the given file, set the next observation number to one greater
-    nextObservationNumber = !isNaN(lastObservationNumber) ? lastObservationNumber + 1 : nextObservationNumber
+    // If an observation number was found in the given file, set the next observation number to one greater (carrying over the prefix)
+    nextObservationNumber = !isNaN(parseInt(lastObservationNumber)) ? incrementObservationNumber(lastObservationNumber) : nextObservationNumber
 
     // Create an input CSV parser and an output stringifier for a temporary file
     const { parser } = createParser(filePath)
@@ -1413,8 +1441,8 @@ async function indexData(filePath, year) {
         if (isRowEmpty(row)) continue
 
         if (!row[OBSERVATION_NO]) {
-            row[OBSERVATION_NO] = String(nextObservationNumber)
-            nextObservationNumber++
+            row[OBSERVATION_NO] = nextObservationNumber
+            nextObservationNumber = incrementObservationNumber(nextObservationNumber)
         }
 
         stringifier.write(row)
@@ -1445,7 +1473,9 @@ async function main() {
                 await updateTaskInProgress(taskId, { currentStep: 'Pulling observations from iNaturalist' })
                 console.log('\tPulling observations from iNaturalist...')
 
-                const observations = await pullObservations(task)
+                const observations = await pullObservations(task, async (percentage) => {
+                    await updateTaskInProgress(taskId, { currentStep: 'Pulling observations from iNaturalist', percentage })
+                })
 
                 await updateTaskInProgress(taskId, { currentStep: 'Updating place data' })
                 console.log('\tUpdating place data...')

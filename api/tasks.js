@@ -15,8 +15,8 @@ const tasksRouter = Router()
  * Requires:
  * - req.file: a CSV base observation dataset
  * - req.body.sources: a comma-separated list of iNaturalist project IDs to pull updates from
- * - req.body.minDate: the minimum date of observations to pull; must be in the same year as maxDate
- * - req.body.maxDate: the maximum date of observations to pull; must be in the same year as minDate
+ * - req.body.minDate: the minimum date of observations to pull
+ * - req.body.maxDate: the maximum date of observations to pull
  * Outputs:
  * - Stores a copy of the uploaded base dataset in /api/data/uploads, accessible at the /api/uploads endpoint
  * - Creates a new CSV observation dataset in /api/data/observations, accessible at the /api/observations endpoint
@@ -48,12 +48,12 @@ tasksRouter.post('/observations', upload.single('file'), async (req, res, next) 
             }
         }
 
-        // Parse minDate and maxDate arguments and check same-year requirement
+        // Parse minDate and maxDate arguments
         const minDate = new Date(req.body.minDate)
         const maxDate = new Date(req.body.maxDate)
-        if (minDate.getUTCFullYear() !== maxDate.getUTCFullYear()) {
+        if (minDate > maxDate) {
             res.status(400).send({
-                error: 'The \'minDate\' and \'maxDate\' request fields must have the same year'
+                error: 'The \'minDate\' must be before the \'maxDate\''
             })
             return
         }

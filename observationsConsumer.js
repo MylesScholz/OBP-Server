@@ -25,128 +25,73 @@ const CHUNK_SIZE = 10000
 // Number of temporary files to merge together at once
 const BATCH_SIZE = 2
 // Field names
-const ERROR_FLAGS = 'Error Flags'
-const OBSERVATION_NO = 'Observation No.'
-const INATURALIST_ID = 'iNaturalist ID'
-const INATURALIST_ALIAS = 'iNaturalist Alias'
-const FIRST_NAME = 'Collector - First Name'
-const FIRST_INITIAL = 'Collector - First Initial'
-const LAST_NAME = 'Collector - Last Name'
-const SAMPLE_ID = 'Sample ID'
-const SPECIMEN_ID = 'Specimen ID'
-const OBA_DAY = 'Collection Day 1'
-const OBA_MONTH = 'Month 1'
-const OBA_YEAR = 'Year 1'
-const OBA_TIME = 'Time 1'
-const OBA_COUNTRY = 'Country'
-const OBA_STATE = 'State'
-const OBA_COUNTY = 'County'
-const OBA_LOCATION = 'Location'
-const OBA_ABBR_LOCATION = 'Abbreviated Location'
-const OBA_LATITUDE = 'Dec. Lat.'
-const OBA_LONGITUDE = 'Dec. Long.'
-const ACCURACY = 'Lat/Long Accuracy'
-const ELEVATION = 'Elevation'
-const COLLECTION_METHOD = 'Collection method'
-const FAMILY = 'Associated plant - family'
-const SCIENTIFIC_NAME = 'Associated plant - genus, species'
-const INATURALIST_URL = 'Associated plant - Inaturalist URL'
+const ERROR_FLAGS = 'errorFlags'
+const OBSERVATION_NO = 'fieldNumber'
+const INATURALIST_ID = 'userId'
+const INATURALIST_ALIAS = 'userLogin'
+const FIRST_NAME = 'firstName'
+const FIRST_NAME_INITIAL = 'firstNameInitial'
+const LAST_NAME = 'lastName'
 const RECORDED_BY = 'recordedBy'
-const ASSOCIATED_TAXA = 'associatedTaxa'
-const SAMPLING_PROTOCOL = 'samplingProtocol'
-const DARWIN_YEAR = 'year'
-const DARWIN_MONTH = 'month'
-const DARWIN_DAY = 'day'
+const TAXON_FAMILY = 'taxonFamilyName'
+const TAXON_SPECIES = 'taxonSpeciesName'
+const INATURALIST_URL = 'url'
+const SAMPLE_ID = 'sampleId'
+const SPECIMEN_ID = 'specimenId'
+const DAY = 'day'
+const MONTH = 'month'
+const YEAR = 'year'
 const VERBATIM_DATE = 'verbatimEventDate'
+const COUNTRY = 'country'
+const STATE = 'stateProvince'
+const COUNTY = 'county'
+const LOCALITY = 'locality'
+const ELEVATION = 'verbatimElevation'
+const LATITUDE = 'decimalLatitude'
+const LONGITUDE = 'decimalLongitude'
+const ACCURACY = 'coordinateUncertaintyInMeters'
+const SAMPLING_PROTOCOL = 'samplingProtocol'
+
+const ASSOCIATED_TAXA = 'associatedTaxa'
 const FIELD_NOTES = 'fieldNotes'
-const DARWIN_COUNTRY = 'country'
-const DARWIN_STATE = 'stateProvince'
-const DARWIN_COUNTY = 'county'
-const DARWIN_LOCATION = 'locality'
-const DARWIN_LATITUDE = 'decimalLatitude'
-const DARWIN_LONGITUDE = 'decimalLongitude'
+
 // Template object for observations; static values are provided as strings, data-dependent values are set to null
 const observationTemplate = {
-    'Error Flags': null,
-    'Verified': '',
-    'Date Added': '',
-    'Date Label Print': '',
-    'Date Label Sent': '',
-    'Observation No.': null,
-    'Voucher No.': '',
-    'iNaturalist ID': null,
-    'iNaturalist Alias': null,
-    'Collector - First Name': null,
-    'Collector - First Initial': null,
-    'Collector - Last Name': null,
-    'Sample ID': null,
-    'Specimen ID': null,
-    'Collection Day 1': null,
-    'Month 1': null,
-    'Year 1': null,
-    'Time 1': null,
-    'Collection Day 2': '',
-    'Month 2': '',
-    'Year 2': '',
-    'Time 2': '',
-    'Collect Date 2 Merge': '',
-    'Country': null,
-    'State': null,
-    'County': null,
-    'Location': null,
-    'Collection Site Description': '',
-    'Abbreviated Location': null,
-    'Dec. Lat.': null,
-    'Dec. Long.': null,
-    'Lat/Long Accuracy': null,
-    'Elevation': null,
-    'Collection method': 'net',
-    'Associated plant - family': null,
-    'Associated plant - genus, species': null,
-    'Associated plant - Inaturalist URL': null,
-    'Det. Volunteer - Family': '',
-    'Det. Volunteer - Genus': '',
-    'Det. Volunteer - Species': '',
-    'Det. Volunteer - Sex/Caste': '',
-    'Det LR Best - Genus': '',          // sic
-    'Det. LR Best - Species': '',
-    'Det LR Best - Sex/Caste': '',      // sic
-    'id': '',
-    'type': 'Dataset',
-    'language': 'en',
-    'license': 'http://creativecommons.org/licenses/by-nc-sa/3.0/',
-    'rightsHolder': 'Oregon State University',
-    'bibliographicCitation': '',
-    'institutionID': 'https://www.gbif.org/grscicoll/institution/f23b6ebc-db50-482b-a923-f26b5cd8d2d1',
-    'datasetID': 'DOI: http://dx.doi.org/10.5399/osu/cat_osac.5.1.4647',
-    'institutionCode': 'OSAC',
-    'collectionCode': 'osac',
-    'datasetName': '',
-    'ownerInstitutionCode': 'OSAC',
-    'basisOfRecord': 'preservedSpecimen',
-    'occurrenceID': '',
+    'errorFlags': null,
+    'dateLabelPrint': '',
+    'fieldNumber': null,
     'catalogNumber': '',
+    'userId': null,
+    'userLogin': null,
+    'firstName': null,
+    'firstNameInitial': null,
+    'lastName': null,
     'recordedBy': null,
-    'sex': '',
-    'disposition': 'confirmedPresent',
-    'otherCatalogNumbers': '',
-    'associatedTaxa': null,
-    'samplingProtocol': null,
-    'year': null,
-    'month': null,
+    'resourceRelationship': '',
+    'taxonKingdomName': '',
+    'taxonOrderName': '',
+    'taxonFamilyName': null,
+    'taxonGenusName': '',
+    'taxonSpeciesName': null,
+    'url': null,
+    'sampleId': null,
+    'specimenId': null,
     'day': null,
+    'month': null,
+    'year': null,
     'verbatimEventDate': null,
-    'fieldNotes': null,
+    'day2': '',
+    'month2': '',
+    'year2': '',
     'country': null,
     'stateProvince': null,
     'county': null,
     'locality': null,
+    'verbatimElevation': null,
     'decimalLatitude': null,
     'decimalLongitude': null,
-    'identifiedBy': '',
-    'dateIdentified': '',
-    'identificationRemarks': '',
-    'scientificName': '',
+    'coordinateUncertaintyInMeters': null,
+    'samplingProtocol': null,
     'phylum': '',
     'class': '',
     'order': '',
@@ -154,51 +99,57 @@ const observationTemplate = {
     'genus': '',
     'subgenus': '',
     'specificEpithet': '',
-    'taxonRank': ''
+    'taxonRank': '',
+    'scientificName': '',
+    'sex': '',
+    'caste': '',
+    'identifiedBy': '',
+    'dateIdentified': '',
+    'identificationRemarks': '',
+
+    'volDetFamily': '',
+    'volDetGenus': '',
+    'volDetSpecies': '',
+    'volDetSex': '',
+    'volDetCaste': '',
+
+    // 'id': '',
+    // 'type': 'Dataset',
+    // 'language': 'en',
+    // 'license': 'http://creativecommons.org/licenses/by-nc-sa/3.0/',
+    // 'rightsHolder': 'Oregon State University',
+    // 'bibliographicCitation': '',
+    // 'institutionID': 'https://www.gbif.org/grscicoll/institution/f23b6ebc-db50-482b-a923-f26b5cd8d2d1',
+    // 'datasetID': 'DOI: http://dx.doi.org/10.5399/osu/cat_osac.5.1.4647',
+    // 'institutionCode': 'OSAC',
+    // 'collectionCode': 'osac',
+    // 'datasetName': '',
+    // 'ownerInstitutionCode': 'OSAC',
+    // 'basisOfRecord': 'preservedSpecimen',
+    // 'occurrenceID': '',
+    // 'disposition': 'confirmedPresent',
+    // 'otherCatalogNumbers': '',
+    // 'associatedTaxa': '',
+    // 'fieldNotes': '',
 }
 // A list of fields that should be flagged if empty
 const nonEmptyFields = [
     FIRST_NAME,
-    FIRST_INITIAL,
+    FIRST_NAME_INITIAL,
     LAST_NAME,
+    RECORDED_BY,
     SAMPLE_ID,
     SPECIMEN_ID,
-    OBA_DAY,
-    OBA_MONTH,
-    OBA_YEAR,
-    OBA_COUNTRY,
-    OBA_STATE,
-    OBA_COUNTY,
-    OBA_LOCATION,
-    OBA_ABBR_LOCATION,
-    OBA_LATITUDE,
-    OBA_LONGITUDE,
+    DAY,
+    MONTH,
+    YEAR,
+    COUNTRY,
+    STATE,
+    COUNTY,
+    LOCALITY,
     ELEVATION,
-    RECORDED_BY,
-    DARWIN_YEAR,
-    DARWIN_MONTH,
-    DARWIN_DAY,
-    DARWIN_COUNTRY,
-    DARWIN_STATE,
-    DARWIN_COUNTY,
-    DARWIN_LOCATION,
-    DARWIN_LATITUDE,
-    DARWIN_LONGITUDE
-]
-// Roman numerals 1 to 12
-const monthNumerals = [
-    'I',
-    'II',
-    'III',
-    'IV',
-    'V',
-    'VI',
-    'VII',
-    'VIII',
-    'IX',
-    'X',
-    'XI',
-    'XII'
+    LATITUDE,
+    LONGITUDE
 ]
 // Abbreviations for countries keyed by how iNaturalist refers to them
 const countryAbbreviations = {
@@ -464,28 +415,28 @@ async function readUsernamesFile() {
  */
 async function lookUpUserName(user) {
     // Default to empty strings
-    let firstName = '', firstInitial = '', lastName = ''
+    let firstName = '', firstNameInitial = '', lastName = ''
 
     // Check that the user field exists
     if (!user) {
-        return { firstName, firstInitial, lastName }
+        return { firstName, firstNameInitial, lastName }
     }
 
     // Get the known name data
     const usernames = await readUsernamesFile()
 
-    // Attempt to extract the user's full name
-    const userLogin = user['login']
-    const fullName = usernames[userLogin]?.split(' ')
+    // Attempt to extract the user from their iNaturalist alias
+    const userAlias = user['login']
+    const userName = usernames[userAlias]
 
-    // Format the outputs if the full name was found
-    if (fullName) {
-        firstName = fullName[0]
-        firstInitial = firstName[0] + '.'
-        lastName =  fullName.length > 1 ? fullName[fullName.length - 1] : ''
+    // Format the outputs if the user was found
+    if (userName) {
+        firstName = userName.firstName
+        firstNameInitial = firstName[0] + '.'
+        lastName = userName.lastName
     }
     
-    return { firstName, firstInitial, lastName }
+    return { firstName, firstNameInitial, lastName }
 }
 
 /*
@@ -656,35 +607,32 @@ async function formatObservation(observation) {
         return formattedObservation
     }
 
+    /* Read from external files */
+
     // Parse user's name
-    const { firstName, firstInitial, lastName } = await lookUpUserName(observation['user'])
+    const { firstName, firstNameInitial, lastName } = await lookUpUserName(observation['user'])
 
     // Parse country, state/province, and county
     const { country, stateProvince, county } =  await lookUpPlaces(observation['place_ids'])
 
-    /* Formatted fields as constants for re-use */
+    /* Formatted fields as constants */
 
     // Look up the taxonomic family
-    const family = getFamily(observation['identifications'])
-    const scientificName = observation.taxon?.name ?? ''
+    const taxonFamily = getFamily(observation['identifications'])
+    const taxonSpecies = observation.taxon?.name ?? ''
 
     // Attempt to parse 'observed_on_string' as a JavaScript Date object
     const observedDate = observation['observed_on_string'] ? new Date(observation['observed_on_string']) : undefined
 
-    // Extract the day, month, year, hour, and minute from the Date object
+    // Extract the day, month, and year from the Date object
     const observedDay = observedDate?.getDate()
     const observedMonth = observedDate?.getMonth()
     const observedYear = observedDate?.getFullYear()
-    const observedHour = observedDate?.getHours()
-    const observedMinute = observedDate?.getMinutes()
 
-    // Format the day, month, year, and time
+    // Format the day, month, and year
     const formattedDay = !isNaN(observedDay) ? observedDay.toString() : ''
     const formattedMonth = !isNaN(observedMonth) ? observedMonth.toString() : ''
     const formattedYear = !isNaN(observedYear) ? observedYear.toString() : ''
-    const formattedHours  = !isNaN(observedHour) ? observedHour.toString().padStart(2, '0') : undefined
-    const formattedMinutes = !isNaN(observedMinute) ? observedMinute.toString().padStart(2, '0') : undefined
-    const formattedTime = (formattedHours && formattedMinutes) ? `${formattedHours}:${formattedMinutes}` : ''
     
     // Format the location
     const formattedLocation = observation.place_guess?.split(/,\s*/)?.at(0)?.replace(countyRegex, '') ?? ''
@@ -703,69 +651,50 @@ async function formatObservation(observation) {
     formattedObservation[INATURALIST_ALIAS] = observation.user?.login ?? ''
 
     formattedObservation[FIRST_NAME] = firstName
-    formattedObservation[FIRST_INITIAL] = firstInitial
+    formattedObservation[FIRST_NAME_INITIAL] = firstNameInitial
     formattedObservation[LAST_NAME] = lastName
+    formattedObservation[RECORDED_BY] = `${firstName}${(firstName && lastName) ? ' ' : ''}${lastName}`
+
+    formattedObservation[TAXON_FAMILY] = taxonFamily
+    formattedObservation[TAXON_SPECIES] = taxonSpecies
+    formattedObservation[INATURALIST_URL] = observation['uri'] ?? ''
 
     formattedObservation[SAMPLE_ID] = getOFV(observation['ofvs'], 'Sample ID.')
     formattedObservation[SPECIMEN_ID] = getOFV(observation['ofvs'], 'Number of bees collected')
 
-    formattedObservation[OBA_DAY] = formattedDay
-    formattedObservation[OBA_MONTH] = monthNumerals[observedMonth] ?? ''
-    formattedObservation[OBA_YEAR] = formattedYear
-    formattedObservation[OBA_TIME] = formattedTime
+    formattedObservation[DAY] = formattedDay
+    formattedObservation[MONTH] = formattedMonth
+    formattedObservation[YEAR] = formattedYear
+    formattedObservation[VERBATIM_DATE] = observation['observed_on_string'] ?? ''
 
-    formattedObservation[OBA_COUNTRY] = countryAbbreviations[country] ?? country
-    formattedObservation[OBA_STATE] = stateProvinceAbbreviations[stateProvince] ?? stateProvince
-    formattedObservation[OBA_COUNTY] = county
+    formattedObservation[COUNTRY] = countryAbbreviations[country] ?? country
+    formattedObservation[STATE] = stateProvinceAbbreviations[stateProvince] ?? stateProvince
+    formattedObservation[COUNTY] = county
 
-    // Flag OBA_COUNTRY and OBA_STATE if they have an unexpected value
-    if (!countryAbbreviations[country]) { errorFields.push(OBA_COUNTRY) }
-    if (!stateProvinceAbbreviations[stateProvince]) { errorFields.push(OBA_STATE) }
+    // Flag COUNTRY and STATE if they have an unexpected value
+    if (!countryAbbreviations[country]) { errorFields.push(COUNTRY) }
+    if (!stateProvinceAbbreviations[stateProvince]) { errorFields.push(STATE) }
 
-    formattedObservation[OBA_LOCATION] = formattedLocation
-    formattedObservation[OBA_ABBR_LOCATION] = formattedLocation
+    formattedObservation[LOCALITY] = formattedLocation
 
-    // Flag OBA_LOCATION, OBA_ABBR_LOCATION, and DARWIN_LOCATION if formattedLocation contains any street suffixes
+    // Flag LOCALITY if formattedLocation contains any street suffixes
     if (includesStreetSuffix(formattedLocation)) {
-        errorFields.push(OBA_LOCATION)
-        errorFields.push(OBA_ABBR_LOCATION)
-        errorFields.push(DARWIN_LOCATION)
+        errorFields.push(LOCALITY)
     }
 
-    formattedObservation[OBA_LATITUDE] = formattedLatitude
-    formattedObservation[OBA_LONGITUDE] = formattedLongitude
+    formattedObservation[ELEVATION] = await getElevation(formattedLatitude, formattedLongitude)
+
+    formattedObservation[LATITUDE] = formattedLatitude
+    formattedObservation[LONGITUDE] = formattedLongitude
     formattedObservation[ACCURACY] = observation.positional_accuracy?.toString() ?? ''
 
     // Flag ACCURACY if positional_accuracy is greater than 250 meters
     if (observation.positional_accuracy > 250) { errorFields.push(ACCURACY) }
 
-    formattedObservation[ELEVATION] = await getElevation(formattedLatitude, formattedLongitude)
-
-    formattedObservation[FAMILY] = family
-    formattedObservation[SCIENTIFIC_NAME] = scientificName
-    formattedObservation[INATURALIST_URL] = observation['uri'] ?? ''
-
-    // Darwin Core fields
-    formattedObservation[RECORDED_BY] = `${firstName}${(firstName && lastName) ? ' ' : ''}${lastName}`
-
-    formattedObservation[ASSOCIATED_TAXA] = (scientificName || family) ? `foraging on : "${scientificName || family}"` : ''
-
     formattedObservation[SAMPLING_PROTOCOL] = 'aerial net'
 
-    formattedObservation[DARWIN_YEAR] = formattedYear
-    formattedObservation[DARWIN_MONTH] = formattedMonth
-    formattedObservation[DARWIN_DAY] = formattedDay
-    formattedObservation[VERBATIM_DATE] = observation['observed_on_string'] ?? ''
-
-    formattedObservation[FIELD_NOTES] = observation['description'] ?? ''
-
-    formattedObservation[DARWIN_COUNTRY] = country
-    formattedObservation[DARWIN_STATE] = stateProvince
-    formattedObservation[DARWIN_COUNTY] = county
-    formattedObservation[DARWIN_LOCATION] = formattedLocation
-
-    formattedObservation[DARWIN_LATITUDE] = formattedLatitude
-    formattedObservation[DARWIN_LONGITUDE] = formattedLongitude
+    // formattedObservation[ASSOCIATED_TAXA] = (taxonSpecies || taxonFamily) ? `foraging on : "${taxonSpecies || taxonFamily}"` : ''
+    // formattedObservation[FIELD_NOTES] = observation['description'] ?? ''
 
     // Set error flags as a semicolon-separated list of fields (non-empty fields and additional flags)
     formattedObservation[ERROR_FLAGS] = nonEmptyFields.filter((field) => !formattedObservation[field]).concat(errorFields).join(';')
@@ -851,40 +780,21 @@ function formatChunkRow(row) {
     const lastName = row[LAST_NAME]
     formattedRow[RECORDED_BY] = row[RECORDED_BY] || `${firstName}${(firstName && lastName) ? ' ' : ''}${lastName}`
 
-    const family = row[FAMILY]
-    const scientificName = row[SCIENTIFIC_NAME]
-    formattedRow[ASSOCIATED_TAXA] = row[ASSOCIATED_TAXA] || ((scientificName || family) ? `foraging on : "${scientificName || family}"` : '')
+    // const family = row[TAXON_FAMILY]
+    // const scientificName = row[TAXON_SPECIES]
+    // formattedRow[ASSOCIATED_TAXA] = row[ASSOCIATED_TAXA] || ((scientificName || family) ? `foraging on : "${scientificName || family}"` : '')
 
-    const method = row[COLLECTION_METHOD] === 'net' ? 'aerial net' : row[COLLECTION_METHOD]
-    formattedRow[SAMPLING_PROTOCOL] = row[SAMPLING_PROTOCOL] || method
-
-    formattedRow[DARWIN_YEAR] = row[DARWIN_YEAR] || row[OBA_YEAR]
-    formattedRow[DARWIN_MONTH] = row[DARWIN_MONTH] || monthNumerals.indexOf(row[OBA_MONTH]) + 1
-    formattedRow[DARWIN_DAY] = row[DARWIN_DAY] || row[OBA_DAY]
-
-    formattedRow[DARWIN_COUNTRY] = row[DARWIN_COUNTRY] || row[OBA_COUNTRY]
-    formattedRow[DARWIN_STATE] = row[DARWIN_STATE] || row[OBA_STATE]
-
-    // Flag OBA_COUNTRY and OBA_STATE if they have an unexpected value
-    if (!Object.values(countryAbbreviations).includes(formattedRow[OBA_COUNTRY])) { errorFields.push(OBA_COUNTRY) }
-    if (!Object.values(stateProvinceAbbreviations).includes(formattedRow[OBA_STATE])) { errorFields.push(OBA_STATE) }
+    formattedRow[SAMPLING_PROTOCOL] = row[SAMPLING_PROTOCOL] === 'net' ? 'aerial net' : row[SAMPLING_PROTOCOL]
 
     // Remove 'County' or 'Co' from the county field (case insensitive)
-    const county = row[DARWIN_COUNTY] || row[OBA_COUNTY]
-    formattedRow[DARWIN_COUNTY] = county.replace(countyRegex, '')
-
-    formattedRow[DARWIN_LOCATION] = row[DARWIN_LOCATION] || row[OBA_ABBR_LOCATION]
-
-    formattedRow[DARWIN_LATITUDE] = row[DARWIN_LATITUDE] || row[OBA_LATITUDE]
-    formattedRow[DARWIN_LONGITUDE] = row[DARWIN_LONGITUDE] || row[OBA_LONGITUDE]
+    const county = row[COUNTY] ?? ''
+    formattedRow[COUNTY] = county.replace(countyRegex, '')
 
     // Flag ACCURACY if it is greater than 250 meters
     if (parseInt(formattedRow[ACCURACY]) > 250) { errorFields.push(ACCURACY) }
 
     // Flag OBA_LOCATION, OBA_ABBR_LOCATION, and DARWIN_LOCATION if they contain street suffixes, respectively
-    if (includesStreetSuffix(formattedRow[OBA_LOCATION])) { errorFields.push(OBA_LOCATION) }
-    if (includesStreetSuffix(formattedRow[OBA_ABBR_LOCATION])) { errorFields.push(OBA_ABBR_LOCATION) }
-    if (includesStreetSuffix(formattedRow[DARWIN_LOCATION])) { errorFields.push(DARWIN_LOCATION) }
+    if (includesStreetSuffix(formattedRow[LOCALITY])) { errorFields.push(LOCALITY) }
 
     // Set error flags as a semicolon-separated list of fields (non-empty fields and additional flags)
     formattedRow[ERROR_FLAGS] = nonEmptyFields.filter((field) => !formattedRow[field]).concat(errorFields).join(';')
@@ -898,7 +808,7 @@ function formatChunkRow(row) {
  */
 async function fetchObservationsById(observationIds) {
     // observationIds can be a very long list of IDs, so batch requests to avoid iNaturalist API refusal
-    const partitionSize = 50
+    const partitionSize = 25
     const nPartitions = Math.floor(observationIds.length / partitionSize) + 1
     let partitionStart = 0
     let partitionEnd = Math.min(partitionSize, observationIds.length)
@@ -937,52 +847,46 @@ async function updateChunkRow(row, observation) {
     if (!row || !observation) { return }
 
     // Look up and update the plant taxonomy
-    const family = getFamily(observation?.identifications) || row[FAMILY]
-    const scientificName = observation?.taxon?.name || row[SCIENTIFIC_NAME]
-    row[FAMILY] = family
-    row[SCIENTIFIC_NAME] = scientificName
-    row[ASSOCIATED_TAXA] = ((scientificName || family) ? `foraging on : "${scientificName || family}"` : '') || row[ASSOCIATED_TAXA]
+    const taxonFamily = getFamily(observation?.identifications) || row[TAXON_FAMILY]
+    const taxonSpecies = observation?.taxon?.name || row[TAXON_SPECIES]
+    row[TAXON_FAMILY] = taxonFamily
+    row[TAXON_SPECIES] = taxonSpecies
+    // row[ASSOCIATED_TAXA] = ((scientificName || family) ? `foraging on : "${scientificName || family}"` : '') || row[ASSOCIATED_TAXA]
 
     // Update the coordinate fields if any are missing or if the accuracy is better (smaller)
     const prevAccuracy = parseInt(row[ACCURACY])
     const newAccuracy = observation?.positional_accuracy
     if (
-        !row[OBA_LATITUDE] ||
-        !row[OBA_LONGITUDE] ||
-        !row[DARWIN_LATITUDE] ||
-        !row[DARWIN_LONGITUDE] ||
+        !row[LATITUDE] ||
+        !row[LONGITUDE] ||
         (prevAccuracy && newAccuracy && newAccuracy < prevAccuracy)
     ) {
-        const latitude = observation?.geojson?.coordinates?.at(1)?.toFixed(3)?.toString()
-        const longitude = observation?.geojson?.coordinates?.at(0)?.toFixed(3)?.toString()
-
-        row[OBA_LATITUDE] = latitude || row[OBA_LATITUDE]
-        row[OBA_LONGITUDE] = longitude || row[OBA_LONGITUDE]
-        row[ACCURACY] = newAccuracy?.toString() || row[ACCURACY]
-
-        row[DARWIN_LATITUDE] = latitude || row[DARWIN_LATITUDE]
-        row[DARWIN_LONGITUDE] = longitude || row[DARWIN_LONGITUDE]
+        const latitude = observation?.geojson?.coordinates?.at(1)?.toFixed(3)?.toString() || row[LATITUDE]
+        const longitude = observation?.geojson?.coordinates?.at(0)?.toFixed(3)?.toString() || row[LONGITUDE]
 
         // Update the elevation in case the location changed
         row[ELEVATION] = await getElevation(latitude, longitude) || row[ELEVATION]
+
+        row[LATITUDE] = latitude
+        row[LONGITUDE] = longitude
+        row[ACCURACY] = newAccuracy?.toString() || row[ACCURACY]
     }
 
     // Deconstruct, update, and reconstruct the ERROR_FLAGS field based on the new data
     let errorFlags = row[ERROR_FLAGS]?.split(';') || []
     const updatableFields = [
-        FAMILY,
-        SCIENTIFIC_NAME,
-        ASSOCIATED_TAXA,
-        OBA_LATITUDE,
-        OBA_LONGITUDE,
-        ACCURACY,
-        DARWIN_LATITUDE,
-        DARWIN_LONGITUDE,
-        ELEVATION
+        TAXON_FAMILY,
+        TAXON_SPECIES,
+        // ASSOCIATED_TAXA,
+        ELEVATION,
+        LATITUDE,
+        LONGITUDE,
+        ACCURACY
     ]
     // Allow the flags of unupdated fields to pass and allow the flags of updated fields that are still empty to pass
     errorFlags = errorFlags.filter((field) => !updatableFields.includes(field) || !row[field])
     if (parseInt(row[ACCURACY]) > 250) { errorFlags.push(ACCURACY) }
+
     // Reconstruct the ERROR_FLAGS field
     row[ERROR_FLAGS] = errorFlags.join(';')
 }
@@ -1041,11 +945,11 @@ function generateRowKey(row) {
         row[INATURALIST_ALIAS] &&
         row[SAMPLE_ID] &&
         row [SPECIMEN_ID] &&
-        row[OBA_DAY] &&
-        row[OBA_MONTH] &&
-        row[OBA_YEAR]
+        row[DAY] &&
+        row[MONTH] &&
+        row[YEAR]
     ) {
-        keyFields = [INATURALIST_ALIAS, SAMPLE_ID, SPECIMEN_ID, OBA_DAY, OBA_MONTH, OBA_YEAR]
+        keyFields = [INATURALIST_ALIAS, SAMPLE_ID, SPECIMEN_ID, DAY, MONTH, YEAR]
     }
 
     // Get a list of the corresponding values for the key fields
@@ -1124,14 +1028,12 @@ function compareRows(row1, row2) {
         return firstNameComparison
     }
 
-    const month1 = monthNumerals.indexOf(row1[OBA_MONTH])
-    const month2 = monthNumerals.indexOf(row2[OBA_MONTH])
-    const monthComparison = (month1 > month2) - (month1 < month2)
+    const monthComparison = compareNumericStrings(row1[MONTH], row2[MONTH])
     if (monthComparison !== 0) {
         return monthComparison
     }
 
-    const dayComparison = compareNumericStrings(row1[OBA_DAY], row2[OBA_DAY])
+    const dayComparison = compareNumericStrings(row1[DAY], row2[DAY])
     if (dayComparison !== 0) {
         return dayComparison
     }
@@ -1423,7 +1325,7 @@ async function indexData(filePath, year) {
 
     // Construct a default observation number from the given year
     const yearPrefix = year.toString().slice(2)
-    let nextObservationNumber = yearPrefix + '000000'
+    let nextObservationNumber = yearPrefix + '000001'
 
     // If an observation number was found in the given file, set the next observation number to one greater (carrying over the prefix)
     nextObservationNumber = !isNaN(parseInt(lastObservationNumber)) ? incrementObservationNumber(lastObservationNumber) : nextObservationNumber

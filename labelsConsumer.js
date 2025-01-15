@@ -22,43 +22,59 @@ const rabbitmqURL = `amqp://${rabbitmqHost}`
 const MAX_LABELS = 10
 
 // Data field names
-const ERROR_FLAGS = 'Error Flags'
-const DATE_LABEL_PRINT = 'Date Label Print'
-const OBSERVATION_NO = 'Observation No.'
-const FIRST_INITIAL = 'Collector - First Initial'
-const LAST_NAME = 'Collector - Last Name'
-const SAMPLE_ID = 'Sample ID'
-const SPECIMEN_ID = 'Specimen ID'
-const OBA_DAY_1 = 'Collection Day 1'
-const OBA_MONTH_1 = 'Month 1'
-const OBA_YEAR = 'Year 1'
-const OBA_DAY_2 = 'Collection Day 2'
-const OBA_MONTH_2 = 'Month 2'
-const OBA_COUNTRY = 'Country'
-const OBA_STATE = 'State'
-const OBA_COUNTY = 'County'
-const OBA_ABBR_LOCATION = 'Abbreviated Location'
-const OBA_LATITUDE = 'Dec. Lat.'
-const OBA_LONGITUDE = 'Dec. Long.'
-const ELEVATION = 'Elevation'
-const COLLECTION_METHOD = 'Collection method'
+const ERROR_FLAGS = 'errorFlags'
+const DATE_LABEL_PRINT = 'dateLabelPrint'
+const OBSERVATION_NO = 'fieldNumber'
+const FIRST_NAME_INITIAL = 'firstNameInitial'
+const LAST_NAME = 'lastName'
+const SAMPLE_ID = 'sampleId'
+const SPECIMEN_ID = 'specimenId'
+const DAY = 'day'
+const MONTH = 'month'
+const YEAR = 'year'
+const DAY_2 = 'day2'
+const MONTH_2 = 'month2'
+const COUNTRY = 'country'
+const STATE = 'stateProvince'
+const COUNTY = 'county'
+const LOCALITY = 'locality'
+const LATITUDE = 'decimalLatitude'
+const LONGITUDE = 'decimalLongitude'
+const ELEVATION = 'verbatimElevation'
+const SAMPLING_PROTOCOL = 'samplingProtocol'
 
 // List of mandatory fields for a label to be printed
 const requiredFields = [
     OBSERVATION_NO,
-    FIRST_INITIAL,
+    FIRST_NAME_INITIAL,
     LAST_NAME,
     SAMPLE_ID,
     SPECIMEN_ID,
-    OBA_DAY_1,
-    OBA_MONTH_1,
-    OBA_YEAR,
-    OBA_COUNTRY,
-    OBA_STATE,
-    OBA_ABBR_LOCATION,
-    OBA_LATITUDE,
-    OBA_LONGITUDE,
-    COLLECTION_METHOD
+    DAY,
+    MONTH,
+    YEAR,
+    COUNTRY,
+    STATE,
+    LOCALITY,
+    LATITUDE,
+    LONGITUDE,
+    SAMPLING_PROTOCOL
+]
+
+// Roman numerals 1 to 12
+const monthNumerals = [
+    'I',
+    'II',
+    'III',
+    'IV',
+    'V',
+    'VI',
+    'VII',
+    'VIII',
+    'IX',
+    'X',
+    'XI',
+    'XII'
 ]
 
 // Number of rows of labels
@@ -105,23 +121,23 @@ function formatObservation(observation) {
     const formattedObservation = {}
 
     // Location field
-    const country = observation[OBA_COUNTRY]
-    const stateProvince = observation[OBA_STATE]
-    const county = observation[OBA_COUNTY] ? `:${observation[OBA_COUNTY]}Co` : ''
-    const place = observation[OBA_ABBR_LOCATION]
-    const latitude = observation[OBA_LATITUDE]
-    const longitude = observation[OBA_LONGITUDE]
+    const country = observation[COUNTRY]
+    const stateProvince = observation[STATE]
+    const county = observation[COUNTY] ? `:${observation[COUNTY]}Co` : ''
+    const place = observation[LOCALITY]
+    const latitude = observation[LATITUDE]
+    const longitude = observation[LONGITUDE]
     const elevation = observation[ELEVATION] ? ` ${observation[ELEVATION]}m` : ''
     const locationText = `${country}:${stateProvince}${county} ${place} ${latitude} ${longitude}${elevation}`
     formattedObservation.location = locationText
 
     // Date field
-    const day1 = observation[OBA_DAY_1]
-    const month1 = observation[OBA_MONTH_1]
-    const year = observation[OBA_YEAR]
+    const day1 = observation[DAY]
+    const month1 = monthNumerals[observation[MONTH] - 1]
+    const year = observation[YEAR]
     // Optional second date (for trap observations)
-    const day2 = observation[OBA_DAY_2]
-    const month2 = observation[OBA_MONTH_2]
+    const day2 = observation[DAY_2]
+    const month2 = monthNumerals[observation[MONTH_2] - 1]
     const duration = `-${day2}.${month2}`
     // Sample and specimen IDs
     const sampleID = observation[SAMPLE_ID].replace('-', '')
@@ -130,18 +146,18 @@ function formatObservation(observation) {
     formattedObservation.date = dateText
 
     // Collector field
-    const firstInitial = observation[FIRST_INITIAL]
+    const firstInitial = observation[FIRST_NAME_INITIAL]
     const lastName = observation[LAST_NAME]
     const nameText = `${firstInitial}${lastName}`
     formattedObservation.name = nameText
 
     // Collection method field
     const methodAbbreviations = {
-        'net': 'net',
-        'vane trap': 'VT',
-        'blue vane trap': 'BVT'
+        'aerial net': 'net',
+        'vane trap': 'trap',
+        'blue vane trap': 'trap'
     }
-    const methodText = methodAbbreviations[observation[COLLECTION_METHOD]] ?? observation[COLLECTION_METHOD]
+    const methodText = methodAbbreviations[observation[SAMPLING_PROTOCOL]] ?? observation[SAMPLING_PROTOCOL]
     formattedObservation.method = methodText
 
     // Observation number field
@@ -158,12 +174,12 @@ function formatObservation(observation) {
 function formatObservations(observations, addWarningID) {
     // Optional fields that should throw warnings
     const warningFields = [
-        OBA_COUNTY,
+        COUNTY,
         ELEVATION
     ]
 
     // Filter out observations that have any falsy requiredFields or that have been printed already
-    const formattedObservations = observations.filter((observation) => !observation[ERROR_FLAGS] && !observation[DATE_LABEL_PRINT] && requiredFields.every((field) => observation[field]))
+    const formattedObservations = observations.filter((observation) => !observation[ERROR_FLAGS] && !observation[DATE_LABEL_PRINT] && requiredFields.every((field) => !!observation[field]))
 
     // Format and add warnings to the remaining observations
     for (let i = 0; i < formattedObservations.length; i++) {
@@ -173,15 +189,15 @@ function formatObservations(observations, addWarningID) {
         // Add warnings for falsy warningFields and fields that are too long (highly specific, may need tuning)
         if (
             warningFields.some((field) => !observation[field]) ||
-            observation[OBA_COUNTRY].length > 3 ||
-            observation[OBA_STATE].length > 2 ||
-            observation[OBA_COUNTY].length > 9 ||
-            observation[OBA_ABBR_LOCATION].length > 18 ||
-            observation[OBA_LATITUDE].length > 8 ||
-            observation[OBA_LONGITUDE].length > 8 ||
+            observation[COUNTRY].length > 3 ||
+            observation[STATE].length > 2 ||
+            observation[COUNTY].length > 9 ||
+            observation[LOCALITY].length > 18 ||
+            observation[LATITUDE].length > 8 ||
+            observation[LONGITUDE].length > 8 ||
             observation[ELEVATION].length > 5 ||
             formattedObservation.name.length > 20 ||
-            observation[COLLECTION_METHOD].length > 5
+            formattedObservation.method.length > 5
         ) {
             addWarningID(observation[OBSERVATION_NO])
         }

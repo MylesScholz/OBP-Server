@@ -33,9 +33,6 @@ const FIRST_NAME = 'firstName'
 const FIRST_NAME_INITIAL = 'firstNameInitial'
 const LAST_NAME = 'lastName'
 const RECORDED_BY = 'recordedBy'
-const TAXON_FAMILY = 'taxonFamilyName'
-const TAXON_SPECIES = 'taxonSpeciesName'
-const INATURALIST_URL = 'url'
 const SAMPLE_ID = 'sampleId'
 const SPECIMEN_ID = 'specimenId'
 const DAY = 'day'
@@ -51,9 +48,13 @@ const LATITUDE = 'decimalLatitude'
 const LONGITUDE = 'decimalLongitude'
 const ACCURACY = 'coordinateUncertaintyInMeters'
 const SAMPLING_PROTOCOL = 'samplingProtocol'
-
-const ASSOCIATED_TAXA = 'associatedTaxa'
-const FIELD_NOTES = 'fieldNotes'
+const PLANT_PHYLUM = 'phylumPlant'
+const PLANT_ORDER = 'orderPlant'
+const PLANT_FAMILY = 'familyPlant'
+const PLANT_GENUS = 'genusPlant'
+const PLANT_SPECIES = 'speciesPlant'
+const PLANT_TAXON_RANK = 'taxonRankPlant'
+const INATURALIST_URL = 'url'
 
 // Template object for observations; static values are provided as strings, data-dependent values are set to null
 const observationTemplate = {
@@ -61,19 +62,13 @@ const observationTemplate = {
     'dateLabelPrint': '',
     'fieldNumber': null,
     'catalogNumber': '',
+    'occurrenceID': null,
     'userId': null,
     'userLogin': null,
     'firstName': null,
     'firstNameInitial': null,
     'lastName': null,
     'recordedBy': null,
-    'resourceRelationship': '',
-    'taxonKingdomName': '',
-    'taxonOrderName': '',
-    'taxonFamilyName': null,
-    'taxonGenusName': '',
-    'taxonSpeciesName': null,
-    'url': null,
     'sampleId': null,
     'specimenId': null,
     'day': null,
@@ -92,6 +87,17 @@ const observationTemplate = {
     'decimalLongitude': null,
     'coordinateUncertaintyInMeters': null,
     'samplingProtocol': null,
+    'resourceRelationship': '',
+    'resourceID': null,
+    'relatedResourceID': null,
+    'relationshipRemarks': '',
+    'phylumPlant': null,
+    'orderPlant': null,
+    'familyPlant': null,
+    'genusPlant': null,
+    'speciesPlant': null,
+    'taxonRankPlant': null,
+    'url': null,
     'phylum': '',
     'class': '',
     'order': '',
@@ -99,45 +105,23 @@ const observationTemplate = {
     'genus': '',
     'subgenus': '',
     'specificEpithet': '',
-    'taxonRank': '',
+    'taxonomicNotes': '',
     'scientificName': '',
     'sex': '',
     'caste': '',
+    'taxonRank': '',
     'identifiedBy': '',
-    'dateIdentified': '',
-    'identificationRemarks': '',
-
-    'volDetFamily': '',
-    'volDetGenus': '',
-    'volDetSpecies': '',
-    'volDetSex': '',
-    'volDetCaste': '',
-
-    // 'id': '',
-    // 'type': 'Dataset',
-    // 'language': 'en',
-    // 'license': 'http://creativecommons.org/licenses/by-nc-sa/3.0/',
-    // 'rightsHolder': 'Oregon State University',
-    // 'bibliographicCitation': '',
-    // 'institutionID': 'https://www.gbif.org/grscicoll/institution/f23b6ebc-db50-482b-a923-f26b5cd8d2d1',
-    // 'datasetID': 'DOI: http://dx.doi.org/10.5399/osu/cat_osac.5.1.4647',
-    // 'institutionCode': 'OSAC',
-    // 'collectionCode': 'osac',
-    // 'datasetName': '',
-    // 'ownerInstitutionCode': 'OSAC',
-    // 'basisOfRecord': 'preservedSpecimen',
-    // 'occurrenceID': '',
-    // 'disposition': 'confirmedPresent',
-    // 'otherCatalogNumbers': '',
-    // 'associatedTaxa': '',
-    // 'fieldNotes': '',
+    'familyVolDet': '',
+    'genusVolDet': '',
+    'speciesVolDet': '',
+    'sexVolDet': '',
+    'casteVolDet': ''
 }
 // A list of fields that should be flagged if empty
 const nonEmptyFields = [
     FIRST_NAME,
     FIRST_NAME_INITIAL,
     LAST_NAME,
-    RECORDED_BY,
     SAMPLE_ID,
     SPECIMEN_ID,
     DAY,
@@ -149,7 +133,8 @@ const nonEmptyFields = [
     LOCALITY,
     ELEVATION,
     LATITUDE,
-    LONGITUDE
+    LONGITUDE,
+    SAMPLING_PROTOCOL
 ]
 // Abbreviations for countries keyed by how iNaturalist refers to them
 const countryAbbreviations = {
@@ -299,7 +284,7 @@ async function pullObservations(task, updatePullProgress) {
  * readPlacesFile()
  * Parses /api/data/places.json into a JS object
  */
-async function readPlacesFile() {
+function readPlacesFile() {
     // If /api/data/places.json doesn't exist locally, create a base version and save it
     if (!fs.existsSync('./api/data/places.json')) {
         fs.writeFileSync('./api/data/places.json', '{}')
@@ -359,7 +344,7 @@ function writePlacesFile(places) {
  */
 async function updatePlaces(observations) {
     // Get the current place data
-    const places = await readPlacesFile()
+    const places = readPlacesFile()
 
     // Compile a list of unknown places from the given observations
     const unknownPlaces = []
@@ -395,10 +380,107 @@ async function updatePlaces(observations) {
 }
 
 /*
+ * readTaxaFile()
+ * Parses /api/data/taxa.json into a JS object
+ */
+function readTaxaFile() {
+    // If /api/data/taxa.json doesn't exist locally, create a base version and save it
+    if (!fs.existsSync('./api/data/taxa.json')) {
+        fs.writeFileSync('./api/data/taxa.json', '{}')
+    }
+
+    // Read and parse /api/data/taxa.json
+    const placesData = fs.readFileSync('./api/data/taxa.json')
+    return JSON.parse(placesData || '{}')
+}
+
+/*
+ * fetchTaxa()
+ * Makes API requests to iNaturalist.org to collect taxon data from a given list of taxon IDs
+ */
+async function fetchTaxa(taxa) {
+    // taxa can be a very long list of IDs, so batch requests to avoid iNaturalist API refusal
+    const partitionSize = 30
+    const nPartitions = Math.floor(taxa.length / partitionSize) + 1
+    let partitionStart = 0
+    let partitionEnd = Math.min(partitionSize, taxa.length)
+
+    // Fetch taxon data for each batch from iNaturalist.org and append it together
+    let results = []
+    for (let i = 0; i < nPartitions; i++) {
+        const requestURL = `https://api.inaturalist.org/v1/taxa/${taxa.slice(partitionStart, partitionEnd).join(',')}`
+
+        try {
+            const res = await fetch(requestURL)
+            if (res.ok) {
+                const resJSON = await res.json()
+                results = results.concat(resJSON['results'])
+            } else {
+                console.error(`Bad response while fetching '${requestURL}':`, res)
+            }
+        } catch (err) {
+            console.error(`ERROR while fetching ${requestURL}:`, err)
+        }
+
+        partitionStart = partitionEnd
+        partitionEnd = Math.min(partitionEnd + partitionSize, taxa.length)
+    }
+
+    return results
+}
+
+/*
+ * writeTaxaFile()
+ * Writes a given taxa object into /api/data/taxa.json
+ */
+function writeTaxaFile(taxa) {
+    fs.writeFileSync('./api/data/taxa.json', JSON.stringify(taxa))
+}
+
+/*
+ * updateTaxa()
+ * Updates local taxonomy data (stored in /api/data/taxa.json) for each given observation
+ */
+async function updateTaxa(observations) {
+    // Get current taxonomy data
+    const taxa = readTaxaFile()
+
+    // Compile a list of unknown taxa from the given observations
+    const unknownTaxa = []
+    for (const observation of observations) {
+        const ancestors = observation.taxon?.min_species_ancestry?.split(',') ?? []
+
+        for (const taxonId of ancestors) {
+            if (!(taxonId in taxa) && !unknownTaxa.includes(taxonId)) {
+                unknownTaxa.push(taxonId)
+            }
+        }
+    }
+
+    // Fetch data for each unknown taxon from iNaturalist.org and combine it with the existing data
+    if (unknownTaxa.length > 0) {
+        const newTaxa = await fetchTaxa(unknownTaxa)
+
+        const savedRanks = ['phylum', 'order', 'family', 'genus', 'species']
+        for (const newTaxon of newTaxa) {
+            if (savedRanks.includes(newTaxon.rank)) {
+                taxa[newTaxon.id] = {
+                    rank: newTaxon.rank,
+                    name: newTaxon.name
+                }
+            }
+        }
+    }
+
+    // Store the updated taxonomy data
+    writeTaxaFile(taxa)
+}
+
+/*
  * readUsernamesFile()
  * Parses /api/data/usernames.json into a JS object
  */
-async function readUsernamesFile() {
+function readUsernamesFile() {
     // If /api/data/usernames.json doesn't exist locally, create a base version and save it
     if (!fs.existsSync('./api/data/usernames.json')) {
         fs.writeFileSync('./api/data/usernames.json', '{}')
@@ -410,10 +492,10 @@ async function readUsernamesFile() {
 }
 
 /*
- * lookUpUserName()
+ * getUserName()
  * Searches for the first name, first initial, and last name of an iNaturalist user in /api/data/usernames.json
  */
-async function lookUpUserName(user) {
+function getUserName(user) {
     // Default to empty strings
     let firstName = '', firstNameInitial = '', lastName = ''
 
@@ -423,7 +505,7 @@ async function lookUpUserName(user) {
     }
 
     // Get the known name data
-    const usernames = await readUsernamesFile()
+    const usernames = readUsernamesFile()
 
     // Attempt to extract the user from their iNaturalist alias
     const userAlias = user['login']
@@ -440,10 +522,10 @@ async function lookUpUserName(user) {
 }
 
 /*
- * lookUpPlaces()
+ * getPlaces()
  * Searches for country, state/province, and county names in /api/data/places.json
  */
-async function lookUpPlaces(placeIds) {
+function getPlaces(placeIds) {
     // Default to empty strings
     let country = '', stateProvince = '', county = ''
 
@@ -453,7 +535,7 @@ async function lookUpPlaces(placeIds) {
     }
 
     // Get the known place data
-    const places = await readPlacesFile()
+    const places = readPlacesFile()
 
     // Look up each place ID and set the appropriate output string
     for (const placeId of placeIds) {
@@ -471,31 +553,44 @@ async function lookUpPlaces(placeIds) {
 }
 
 /*
- * getFamily()
- * Searches for a taxonomic family name in an observation's 'identifications' field
+ * getPlantTaxonomy()
+ * Searches for a plant phylum, order, family, genus, and species from a given observation taxon
  */
-function getFamily(identifications) {
-    // Check that the identifications field exists
-    if (!identifications) {
-        return ''
+function getPlantTaxonomy(taxon) {
+    const taxonomy = {
+        phylum: '',
+        order: '',
+        family: '',
+        genus: '',
+        species: ''
     }
 
-    // Search each identification
-    for (const id of identifications) {
-        // If the identification is a family, return its name; otherwise, search the ancestors field
-        if (id.taxon?.rank === 'family') {
-            return id.taxon?.name ?? ''
-        } else if (id['ancestors']) {
-            for (const ancestor of id['ancestors']) {
-                if (ancestor['rank'] === 'family') {
-                    return ancestor['name'] ?? ''
-                }
-            }
+    // Check that the given taxon exists
+    if (!taxon) {
+        return taxonomy
+    }
+
+    const taxa = readTaxaFile()
+
+    // Look up each ancestor in the local taxonomy dataset
+    const ancestorIds = taxon.min_species_ancestry?.split(',') ?? []
+    for (const ancestorId of ancestorIds) {
+        const ancestorTaxon = taxa[ancestorId]
+        if (ancestorTaxon) {
+            taxonomy[ancestorTaxon.rank] = ancestorTaxon.name
         }
     }
 
-    // Default to an empty string if the search reaches this point
-    return ''
+    // If the given taxon is at least species level, use its name instead of the result of the local data
+    const minSpeciesTaxonRanks = ['species', 'hybrid', 'subspecies', 'variety', 'form']
+    if (minSpeciesTaxonRanks.includes(taxon.rank)) {
+        taxonomy.species = taxon.name || taxonomy.species
+    }
+
+    // Use the given taxon as a minimum (unless it is empty)
+    taxonomy[taxon.rank] = taxon.name || taxonomy[taxon.rank]
+
+    return taxonomy
 }
 
 /*
@@ -610,23 +705,19 @@ async function formatObservation(observation) {
     /* Read from external files */
 
     // Parse user's name
-    const { firstName, firstNameInitial, lastName } = await lookUpUserName(observation['user'])
+    const { firstName, firstNameInitial, lastName } = getUserName(observation['user'])
 
     // Parse country, state/province, and county
-    const { country, stateProvince, county } =  await lookUpPlaces(observation['place_ids'])
+    const { country, stateProvince, county } =  getPlaces(observation['place_ids'])
 
     /* Formatted fields as constants */
-
-    // Look up the taxonomic family
-    const taxonFamily = getFamily(observation['identifications'])
-    const taxonSpecies = observation.taxon?.name ?? ''
 
     // Attempt to parse 'observed_on_string' as a JavaScript Date object
     const observedDate = observation['observed_on_string'] ? new Date(observation['observed_on_string']) : undefined
 
     // Extract the day, month, and year from the Date object
     const observedDay = observedDate?.getDate()
-    const observedMonth = observedDate?.getMonth()
+    const observedMonth = observedDate?.getMonth() + 1
     const observedYear = observedDate?.getFullYear()
 
     // Format the day, month, and year
@@ -638,11 +729,11 @@ async function formatObservation(observation) {
     const formattedLocation = observation.place_guess?.split(/,\s*/)?.at(0)?.replace(countyRegex, '') ?? ''
 
     // Format the coordinates
-    const formattedLatitude = observation.geojson?.coordinates?.at(1)?.toFixed(3)?.toString() ?? ''
-    const formattedLongitude = observation.geojson?.coordinates?.at(0)?.toFixed(3)?.toString() ?? ''
+    const formattedLatitude = observation.geojson?.coordinates?.at(1)?.toFixed(4)?.toString() ?? ''
+    const formattedLongitude = observation.geojson?.coordinates?.at(0)?.toFixed(4)?.toString() ?? ''
 
     // A list of fields to flag in addition to the non-empty fields
-    const errorFields = []
+    let errorFields = []
 
     /* Final formatting */
 
@@ -654,10 +745,6 @@ async function formatObservation(observation) {
     formattedObservation[FIRST_NAME_INITIAL] = firstNameInitial
     formattedObservation[LAST_NAME] = lastName
     formattedObservation[RECORDED_BY] = `${firstName}${(firstName && lastName) ? ' ' : ''}${lastName}`
-
-    formattedObservation[TAXON_FAMILY] = taxonFamily
-    formattedObservation[TAXON_SPECIES] = taxonSpecies
-    formattedObservation[INATURALIST_URL] = observation['uri'] ?? ''
 
     formattedObservation[SAMPLE_ID] = getOFV(observation['ofvs'], 'Sample ID.')
     formattedObservation[SPECIMEN_ID] = getOFV(observation['ofvs'], 'Number of bees collected')
@@ -693,8 +780,24 @@ async function formatObservation(observation) {
 
     formattedObservation[SAMPLING_PROTOCOL] = 'aerial net'
 
-    // formattedObservation[ASSOCIATED_TAXA] = (taxonSpecies || taxonFamily) ? `foraging on : "${taxonSpecies || taxonFamily}"` : ''
-    // formattedObservation[FIELD_NOTES] = observation['description'] ?? ''
+    // Look up the plant taxonomy and format it
+    const plantTaxonomy = getPlantTaxonomy(observation.taxon)
+    formattedObservation[PLANT_PHYLUM] = plantTaxonomy.phylum
+    formattedObservation[PLANT_ORDER] = plantTaxonomy.order
+    formattedObservation[PLANT_FAMILY] = plantTaxonomy.family
+    formattedObservation[PLANT_GENUS] = plantTaxonomy.genus
+    formattedObservation[PLANT_SPECIES] = plantTaxonomy.species
+
+    // As a fallback, search the plant taxonomy upward for the first truthy rank
+    const minRank = ['species', 'genus', 'family', 'order', 'phylum'].find((rank) => !!plantTaxonomy[rank])
+    formattedObservation[PLANT_TAXON_RANK] = observation.taxon?.rank || minRank || ''
+
+    // Flag all plant taxonomy fields if the phylum is defined but is not Tracheophyta
+    if (!!formattedObservation[PLANT_PHYLUM] && formattedObservation[PLANT_PHYLUM].toLowerCase() !== 'tracheophyta') {
+        errorFields = errorFields.concat([PLANT_PHYLUM, PLANT_ORDER, PLANT_FAMILY, PLANT_GENUS, PLANT_SPECIES, PLANT_TAXON_RANK])
+    }
+
+    formattedObservation[INATURALIST_URL] = observation['uri'] ?? ''
 
     // Set error flags as a semicolon-separated list of fields (non-empty fields and additional flags)
     formattedObservation[ERROR_FLAGS] = nonEmptyFields.filter((field) => !formattedObservation[field]).concat(errorFields).join(';')
@@ -773,18 +876,7 @@ function formatChunkRow(row) {
     const formattedRow = Object.assign({}, observationTemplate, row)
 
     // A list of fields to flag in addition to the non-empty fields
-    const errorFields = []
-
-    // If the Darwin Core fields are empty, fill them from the labels fields
-    const firstName = row[FIRST_NAME]
-    const lastName = row[LAST_NAME]
-    formattedRow[RECORDED_BY] = row[RECORDED_BY] || `${firstName}${(firstName && lastName) ? ' ' : ''}${lastName}`
-
-    // const family = row[TAXON_FAMILY]
-    // const scientificName = row[TAXON_SPECIES]
-    // formattedRow[ASSOCIATED_TAXA] = row[ASSOCIATED_TAXA] || ((scientificName || family) ? `foraging on : "${scientificName || family}"` : '')
-
-    formattedRow[SAMPLING_PROTOCOL] = row[SAMPLING_PROTOCOL] === 'net' ? 'aerial net' : row[SAMPLING_PROTOCOL]
+    let errorFields = []
 
     // Remove 'County' or 'Co' from the county field (case insensitive)
     const county = row[COUNTY] ?? ''
@@ -793,8 +885,13 @@ function formatChunkRow(row) {
     // Flag ACCURACY if it is greater than 250 meters
     if (parseInt(formattedRow[ACCURACY]) > 250) { errorFields.push(ACCURACY) }
 
-    // Flag OBA_LOCATION, OBA_ABBR_LOCATION, and DARWIN_LOCATION if they contain street suffixes, respectively
+    // Flag LOCALITY if it contains street suffixes
     if (includesStreetSuffix(formattedRow[LOCALITY])) { errorFields.push(LOCALITY) }
+
+    // Flag all plant taxonomy fields if the phylum is defined but is not Tracheophyta
+    if (!!formattedRow[PLANT_PHYLUM] && formattedRow[PLANT_PHYLUM].toLowerCase() !== 'tracheophyta') {
+        errorFields = errorFields.concat([PLANT_PHYLUM, PLANT_ORDER, PLANT_FAMILY, PLANT_GENUS, PLANT_SPECIES, PLANT_TAXON_RANK])
+    }
 
     // Set error flags as a semicolon-separated list of fields (non-empty fields and additional flags)
     formattedRow[ERROR_FLAGS] = nonEmptyFields.filter((field) => !formattedRow[field]).concat(errorFields).join(';')
@@ -847,11 +944,16 @@ async function updateChunkRow(row, observation) {
     if (!row || !observation) { return }
 
     // Look up and update the plant taxonomy
-    const taxonFamily = getFamily(observation?.identifications) || row[TAXON_FAMILY]
-    const taxonSpecies = observation?.taxon?.name || row[TAXON_SPECIES]
-    row[TAXON_FAMILY] = taxonFamily
-    row[TAXON_SPECIES] = taxonSpecies
-    // row[ASSOCIATED_TAXA] = ((scientificName || family) ? `foraging on : "${scientificName || family}"` : '') || row[ASSOCIATED_TAXA]
+    const plantTaxonomy = getPlantTaxonomy(observation?.taxon)
+    row[PLANT_PHYLUM] = plantTaxonomy.phylum
+    row[PLANT_ORDER] = plantTaxonomy.order
+    row[PLANT_FAMILY] = plantTaxonomy.family
+    row[PLANT_GENUS] = plantTaxonomy.genus
+    row[PLANT_SPECIES] = plantTaxonomy.species
+
+    // As a fallback, search the plant taxonomy upward for the first truthy rank
+    const minRank = ['species', 'genus', 'family', 'order', 'phylum'].find((rank) => !!plantTaxonomy[rank])
+    row[PLANT_TAXON_RANK] = observation.taxon?.rank || minRank || ''
 
     // Update the coordinate fields if any are missing or if the accuracy is better (smaller)
     const prevAccuracy = parseInt(row[ACCURACY])
@@ -861,8 +963,8 @@ async function updateChunkRow(row, observation) {
         !row[LONGITUDE] ||
         (prevAccuracy && newAccuracy && newAccuracy < prevAccuracy)
     ) {
-        const latitude = observation?.geojson?.coordinates?.at(1)?.toFixed(3)?.toString() || row[LATITUDE]
-        const longitude = observation?.geojson?.coordinates?.at(0)?.toFixed(3)?.toString() || row[LONGITUDE]
+        const latitude = observation?.geojson?.coordinates?.at(1)?.toFixed(4)?.toString() || row[LATITUDE]
+        const longitude = observation?.geojson?.coordinates?.at(0)?.toFixed(4)?.toString() || row[LONGITUDE]
 
         // Update the elevation in case the location changed
         row[ELEVATION] = await getElevation(latitude, longitude) || row[ELEVATION]
@@ -875,17 +977,27 @@ async function updateChunkRow(row, observation) {
     // Deconstruct, update, and reconstruct the ERROR_FLAGS field based on the new data
     let errorFlags = row[ERROR_FLAGS]?.split(';') || []
     const updatableFields = [
-        TAXON_FAMILY,
-        TAXON_SPECIES,
-        // ASSOCIATED_TAXA,
         ELEVATION,
         LATITUDE,
         LONGITUDE,
-        ACCURACY
+        ACCURACY,
+        PLANT_PHYLUM,
+        PLANT_ORDER,
+        PLANT_FAMILY,
+        PLANT_GENUS,
+        PLANT_SPECIES,
+        PLANT_TAXON_RANK
     ]
     // Allow the flags of unupdated fields to pass and allow the flags of updated fields that are still empty to pass
     errorFlags = errorFlags.filter((field) => !updatableFields.includes(field) || !row[field])
+
+    // Flag ACCURACY if it is greater than 250 meters
     if (parseInt(row[ACCURACY]) > 250) { errorFlags.push(ACCURACY) }
+
+    // Flag all plant taxonomy fields if the phylum is defined but is not Tracheophyta
+    if (!!row[PLANT_PHYLUM] && row[PLANT_PHYLUM].toLowerCase() !== 'tracheophyta') {
+        errorFlags = errorFlags.concat([PLANT_PHYLUM, PLANT_ORDER, PLANT_FAMILY, PLANT_GENUS, PLANT_SPECIES, PLANT_TAXON_RANK])
+    }
 
     // Reconstruct the ERROR_FLAGS field
     row[ERROR_FLAGS] = errorFlags.join(';')
@@ -1383,6 +1495,11 @@ async function main() {
                 console.log('\tUpdating place data...')
 
                 await updatePlaces(observations)
+
+                await updateTaskInProgress(taskId, { currentStep: 'Updating taxonomy data' })
+                console.log('\tUpdating taxonomy data...')
+
+                await updateTaxa(observations)
 
                 await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations' })
                 console.log('\tFormatting new observations...')

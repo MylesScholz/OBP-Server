@@ -5,6 +5,7 @@ docker_commands.txt
 api/data/elevation
 api/data/usernames.json
 api/data/places.json
+api/data/taxa.json
 
 # Logs
 logs

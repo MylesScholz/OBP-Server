@@ -125,8 +125,8 @@ function formatObservation(observation) {
     const stateProvince = observation[STATE]
     const county = observation[COUNTY] ? `:${observation[COUNTY]}Co` : ''
     const place = observation[LOCALITY]
-    const latitude = observation[LATITUDE]
-    const longitude = observation[LONGITUDE]
+    const latitude = parseFloat(observation[LATITUDE]).toFixed(3).toString()
+    const longitude = parseFloat(observation[LONGITUDE]).toFixed(3).toString()
     const elevation = observation[ELEVATION] ? ` ${observation[ELEVATION]}m` : ''
     const locationText = `${country}:${stateProvince}${county} ${place} ${latitude} ${longitude}${elevation}`
     formattedObservation.location = locationText
@@ -146,18 +146,16 @@ function formatObservation(observation) {
     formattedObservation.date = dateText
 
     // Collector field
-    const firstInitial = observation[FIRST_NAME_INITIAL]
+    const firstNameInitial = observation[FIRST_NAME_INITIAL]
     const lastName = observation[LAST_NAME]
-    const nameText = `${firstInitial}${lastName}`
+    const nameText = `${firstNameInitial}${lastName}`
     formattedObservation.name = nameText
 
     // Collection method field
-    const methodAbbreviations = {
-        'aerial net': 'net',
-        'vane trap': 'trap',
-        'blue vane trap': 'trap'
-    }
-    const methodText = methodAbbreviations[observation[SAMPLING_PROTOCOL]] ?? observation[SAMPLING_PROTOCOL]
+    let methodText = observation[SAMPLING_PROTOCOL].toLowerCase() ?? ''
+    if (methodText.includes('net')) { methodText = 'net' }
+    if (methodText.includes('trap')) { methodText = 'trap' }
+    if (methodText.includes('nest')) { methodText = 'nest' }
     formattedObservation.method = methodText
 
     // Observation number field
@@ -191,12 +189,8 @@ function formatObservations(observations, addWarningID) {
             warningFields.some((field) => !observation[field]) ||
             observation[COUNTRY].length > 3 ||
             observation[STATE].length > 2 ||
-            observation[COUNTY].length > 9 ||
-            observation[LOCALITY].length > 18 ||
-            observation[LATITUDE].length > 8 ||
-            observation[LONGITUDE].length > 8 ||
-            observation[ELEVATION].length > 5 ||
-            formattedObservation.name.length > 20 ||
+            observation[COUNTY].length + observation[LOCALITY].length > 25 ||
+            formattedObservation.name.length > 19 ||
             formattedObservation.method.length > 5
         ) {
             addWarningID(observation[OBSERVATION_NO])

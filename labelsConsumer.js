@@ -177,11 +177,13 @@ function formatObservations(observations, addWarningID) {
     ]
 
     // Filter out observations that have any falsy requiredFields or that have been printed already
-    const formattedObservations = observations.filter((observation) => !observation[ERROR_FLAGS] && !observation[DATE_LABEL_PRINT] && requiredFields.every((field) => !!observation[field]))
+    let filteredObservations = observations.filter((observation) => !observation[DATE_LABEL_PRINT] && requiredFields.every((field) => !!observation[field]))
+    // Filter out observations where any of the required fields show up in ERROR_FLAGS
+    filteredObservations = filteredObservations.filter((observation) => !requiredFields.some((field) => observation[ERROR_FLAGS].split(';').includes(field)))
 
     // Format and add warnings to the remaining observations
-    for (let i = 0; i < formattedObservations.length; i++) {
-        const observation = formattedObservations[i]
+    for (let i = 0; i < filteredObservations.length; i++) {
+        const observation = filteredObservations[i]
         const formattedObservation = formatObservation(observation)
 
         // Add warnings for falsy warningFields and fields that are too long (highly specific, may need tuning)
@@ -196,10 +198,10 @@ function formatObservations(observations, addWarningID) {
             addWarningID(observation[OBSERVATION_NO])
         }
 
-        formattedObservations[i] = formattedObservation
+        filteredObservations[i] = formattedObservation
     }
 
-    return formattedObservations
+    return filteredObservations
 }
 
 /*

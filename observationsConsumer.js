@@ -21,12 +21,13 @@ const rabbitmqURL = `amqp://${rabbitmqHost}`
 // Maximum number of output files stored on the server
 const MAX_OBSERVATIONS = 10
 // Maximum number of observations to read from a file at once
-const CHUNK_SIZE = 10000
+const CHUNK_SIZE = 5000
 // Number of temporary files to merge together at once
 const BATCH_SIZE = 2
 // Field names
 const ERROR_FLAGS = 'errorFlags'
 const OBSERVATION_NO = 'fieldNumber'
+const OCCURRENCE_ID = 'occurrenceID'
 const INATURALIST_ID = 'userId'
 const INATURALIST_ALIAS = 'userLogin'
 const FIRST_NAME = 'firstName'
@@ -48,6 +49,9 @@ const LATITUDE = 'decimalLatitude'
 const LONGITUDE = 'decimalLongitude'
 const ACCURACY = 'coordinateUncertaintyInMeters'
 const SAMPLING_PROTOCOL = 'samplingProtocol'
+const RESOURCE_RELATIONSHIP = 'relationshipOfResource'
+const RESOURCE_ID = 'resourceID'
+const RELATED_RESOURCE_ID = 'relatedResourceID'
 const PLANT_PHYLUM = 'phylumPlant'
 const PLANT_ORDER = 'orderPlant'
 const PLANT_FAMILY = 'familyPlant'
@@ -78,6 +82,8 @@ const observationTemplate = {
     'day2': '',
     'month2': '',
     'year2': '',
+    'startDayofYear': '',
+    'endDayofYear': '',
     'country': null,
     'stateProvince': null,
     'county': null,
@@ -87,7 +93,7 @@ const observationTemplate = {
     'decimalLongitude': null,
     'coordinateUncertaintyInMeters': null,
     'samplingProtocol': null,
-    'resourceRelationship': '',
+    'resourceRelationship': null,
     'resourceID': null,
     'relatedResourceID': null,
     'relationshipRemarks': '',
@@ -395,6 +401,14 @@ function readTaxaFile() {
 }
 
 /*
+ * delay()
+ * Returns a Promise that resolves after a given number of milliseconds
+ */
+function delay(mSec) {
+    return new Promise(resolve => setTimeout(resolve, mSec))
+}
+
+/*
  * fetchTaxa()
  * Makes API requests to iNaturalist.org to collect taxon data from a given list of taxon IDs
  */
@@ -411,12 +425,21 @@ async function fetchTaxa(taxa) {
         const requestURL = `https://api.inaturalist.org/v1/taxa/${taxa.slice(partitionStart, partitionEnd).join(',')}`
 
         try {
-            const res = await fetch(requestURL)
-            if (res.ok) {
-                const resJSON = await res.json()
-                results = results.concat(resJSON['results'])
-            } else {
-                console.error(`Bad response while fetching '${requestURL}':`, res)
+            // Make requests with exponential backoff to avoid API throttling
+            for (let i = 1000; i <= 8000; i *= 2) {
+                const res = await fetch(requestURL)
+
+                if (res.ok) {
+                    const resJSON = await res.json()
+                    results = results.concat(resJSON['results'])
+                    break
+                } else if (res.status === 429) {    // 'Too Many Requests'
+                    console.log(`Hit API request limit. Waiting ${i} milliseconds...`)
+                    await delay(i)
+                } else {
+                    console.error(`Bad response while fetching '${requestURL}':`, res)
+                    break
+                }
             }
         } catch (err) {
             console.error(`ERROR while fetching ${requestURL}:`, err)
@@ -523,19 +546,16 @@ function getUserName(user) {
 
 /*
  * getPlaces()
- * Searches for country, state/province, and county names in /api/data/places.json
+ * Searches for country, state/province, and county names in the given place data (originally from /api/data/places.json)
  */
-function getPlaces(placeIds) {
+function getPlaces(placeIds, places) {
     // Default to empty strings
     let country = '', stateProvince = '', county = ''
 
-    // Check that the placeIds field exists
-    if (!placeIds) {
+    // Check that placeIds and places exist
+    if (!placeIds || !places) {
         return { country, stateProvince, county }
     }
-
-    // Get the known place data
-    const places = readPlacesFile()
 
     // Look up each place ID and set the appropriate output string
     for (const placeId of placeIds) {
@@ -553,11 +573,11 @@ function getPlaces(placeIds) {
 }
 
 /*
- * getPlantTaxonomy()
- * Searches for a plant phylum, order, family, genus, and species from a given observation taxon
+ * getPlantAncestry()
+ * Searches in the given taxonomy (taxa) for the plant ancestry of the given observation taxon
  */
-function getPlantTaxonomy(taxon) {
-    const taxonomy = {
+function getPlantAncestry(taxon, taxa) {
+    const plantAncestry = {
         phylum: '',
         order: '',
         family: '',
@@ -565,32 +585,30 @@ function getPlantTaxonomy(taxon) {
         species: ''
     }
 
-    // Check that the given taxon exists
-    if (!taxon) {
-        return taxonomy
+    // Check that the given taxon and taxonomy data exist
+    if (!taxon || !taxa) {
+        return plantAncestry
     }
-
-    const taxa = readTaxaFile()
 
     // Look up each ancestor in the local taxonomy dataset
     const ancestorIds = taxon.min_species_ancestry?.split(',') ?? []
     for (const ancestorId of ancestorIds) {
         const ancestorTaxon = taxa[ancestorId]
         if (ancestorTaxon) {
-            taxonomy[ancestorTaxon.rank] = ancestorTaxon.name
+            plantAncestry[ancestorTaxon.rank] = ancestorTaxon.name
         }
     }
 
     // If the given taxon is at least species level, use its name instead of the result of the local data
     const minSpeciesTaxonRanks = ['species', 'hybrid', 'subspecies', 'variety', 'form']
     if (minSpeciesTaxonRanks.includes(taxon.rank)) {
-        taxonomy.species = taxon.name || taxonomy.species
+        plantAncestry.species = taxon.name || plantAncestry.species
     }
 
     // Use the given taxon as a minimum (unless it is empty)
-    taxonomy[taxon.rank] = taxon.name || taxonomy[taxon.rank]
+    plantAncestry[taxon.rank] = taxon.name || plantAncestry[taxon.rank]
 
-    return taxonomy
+    return plantAncestry
 }
 
 /*
@@ -685,9 +703,9 @@ async function getElevation(latitude, longitude) {
 
 /*
  * formatObservation()
- * Creates a fully formatted observation object from a raw iNaturalist observation
+ * Creates a fully formatted observation object from a raw iNaturalist observation (and place and taxonomy data)
  */
-async function formatObservation(observation) {
+async function formatObservation(observation, places, taxa) {
     // Start from template observation object
     const formattedObservation = Object.assign({}, observationTemplate)
 
@@ -708,7 +726,7 @@ async function formatObservation(observation) {
     const { firstName, firstNameInitial, lastName } = getUserName(observation['user'])
 
     // Parse country, state/province, and county
-    const { country, stateProvince, county } =  getPlaces(observation['place_ids'])
+    const { country, stateProvince, county } =  getPlaces(observation['place_ids'], places)
 
     /* Formatted fields as constants */
 
@@ -737,7 +755,6 @@ async function formatObservation(observation) {
 
     /* Final formatting */
 
-    // Label fields
     formattedObservation[INATURALIST_ID] = observation.user?.id?.toString() ?? ''
     formattedObservation[INATURALIST_ALIAS] = observation.user?.login ?? ''
 
@@ -780,19 +797,22 @@ async function formatObservation(observation) {
 
     formattedObservation[SAMPLING_PROTOCOL] = 'aerial net'
 
-    // Look up the plant taxonomy and format it
-    const plantTaxonomy = getPlantTaxonomy(observation.taxon)
-    formattedObservation[PLANT_PHYLUM] = plantTaxonomy.phylum
-    formattedObservation[PLANT_ORDER] = plantTaxonomy.order
-    formattedObservation[PLANT_FAMILY] = plantTaxonomy.family
-    formattedObservation[PLANT_GENUS] = plantTaxonomy.genus
-    formattedObservation[PLANT_SPECIES] = plantTaxonomy.species
+    formattedObservation[RESOURCE_RELATIONSHIP] = 'visits flowers of'
+    formattedObservation[RELATED_RESOURCE_ID] = observation.uuid
 
-    // As a fallback, search the plant taxonomy upward for the first truthy rank
-    const minRank = ['species', 'genus', 'family', 'order', 'phylum'].find((rank) => !!plantTaxonomy[rank])
+    // Look up the plant ancestry and format it
+    const plantAncestry = getPlantAncestry(observation.taxon, taxa)
+    formattedObservation[PLANT_PHYLUM] = plantAncestry.phylum
+    formattedObservation[PLANT_ORDER] = plantAncestry.order
+    formattedObservation[PLANT_FAMILY] = plantAncestry.family
+    formattedObservation[PLANT_GENUS] = plantAncestry.genus
+    formattedObservation[PLANT_SPECIES] = plantAncestry.species
+
+    // As a fallback, search the plant ancestry upward for the first truthy rank
+    const minRank = ['species', 'genus', 'family', 'order', 'phylum'].find((rank) => !!plantAncestry[rank])
     formattedObservation[PLANT_TAXON_RANK] = observation.taxon?.rank || minRank || ''
 
-    // Flag all plant taxonomy fields if the phylum is defined but is not Tracheophyta
+    // Flag all plant ancestry fields if the phylum is defined but is not Tracheophyta
     if (!!formattedObservation[PLANT_PHYLUM] && formattedObservation[PLANT_PHYLUM].toLowerCase() !== 'tracheophyta') {
         errorFields = errorFields.concat([PLANT_PHYLUM, PLANT_ORDER, PLANT_FAMILY, PLANT_GENUS, PLANT_SPECIES, PLANT_TAXON_RANK])
     }
@@ -812,9 +832,13 @@ async function formatObservation(observation) {
 async function formatObservations(observations, updateFormattingProgress) {
     let formattedObservations = []
 
+    // Read known place and taxonomy data from /api/data/places.json and /api/data/taxa.json respectively
+    const places = readPlacesFile()
+    const taxa = readTaxaFile()
+
     let i = 0
     for (const observation of observations) {
-        const formattedObservation = await formatObservation(observation)
+        const formattedObservation = await formatObservation(observation, places, taxa)
         updateFormattingProgress(`${(100 * (i++) / observations.length).toFixed(2)}%`)
 
         // SPECIMEN_ID is initially set to the number of bees collected
@@ -848,8 +872,10 @@ async function* readObservationsFileChunks(filePath, chunkSize) {
     const parser = parse({ columns: true, skip_empty_lines: true, relax_quotes: true })
     const csvStream = fileStream.pipe(parser)
 
-    // Iterate through the whole file (should yield before reading everything at once)
+    // Create a chunk to store rows
     let chunk = []
+
+    // Read the file, yielding chunks as they are filled
     for await (const row of csvStream) {
         // Add the current row to the chunk
         chunk.push(row)
@@ -873,20 +899,28 @@ async function* readObservationsFileChunks(filePath, chunkSize) {
  */
 function formatChunkRow(row) {
     // The final field set should be a union of the standard template and the given row
+    // The given row's values will overwrite the template's values
     const formattedRow = Object.assign({}, observationTemplate, row)
+
+    // Fill recordedBy if empty
+    const firstName = formattedRow[FIRST_NAME]
+    const lastName = formattedRow[LAST_NAME]
+    formattedRow[RECORDED_BY] ||= `${firstName}${(firstName && lastName) ? ' ' : ''}${lastName}`
+
+    // Enforce 4-decimal-point latitude and longitude
+    const latitude = parseFloat(formattedRow[LATITUDE])
+    const longitude = parseFloat(formattedRow[LONGITUDE])
+    formattedRow[LATITUDE] = !isNaN(latitude) ? latitude.toFixed(4).toString() : formattedRow[LATITUDE]
+    formattedRow[LONGITUDE] = !isNaN(longitude) ? longitude.toFixed(4).toString() : formattedRow[LONGITUDE]
 
     // A list of fields to flag in addition to the non-empty fields
     let errorFields = []
 
-    // Remove 'County' or 'Co' from the county field (case insensitive)
-    const county = row[COUNTY] ?? ''
-    formattedRow[COUNTY] = county.replace(countyRegex, '')
-
-    // Flag ACCURACY if it is greater than 250 meters
-    if (parseInt(formattedRow[ACCURACY]) > 250) { errorFields.push(ACCURACY) }
-
     // Flag LOCALITY if it contains street suffixes
     if (includesStreetSuffix(formattedRow[LOCALITY])) { errorFields.push(LOCALITY) }
+
+    // Flag ACCURACY if it is greater than 250 meters
+    if (parseInt(formattedRow[ACCURACY]) > 250) { errorFields.push(ACCURACY) }    
 
     // Flag all plant taxonomy fields if the phylum is defined but is not Tracheophyta
     if (!!formattedRow[PLANT_PHYLUM] && formattedRow[PLANT_PHYLUM].toLowerCase() !== 'tracheophyta') {
@@ -905,7 +939,7 @@ function formatChunkRow(row) {
  */
 async function fetchObservationsById(observationIds) {
     // observationIds can be a very long list of IDs, so batch requests to avoid iNaturalist API refusal
-    const partitionSize = 25
+    const partitionSize = 200
     const nPartitions = Math.floor(observationIds.length / partitionSize) + 1
     let partitionStart = 0
     let partitionEnd = Math.min(partitionSize, observationIds.length)
@@ -913,16 +947,25 @@ async function fetchObservationsById(observationIds) {
     // Gather results until all partitions are complete
     let results = []
     for (let i = 0; i < nPartitions; i++) {
-        const requestURL = `https://api.inaturalist.org/v1/observations/${observationIds.slice(partitionStart, partitionEnd).join(',')}`
+        const requestURL = `https://api.inaturalist.org/v1/observations?per_page=${partitionSize}&id=${observationIds.slice(partitionStart, partitionEnd).join(',')}`
 
         // Fetch and concatenate the data, catching errors
         try {
-            const res = await fetch(requestURL)
-            if (res.ok) {
-                const resJSON = await res.json()
-                results = results.concat(resJSON['results'])
-            } else {
-                console.error(`Bad response while fetching '${requestURL}':`, res)
+            // Make requests with exponential backoff to avoid API throttling
+            for (let i = 1000; i <= 8000; i *= 2) {
+                const res = await fetch(requestURL)
+
+                if (res.ok) {
+                    const resJSON = await res.json()
+                    results = results.concat(resJSON['results'])
+                    break
+                } else if (res.status === 429) {    // 'Too Many Requests'
+                    console.error(`Hit API request limit. Waiting ${i} milliseconds...`)
+                    await delay(i)
+                } else {
+                    console.error(`Bad response while fetching '${requestURL}':`, res)
+                    break
+                }
             }
         } catch (err) {
             console.error(`ERROR while fetching ${requestURL}:`, err)
@@ -940,92 +983,101 @@ async function fetchObservationsById(observationIds) {
  * updateChunkRow()
  * Updates specific values (location and taxonomy) in a formatted row from its corresponding iNaturalist observation
  */
-async function updateChunkRow(row, observation) {
-    if (!row || !observation) { return }
+async function updateChunkRow(row, observation, taxa) {
+    if (!row) {
+        return
+    }
 
-    // Look up and update the plant taxonomy
-    const plantTaxonomy = getPlantTaxonomy(observation?.taxon)
-    row[PLANT_PHYLUM] = plantTaxonomy.phylum
-    row[PLANT_ORDER] = plantTaxonomy.order
-    row[PLANT_FAMILY] = plantTaxonomy.family
-    row[PLANT_GENUS] = plantTaxonomy.genus
-    row[PLANT_SPECIES] = plantTaxonomy.species
-
-    // As a fallback, search the plant taxonomy upward for the first truthy rank
-    const minRank = ['species', 'genus', 'family', 'order', 'phylum'].find((rank) => !!plantTaxonomy[rank])
-    row[PLANT_TAXON_RANK] = observation.taxon?.rank || minRank || ''
-
-    // Update the coordinate fields if any are missing or if the accuracy is better (smaller)
+    // Update the coordinate fields if the accuracy is better (smaller) or as good
     const prevAccuracy = parseInt(row[ACCURACY])
-    const newAccuracy = observation?.positional_accuracy
-    if (
-        !row[LATITUDE] ||
-        !row[LONGITUDE] ||
-        (prevAccuracy && newAccuracy && newAccuracy < prevAccuracy)
-    ) {
+    const newAccuracy = observation?.positional_accuracy ?? Infinity
+    if (newAccuracy < prevAccuracy) {
         const latitude = observation?.geojson?.coordinates?.at(1)?.toFixed(4)?.toString() || row[LATITUDE]
         const longitude = observation?.geojson?.coordinates?.at(0)?.toFixed(4)?.toString() || row[LONGITUDE]
 
         // Update the elevation in case the location changed
-        row[ELEVATION] = await getElevation(latitude, longitude) || row[ELEVATION]
+        row[ELEVATION] = await getElevation(latitude, longitude) || ''
 
         row[LATITUDE] = latitude
         row[LONGITUDE] = longitude
-        row[ACCURACY] = newAccuracy?.toString() || row[ACCURACY]
+        row[ACCURACY] = newAccuracy.toString() || ''
     }
 
-    // Deconstruct, update, and reconstruct the ERROR_FLAGS field based on the new data
-    let errorFlags = row[ERROR_FLAGS]?.split(';') || []
-    const updatableFields = [
-        ELEVATION,
-        LATITUDE,
-        LONGITUDE,
-        ACCURACY,
-        PLANT_PHYLUM,
-        PLANT_ORDER,
-        PLANT_FAMILY,
-        PLANT_GENUS,
-        PLANT_SPECIES,
-        PLANT_TAXON_RANK
-    ]
-    // Allow the flags of unupdated fields to pass and allow the flags of updated fields that are still empty to pass
-    errorFlags = errorFlags.filter((field) => !updatableFields.includes(field) || !row[field])
+    if (observation) {
+        row[RESOURCE_RELATIONSHIP] = 'visits flowers of'
+        row[RELATED_RESOURCE_ID] = observation.uuid
+
+        // Look up and update the plant taxonomy
+        const plantTaxonomy = getPlantAncestry(observation.taxon, taxa)
+        row[PLANT_PHYLUM] = plantTaxonomy.phylum
+        row[PLANT_ORDER] = plantTaxonomy.order
+        row[PLANT_FAMILY] = plantTaxonomy.family
+        row[PLANT_GENUS] = plantTaxonomy.genus
+        row[PLANT_SPECIES] = plantTaxonomy.species
+
+        // As a fallback, search the plant taxonomy upward for the first truthy rank
+        const minRank = ['species', 'genus', 'family', 'order', 'phylum'].find((rank) => !!plantTaxonomy[rank])
+        row[PLANT_TAXON_RANK] = observation.taxon?.rank || minRank || ''
+    }
+
+    // Rewrite the ERROR_FLAGS field based on the new data
+    let errorFields = []
+
+    // Flag LOCALITY if it contains street suffixes
+    if (includesStreetSuffix(row[LOCALITY])) { errorFields.push(LOCALITY) }
 
     // Flag ACCURACY if it is greater than 250 meters
-    if (parseInt(row[ACCURACY]) > 250) { errorFlags.push(ACCURACY) }
+    if (parseInt(row[ACCURACY]) > 250) { errorFields.push(ACCURACY) }
 
     // Flag all plant taxonomy fields if the phylum is defined but is not Tracheophyta
     if (!!row[PLANT_PHYLUM] && row[PLANT_PHYLUM].toLowerCase() !== 'tracheophyta') {
-        errorFlags = errorFlags.concat([PLANT_PHYLUM, PLANT_ORDER, PLANT_FAMILY, PLANT_GENUS, PLANT_SPECIES, PLANT_TAXON_RANK])
+        errorFields = errorFields.concat([PLANT_PHYLUM, PLANT_ORDER, PLANT_FAMILY, PLANT_GENUS, PLANT_SPECIES, PLANT_TAXON_RANK])
     }
 
-    // Reconstruct the ERROR_FLAGS field
-    row[ERROR_FLAGS] = errorFlags.join(';')
+    // Set error flags as a semicolon-separated list of fields (non-empty fields and additional flags)
+    row[ERROR_FLAGS] = nonEmptyFields.filter((field) => !row[field]).concat(errorFields).join(';')
 }
 
 /*
  * formatChunk()
  * Formats and updates a chunk of pre-existing observation data
  */
-async function formatChunk(chunk) {
+async function formatChunk(chunk, updateChunkProgress) {
+    await updateChunkProgress('0.00')
+
     // Apply standard formatting
     const formattedChunk = chunk.map((row) => formatChunkRow(row))
 
     // Fetch the iNaturalist observations for rows that have an iNaturalist URL
-    let observationIds = chunk
-        .map((row) => row[INATURALIST_URL]?.split('/')?.pop())
-        .filter((id) => !!id)
+
+    let observationIds = []
+    for (let i = 0; i < chunk.length; i++) {
+        const url = chunk[i][INATURALIST_URL]
+        const urlId = url?.split('/')?.pop()
+
+        if (!isNaN(parseInt(urlId))) {
+            observationIds.push(urlId)
+        }
+    }
     observationIds = [...new Set(observationIds)]
+    console.log(`\t\tFetching ${observationIds.length} observations...`)
     const observations = await fetchObservationsById(observationIds)
 
+    // Read known taxonomy data from /api/data/taxa.json
+    const taxa = readTaxaFile()
+
     // Update rows with the new data from iNaturalist
+    let i = 1
     for (const row of formattedChunk) {
         // Find the corresponding iNaturalist observation for the current row by matching the iNaturalist URL
         const matchingObservation = observations.find((observation) => observation['uri'] && (observation['uri'] === row[INATURALIST_URL]))
         // Update the row data
-        await updateChunkRow(row, matchingObservation)
+        await updateChunkRow(row, matchingObservation, taxa)
+
+        await updateChunkProgress((100 * (i++) / formattedChunk.length).toFixed(2).toString())
     }
 
+    await updateChunkProgress('100.00')
     return formattedChunk
 }
 
@@ -1048,20 +1100,15 @@ function isRowEmpty(row) {
  */
 function generateRowKey(row) {
     // Which key fields to use depend on which are available:
-    // First, use iNaturalist URL, sample ID, and specimen ID
-    // Then, use iNaturalist alias, collection day, month, and year, sample ID, and specimen ID
-    let keyFields = []
-    if (row[INATURALIST_URL] && row[SAMPLE_ID] && row[SPECIMEN_ID]) {
-        keyFields = [INATURALIST_URL, SAMPLE_ID, SPECIMEN_ID]
-    } else if (
-        row[INATURALIST_ALIAS] &&
-        row[SAMPLE_ID] &&
-        row [SPECIMEN_ID] &&
-        row[DAY] &&
-        row[MONTH] &&
-        row[YEAR]
-    ) {
-        keyFields = [INATURALIST_ALIAS, SAMPLE_ID, SPECIMEN_ID, DAY, MONTH, YEAR]
+    // At minimum, use first name, last name, day, month, and year, sample ID, and specimen ID
+    // If available, use the observation number
+    // If available, use iNaturalist URL
+    let keyFields = [FIRST_NAME, LAST_NAME, SAMPLE_ID, SPECIMEN_ID, DAY, MONTH, YEAR]
+    if (row[OBSERVATION_NO]) {
+        keyFields.push(OBSERVATION_NO)
+    }
+    if (row[INATURALIST_URL]) {
+        keyFields.push(INATURALIST_URL)
     }
 
     // Get a list of the corresponding values for the key fields
@@ -1173,11 +1220,7 @@ function sortAndDedupeChunk(chunk, seenKeys) {
 
     // First, add rows with observation numbers since these are presumed to be unique
     for (const row of chunk) {
-        if (isRowEmpty(row)) {
-            continue
-        }
-
-        if (row[OBSERVATION_NO]) {
+        if (!!row[OBSERVATION_NO]) {
             // Create a key for this row and add it to the set of seen keys
             const key = generateRowKey(row)
             seenKeys.add(key)
@@ -1188,7 +1231,7 @@ function sortAndDedupeChunk(chunk, seenKeys) {
 
     // Next, add other rows if they are unique
     for (const row of chunk) {
-        if (isRowEmpty(row)) {
+        if (isRowEmpty(row) || !!row[OBSERVATION_NO]) {
             continue
         }
 
@@ -1450,7 +1493,7 @@ async function indexData(filePath, year) {
     const stringifier = stringify({ header: true, columns: Object.keys(observationTemplate) })
     stringifier.pipe(outputFileStream)
 
-    // Add each non-empty row from the input file to the temporary output file; fill in the observation number if empty
+    // Add each non-empty row from the input file to the temporary output file; fill in the observation number, occurrence ID, and resource ID if empty
     for await (const row of parser) {
         if (isRowEmpty(row)) continue
 
@@ -1459,9 +1502,21 @@ async function indexData(filePath, year) {
             nextObservationNumber = incrementObservationNumber(nextObservationNumber)
         }
 
+        if (!isNaN(parseInt(row[OBSERVATION_NO]))) {
+            if (row[STATE] === 'WA') {
+                row[OCCURRENCE_ID] ||= `https://wsu.edu/WSU/WSDA_${row[OBSERVATION_NO]}`
+            } else {
+                row[OCCURRENCE_ID] ||= `https://osac.oregonstate.edu/OBS/OBA_${row[OBSERVATION_NO]}`
+            }
+            row[RESOURCE_ID] ||= row[OCCURRENCE_ID]
+        }
+
         stringifier.write(row)
     }
     stringifier.end()
+    parser.destroy()
+
+    await delay(1000)
 
     // Move the temporary output file to the input file path (overwrites the original file and renames the temporary file)
     fs.renameSync(tempFilePath, filePath)
@@ -1483,7 +1538,10 @@ async function main() {
                 const taskId = msg.content.toString()
                 const task = await getTaskById(taskId)
 
-                console.log(`Processing task ${taskId}...`)
+                // ACK immediately to prevent timeout
+                observationsChannel.ack(msg)
+
+                console.log(`${new Date().toLocaleTimeString('en-US')} Processing task ${taskId}...`)
                 await updateTaskInProgress(taskId, { currentStep: 'Pulling observations from iNaturalist' })
                 console.log('\tPulling observations from iNaturalist...')
 
@@ -1519,13 +1577,18 @@ async function main() {
                 const tempFiles = []
 
                 // Separate the provided dataset into chunks and store them in temporary files; also, format and update the data
+                let i = 1
                 for await (const chunk of readObservationsFileChunks(inputFilePath, CHUNK_SIZE)) {
-                    const formattedChunk = await formatChunk(chunk)
+                    const formattedChunk = await formatChunk(chunk, async (percentage) => {
+                        await updateTaskInProgress(taskId, { currentStep: 'Formatting provided dataset', percentage: `Chunk ${i}: ${percentage}%` })
+                    })
 
                     const sortedChunk = sortAndDedupeChunk(formattedChunk, seenKeys)
                     if (sortedChunk) {
                         writeChunkToTempFile(sortedChunk, tempFiles)
                     }
+
+                    i++
                 }
 
                 await updateTaskInProgress(taskId, { currentStep: 'Merging new observations with provided dataset' })
@@ -1549,14 +1612,12 @@ async function main() {
                 await indexData(outputFilePath, year)
 
                 await updateTaskResult(taskId, { uri: `/api/observations/${outputFileName}`, fileName: outputFileName })
-                console.log('Completed task', taskId)
+                console.log(`${new Date().toLocaleTimeString('en-US')} Completed task ${taskId}`)
 
                 limitFilesInDirectory('./api/data/observations', MAX_OBSERVATIONS)
                 clearTasksWithoutFiles()
 
                 clearDirectory('./api/data/temp')
-
-                observationsChannel.ack(msg)
             }
         })
     } catch (err) {

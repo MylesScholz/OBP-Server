@@ -10,7 +10,7 @@ import 'dotenv/config'
 
 import { connectToDb } from './api/lib/mongo.js'
 import { observationsQueueName } from './api/lib/rabbitmq.js'
-import { clearTasksWithoutFiles, getTaskById, updateTaskInProgress, updateTaskResult } from './api/models/task.js'
+import { clearTasksWithoutFiles, getTaskById, updateTaskFailure, updateTaskInProgress, updateTaskResult } from './api/models/task.js'
 import { clearDirectory, limitFilesInDirectory } from './api/lib/utilities.js'
 
 /* Constants */
@@ -839,7 +839,7 @@ async function formatObservations(observations, updateFormattingProgress) {
     let i = 0
     for (const observation of observations) {
         const formattedObservation = await formatObservation(observation, places, taxa)
-        updateFormattingProgress(`${(100 * (i++) / observations.length).toFixed(2)}%`)
+        await updateFormattingProgress(`${(100 * (i++) / observations.length).toFixed(2)}%`)
 
         // SPECIMEN_ID is initially set to the number of bees collected
         // Now, duplicate observations a number of times equal to this value and overwrite SPECIMEN_ID to index the duplications
@@ -1055,7 +1055,7 @@ async function formatChunk(chunk, updateChunkProgress) {
         const url = chunk[i][INATURALIST_URL]
         const urlId = url?.split('/')?.pop()
 
-        if (!isNaN(parseInt(urlId))) {
+        if (!!urlId && !isNaN(urlId)) {
             observationIds.push(urlId)
         }
     }
@@ -1151,11 +1151,11 @@ function compareNumericStrings(str1, str2) {
         return 0
     }
 
-    try {
+    if (!isNaN(str1) && !isNaN(str2)) {
         const num1 = parseInt(str1)
         const num2 = parseInt(str2)
         return (num1 > num2) - (num1 < num2)
-    } catch (err) {
+    } else {
         return compareStrings(str1, str2)
     }
 }
@@ -1185,6 +1185,11 @@ function compareRows(row1, row2) {
     const firstNameComparison = compareStrings(row1[FIRST_NAME], row2[FIRST_NAME])
     if (firstNameComparison !== 0) {
         return firstNameComparison
+    }
+
+    const aliasComparison = compareStrings(row1[INATURALIST_ALIAS], row2[INATURALIST_ALIAS])
+    if (aliasComparison !== 0) {
+        return aliasComparison
     }
 
     const monthComparison = compareNumericStrings(row1[MONTH], row2[MONTH])
@@ -1433,11 +1438,12 @@ async function findLastObservationNumber(filePath) {
 
     // Search linearly for the highest OBSERVATION_NO
     for await (const row of parser) {
-        if (row[OBSERVATION_NO]) {
+        if (!!row[OBSERVATION_NO]) {
             // Parse OBSERVATION_NO as an integer and update lastObservationNumber
             const currentObservationNumber = row[OBSERVATION_NO]
+
             if (!isNaN(currentObservationNumber) && (!lastObservationNumber || currentObservationNumber > lastObservationNumber)) {
-                lastObservationNumber = currentObservationNumber
+                lastObservationNumber = parseInt(currentObservationNumber)
             }
         }
     }
@@ -1483,7 +1489,7 @@ async function indexData(filePath, year) {
     let nextObservationNumber = yearPrefix + '000001'
 
     // If an observation number was found in the given file, set the next observation number to one greater (carrying over the prefix)
-    nextObservationNumber = !isNaN(parseInt(lastObservationNumber)) ? incrementObservationNumber(lastObservationNumber) : nextObservationNumber
+    nextObservationNumber = !!lastObservationNumber && !isNaN(lastObservationNumber) ? incrementObservationNumber(lastObservationNumber) : nextObservationNumber
 
     // Create an input CSV parser and an output stringifier for a temporary file
     const { parser } = createParser(filePath)
@@ -1502,7 +1508,7 @@ async function indexData(filePath, year) {
             nextObservationNumber = incrementObservationNumber(nextObservationNumber)
         }
 
-        if (!isNaN(parseInt(row[OBSERVATION_NO]))) {
+        if (!!row[OBSERVATION_NO] && !isNaN(row[OBSERVATION_NO])) {
             if (row[STATE] === 'WA') {
                 row[OCCURRENCE_ID] ||= `https://wsu.edu/WSU/WSDA_${row[OBSERVATION_NO]}`
             } else {
@@ -1513,9 +1519,11 @@ async function indexData(filePath, year) {
 
         stringifier.write(row)
     }
+    // Destroy the input and output streams
     stringifier.end()
     parser.destroy()
 
+    // Wait a second for file permissions to release
     await delay(1000)
 
     // Move the temporary output file to the input file path (overwrites the original file and renames the temporary file)
@@ -1534,48 +1542,50 @@ async function main() {
 
         console.log(`Consuming queue '${observationsQueueName}'...`)
         observationsChannel.consume(observationsQueueName, async (msg) => {
-            if (msg) {
-                const taskId = msg.content.toString()
-                const task = await getTaskById(taskId)
+            if (!msg) { return }
 
-                // ACK immediately to prevent timeout
-                observationsChannel.ack(msg)
+            const taskId = msg.content.toString()
+            const task = await getTaskById(taskId)
 
-                console.log(`${new Date().toLocaleTimeString('en-US')} Processing task ${taskId}...`)
-                await updateTaskInProgress(taskId, { currentStep: 'Pulling observations from iNaturalist' })
-                console.log('\tPulling observations from iNaturalist...')
+            // ACK immediately to prevent timeout
+            observationsChannel.ack(msg)
 
-                const observations = await pullObservations(task, async (percentage) => {
-                    await updateTaskInProgress(taskId, { currentStep: 'Pulling observations from iNaturalist', percentage })
-                })
+            console.log(`${new Date().toLocaleTimeString('en-US')} Processing task ${taskId}...`)
 
-                await updateTaskInProgress(taskId, { currentStep: 'Updating place data' })
-                console.log('\tUpdating place data...')
+            await updateTaskInProgress(taskId, { currentStep: 'Pulling observations from iNaturalist' })
+            console.log('\tPulling observations from iNaturalist...')
 
-                await updatePlaces(observations)
+            const observations = await pullObservations(task, async (percentage) => {
+                await updateTaskInProgress(taskId, { currentStep: 'Pulling observations from iNaturalist', percentage })
+            })
 
-                await updateTaskInProgress(taskId, { currentStep: 'Updating taxonomy data' })
-                console.log('\tUpdating taxonomy data...')
+            await updateTaskInProgress(taskId, { currentStep: 'Updating place data' })
+            console.log('\tUpdating place data...')
 
-                await updateTaxa(observations)
+            await updatePlaces(observations)
 
-                await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations' })
-                console.log('\tFormatting new observations...')
+            await updateTaskInProgress(taskId, { currentStep: 'Updating taxonomy data' })
+            console.log('\tUpdating taxonomy data...')
 
-                const formattedObservations = await formatObservations(observations, async (percentage) => {
-                    await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations', percentage })
-                })
+            await updateTaxa(observations)
 
-                await updateTaskInProgress(taskId, { currentStep: 'Formatting provided dataset' })
-                console.log('\tFormatting provided dataset...')
+            await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations' })
+            console.log('\tFormatting new observations...')
 
-                const inputFilePath = './api/data' + task.dataset.replace('/api', '')    // task.dataset has a '/api' suffix, which should be removed
-                const outputFileName = `${Crypto.randomUUID()}.csv`
-                const outputFilePath = './api/data/observations/' + outputFileName
+            const formattedObservations = await formatObservations(observations, async (percentage) => {
+                await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations', percentage })
+            })
 
-                const seenKeys = new Set()
-                const tempFiles = []
+            await updateTaskInProgress(taskId, { currentStep: 'Formatting provided dataset' })
+            console.log('\tFormatting provided dataset...')
 
+            const inputFilePath = './api/data' + task.dataset.replace('/api', '')    // task.dataset has a '/api' suffix, which should be removed
+            const outputFileName = `${Crypto.randomUUID()}.csv`
+            const outputFilePath = './api/data/observations/' + outputFileName
+
+            const seenKeys = new Set()
+            const tempFiles = []
+            try {
                 // Separate the provided dataset into chunks and store them in temporary files; also, format and update the data
                 let i = 1
                 for await (const chunk of readObservationsFileChunks(inputFilePath, CHUNK_SIZE)) {
@@ -1612,13 +1622,17 @@ async function main() {
                 await indexData(outputFilePath, year)
 
                 await updateTaskResult(taskId, { uri: `/api/observations/${outputFileName}`, fileName: outputFileName })
-                console.log(`${new Date().toLocaleTimeString('en-US')} Completed task ${taskId}`)
-
-                limitFilesInDirectory('./api/data/observations', MAX_OBSERVATIONS)
-                clearTasksWithoutFiles()
-
-                clearDirectory('./api/data/temp')
+            } catch (error) {
+                console.error(error)
+                await updateTaskFailure(taskId)
             }
+            
+            console.log(`${new Date().toLocaleTimeString('en-US')} Completed task ${taskId}`)
+
+            limitFilesInDirectory('./api/data/observations', MAX_OBSERVATIONS)
+            clearTasksWithoutFiles()
+
+            clearDirectory('./api/data/temp')
         })
     } catch (err) {
         // console.error(err)

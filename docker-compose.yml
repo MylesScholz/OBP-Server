@@ -41,6 +41,7 @@ services:
         env_file: ./.env
         volumes:
             - app-data:/app
+            - ./api/data/elevation:/app/api/data/elevation
     mongo:
         image: 'mongo:latest'
         restart: always

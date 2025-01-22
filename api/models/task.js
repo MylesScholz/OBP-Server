@@ -166,4 +166,29 @@ async function updateTaskResult(id, result) {
     }
 }
 
-export { clearTasks, clearTasksWithoutFiles, createTask, getTaskById, getTasks, updateTaskInProgress, updateTaskWarning, updateTaskResult }
+/*
+ * updateTaskFailure()
+ * 'Ends' a task by marking it as failed and removing the 'progress' field
+ */
+async function updateTaskFailure(id) {
+    const db = getDb()
+    const collection = db.collection('tasks')
+
+    // Check ID argument before attempting query
+    if (!ObjectId.isValid(id)) {
+        throw new Error('Invalid field \'id\'')
+    } else {
+        await collection.updateOne(
+            { _id: new ObjectId(id) },
+            {
+                $set: {
+                    status: 'Failed',
+                    completedAt: new Date().toISOString()       // Current time
+                },
+                $unset: { progress: undefined }
+            }
+        )
+    }
+}
+
+export { clearTasks, clearTasksWithoutFiles, createTask, getTaskById, getTasks, updateTaskInProgress, updateTaskWarning, updateTaskResult, updateTaskFailure }

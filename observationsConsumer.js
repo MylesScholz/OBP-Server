@@ -707,6 +707,124 @@ async function getElevation(latitude, longitude) {
 }
 
 /*
+ * getElevationFileName()
+ * Takes a coordinate pair as strings and generates the GeoTIFF file name where its elevation data is stored
+ */
+function getElevationFileName(latitude, longitude) {
+    // Check that both latitude and longitude are provided and are parseable as floats
+    if (!latitude || !longitude || !parseFloat(latitude) || !parseFloat(longitude)) {
+        return ''
+    }
+
+    // Split just the integer part of the latitude and longitude
+    let cardinalLatitude = latitude.split('.')[0]
+    const degreesLatitude = parseInt(cardinalLatitude)
+    let cardinalLongitude = longitude.split('.')[0]
+    const degreesLongitude = parseInt(cardinalLongitude)
+
+    // Convert negative latitudes to degrees south
+    if (degreesLatitude < 0) {
+        cardinalLatitude = 's' + `${-degreesLatitude + 1}`
+    } else {
+        cardinalLatitude = 'n' + cardinalLatitude
+    }
+
+    // Convert negative longitudes to degrees west
+    if (degreesLongitude < 0) {
+        cardinalLongitude = 'w' + `${-degreesLongitude + 1}`.padStart(3, '0')
+    } else {
+        cardinalLongitude = 'e' + cardinalLongitude.padStart(3, '0')
+    }
+
+    // Create the file name for the elevation data file in which the coordinates lie
+    const fileName = `elevation/${cardinalLatitude}_${cardinalLongitude}_1arc_v3.tif`
+
+    return fileName
+}
+
+/*
+ * readElevationBatchFromFile()
+ * Given a batch of coordinates corresponding to a single GeoTIFF file, reads the elevation data for each coordinate
+ */
+async function readElevationBatchFromFile(fileName, batch) {
+    try {
+        // Create the output object, which relates specific coordinates (as comma-joined strings) to their corresponding elevation
+        const elevations = {}
+
+        // Local path for the elevation file
+        const filePath = './api/data/' + fileName
+
+        // Read the given file's raster data using the geotiff package
+        const tiff = await fromFile(filePath)
+        const image = await tiff.getImage()
+        const rasters = await image.readRasters()
+        const data = rasters[0]
+
+        for (const coordinate of batch) {
+            const latitude = coordinate[0]
+            const longitude = coordinate[1]
+
+            // Calculate the row and column corresponding to the current coordinate
+            const latitudeDecimalPart = latitude - Math.floor(latitude)
+            const row = Math.floor(latitudeDecimalPart * rasters.height)
+
+            const longitudeDecimalPart = longitude - Math.floor(longitude)
+            const column = Math.floor(longitudeDecimalPart * rasters.width)
+
+            // Look up the elevation value for the row and column, default to an empty string
+            const elevation = data[column + rasters.width * row]?.toString() ?? ''
+
+            const joinedCoordinate = `${latitude.toFixed(4)},${longitude.toFixed(4)}`
+            elevations[joinedCoordinate] = elevation
+        }
+
+        // Close the GeoTIFF file
+        tiff.close()
+
+        // Return the elevations object
+        return elevations
+    } catch (err) {
+        // Return nothing if the file reading fails (e.g., the file doesn't exist)
+        return
+    }
+}
+
+/*
+ * getElevations()
+ * Batches together a list of coordinates and reads their elevation data from the NASA SRTM 1 Arc-Second Global dataset stored in GeoTIFF files
+ */
+async function getElevations(coordinates) {
+    if (!coordinates) { return }
+
+    // An object whose keys are elevation data file names and whose values are lists of corresponding coordinates (latitude-longitude float pairs)
+    const batches = {}
+    for (let i = 0; i < coordinates.length; i++) {
+        const [latitude, longitude] = coordinates[i].split(',')
+        const fileName = getElevationFileName(latitude, longitude)
+
+        const coordinate = [parseFloat(latitude), parseFloat(longitude)]
+        if (!(fileName in batches)) {
+            batches[fileName] = [coordinate]
+        } else {
+            batches[fileName].push(coordinate)
+        }
+    }
+
+    // Read the files batch-by-batch and append the data to an output object that relates coordinates to their elevation
+    let elevations = {}
+    for (const [fileName, batch] of Object.entries(batches)) {
+        const batchElevations = await readElevationBatchFromFile(fileName, batch)
+
+        if (!!batchElevations) {
+            // Append the batch elevations to the overall output object
+            elevations = { ...elevations, ...batchElevations }
+        }
+    }
+
+    return elevations
+}
+
+/*
  * formatObservation()
  * Creates a fully formatted observation object from a raw iNaturalist observation (and place and taxonomy data)
  */
@@ -1022,12 +1140,16 @@ async function fetchObservationsById(observationIds) {
 
 /*
  * updateChunkRow()
- * Updates specific values (location and taxonomy) in a formatted row from its corresponding iNaturalist observation
+ * Updates specific values (location, elevation, and taxonomy) in a formatted row from its corresponding iNaturalist observation
  */
-async function updateChunkRow(row, observation, taxa) {
+async function updateChunkRow(row, observation, elevations, taxa) {
     if (!row) {
         return
     }
+
+    // Overwrite the current elevation
+    const coordinate = `${row[LATITUDE]},${row[LONGITUDE]}`
+    row[ELEVATION] = elevations[coordinate] || ''
 
     // Update the coordinate fields if the accuracy is better (smaller) or as good
     const prevAccuracy = parseInt(row[ACCURACY])
@@ -1090,19 +1212,30 @@ async function formatChunk(chunk, updateChunkProgress) {
     const formattedChunk = chunk.map((row) => formatChunkRow(row))
 
     // Fetch the iNaturalist observations for rows that have an iNaturalist URL
-
-    let observationIds = []
+    let observationIds = new Set()
     for (let i = 0; i < chunk.length; i++) {
         const url = chunk[i][INATURALIST_URL]
         const urlId = url?.split('/')?.pop()
 
         if (!!urlId && !isNaN(urlId)) {
-            observationIds.push(urlId)
+            observationIds.add(urlId)
         }
     }
-    observationIds = [...new Set(observationIds)]
+    observationIds = [...observationIds]
     console.log(`\t\tFetching ${observationIds.length} observations...`)
     const observations = await fetchObservationsById(observationIds)
+
+    // Fetch the elevation data for rows with coordinates
+    let coordinates = new Set()
+    for (let i = 0; i < chunk.length; i++) {
+        if (!chunk[i][LATITUDE] || !chunk[i][LONGITUDE]) { continue }
+
+        const coordinate = `${chunk[i][LATITUDE]},${chunk[i][LONGITUDE]}`
+        coordinates.add(coordinate)
+    }
+    coordinates = [...coordinates]
+    // console.log(`\t\tReading ${coordinates.length} elevations...`)
+    const elevations = await getElevations(coordinates)
 
     // Read known taxonomy data from /api/data/taxa.json
     const taxa = readTaxaFile()
@@ -1113,7 +1246,7 @@ async function formatChunk(chunk, updateChunkProgress) {
         // Find the corresponding iNaturalist observation for the current row by matching the iNaturalist URL
         const matchingObservation = observations.find((observation) => observation['uri'] && (observation['uri'] === row[INATURALIST_URL]))
         // Update the row data
-        await updateChunkRow(row, matchingObservation, taxa)
+        await updateChunkRow(row, matchingObservation, elevations, taxa)
 
         await updateChunkProgress((100 * (i++) / formattedChunk.length).toFixed(2).toString())
     }

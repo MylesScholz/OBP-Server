@@ -39,6 +39,11 @@ const SPECIMEN_ID = 'specimenId'
 const DAY = 'day'
 const MONTH = 'month'
 const YEAR = 'year'
+const DAY2 = 'day2'
+const MONTH2 = 'month2'
+const YEAR2 = 'year2'
+const START_DAY_OF_YEAR = 'startDayofYear'
+const END_DAY_OF_YEAR = 'endDayofYear'
 const VERBATIM_DATE = 'verbatimEventDate'
 const COUNTRY = 'country'
 const STATE = 'stateProvince'
@@ -894,6 +899,21 @@ async function* readObservationsFileChunks(filePath, chunkSize) {
 }
 
 /*
+ * getDayOfYear()
+ * Calculates the day of the year (1 - 366) of a given Date object
+ */
+function getDayOfYear(date) {
+    if (!(date instanceof Date) || isNaN(date)) {
+        return
+    }
+
+    const startDate = new Date(date.getFullYear(), 0, 0)
+    const dateDifference = date - startDate
+    const dayMilliseconds = 1000 * 60 * 60 * 24
+    return Math.floor(dateDifference / dayMilliseconds)
+}
+
+/*
  * formatChunkRow()
  * Fully formats an observation object from a pre-existing row
  */
@@ -902,10 +922,31 @@ function formatChunkRow(row) {
     // The given row's values will overwrite the template's values
     const formattedRow = Object.assign({}, observationTemplate, row)
 
-    // Fill recordedBy if empty
+    // Fill RECORDED_BY if empty
     const firstName = formattedRow[FIRST_NAME]
     const lastName = formattedRow[LAST_NAME]
     formattedRow[RECORDED_BY] ||= `${firstName}${(firstName && lastName) ? ' ' : ''}${lastName}`
+
+    // Fill START_DAY_OF_YEAR and END_DAY_OF_YEAR if DAY2, MONTH2, and YEAR2 are defined
+    if (!!formattedRow[DAY2] && !!formattedRow[MONTH2] && !!formattedRow[YEAR2]) {
+        const day1 = parseInt(formattedRow[DAY])
+        // Convert month to its index (subtract 1)
+        const month1Index = parseInt(formattedRow[MONTH]) - 1
+        const year1 = parseInt(formattedRow[YEAR])
+        // Set the time to noon to avoid timezone errors
+        const date1 = new Date(year1, month1Index, day1, 12)
+
+        formattedRow[START_DAY_OF_YEAR] = getDayOfYear(date1)?.toString() ?? ''
+
+        const day2 = parseInt(formattedRow[DAY2])
+        // Convert month to its index (subtract 1)
+        const month2Index = parseInt(formattedRow[MONTH2]) - 1
+        const year2 = parseInt(formattedRow[YEAR2])
+        // Set the time to noon to avoid timezone errors
+        const date2 = new Date(year2, month2Index, day2, 12)
+
+        formattedRow[END_DAY_OF_YEAR] = getDayOfYear(date2)?.toString() ?? ''
+    }
 
     // Enforce 4-decimal-point latitude and longitude
     const latitude = parseFloat(formattedRow[LATITUDE])
@@ -1087,7 +1128,7 @@ async function formatChunk(chunk, updateChunkProgress) {
  */
 function isRowEmpty(row) {
     for (const field of Object.keys(row)) {
-        if (row[field] && row[field] !== '') {
+        if (!!row[field] && row[field] !== '') {
             return false
         }
     }

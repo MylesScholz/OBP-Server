@@ -3,6 +3,9 @@ docker_commands.txt
 
 # API Data
 api/data/elevation
+api/data/observations
+api/data/temp
+api/data/uploads
 api/data/usernames.json
 api/data/places.json
 api/data/taxa.json

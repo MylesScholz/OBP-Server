@@ -772,7 +772,12 @@ async function readElevationBatchFromFile(fileName, batch) {
             const column = Math.floor(longitudeDecimalPart * rasters.width)
 
             // Look up the elevation value for the row and column, default to an empty string
-            const elevation = data[column + rasters.width * row]?.toString() ?? ''
+            let elevation = data[column + rasters.width * row] ?? -Infinity
+            if (elevation < -1000) {
+                elevation = ''
+            } else {
+                elevation = elevation.toString()
+            }
 
             const joinedCoordinate = `${latitude.toFixed(4)},${longitude.toFixed(4)}`
             elevations[joinedCoordinate] = elevation
@@ -1222,7 +1227,7 @@ async function formatChunk(chunk, updateChunkProgress) {
         }
     }
     observationIds = [...observationIds]
-    console.log(`\t\tFetching ${observationIds.length} observations...`)
+    console.log(`\t\t\tFetching ${observationIds.length} observations...`)
     const observations = await fetchObservationsById(observationIds)
 
     // Fetch the elevation data for rows with coordinates
@@ -1234,7 +1239,7 @@ async function formatChunk(chunk, updateChunkProgress) {
         coordinates.add(coordinate)
     }
     coordinates = [...coordinates]
-    // console.log(`\t\tReading ${coordinates.length} elevations...`)
+    console.log(`\t\t\tReading ${coordinates.length} elevations...`)
     const elevations = await getElevations(coordinates)
 
     // Read known taxonomy data from /api/data/taxa.json
@@ -1242,6 +1247,7 @@ async function formatChunk(chunk, updateChunkProgress) {
 
     // Update rows with the new data from iNaturalist
     let i = 1
+    console.log(`\t\t\tFormatting ${formattedChunk.length} rows...`)
     for (const row of formattedChunk) {
         // Find the corresponding iNaturalist observation for the current row by matching the iNaturalist URL
         const matchingObservation = observations.find((observation) => observation['uri'] && (observation['uri'] === row[INATURALIST_URL]))
@@ -1469,7 +1475,7 @@ function createParser(filePath) {
  * mergeTempFilesBatch()
  * Combines a batch of observation files into a single, sorted output file using a given comparison function
  */
-async function mergeTempFilesBatch(inputFiles, outputFile, compareRows) {
+async function mergeTempFilesBatch(inputFiles, outputFile) {
     // A list of open read streams and CSV parsers (open pair for each file in the batch)
     const readers = []
     // The current "top" rows from the open files in the batch
@@ -1484,20 +1490,13 @@ async function mergeTempFilesBatch(inputFiles, outputFile, compareRows) {
             
             // Get the first row
             const iterator = parser[Symbol.asyncIterator]()
-            const { value: firstRow, done } = await iterator.next()
+            const { value: firstRow } = await iterator.next()
 
-            // If not at the end of the file, add the row to currentRows
-            if (!done) {
-                currentRows.push({
-                    row: firstRow,
-                    iterator
-                })
-            } else {
-                currentRows.push({
-                    row: null,
-                    iterator
-                })
-            }
+            // Add the row to currentRows
+            currentRows.push({
+                row: firstRow,
+                iterator
+            })
         } catch (error) {
             // Log the error and rethrow it; there is no way to gracefully recover
             console.error(`Error opening file ${filePath}`)
@@ -1511,6 +1510,7 @@ async function mergeTempFilesBatch(inputFiles, outputFile, compareRows) {
     const stringifier = stringify({ header: true, columns: Object.keys(observationTemplate) })
     stringifier.pipe(outputFileStream)
 
+    let i = 0
     // Repeatedly write the "minimum" row of currentRows to the output file until there are none left
     while (true) {
         // Record the index of each row within currentRows; filter out empty rows (e.g., from reaching the end of an open file)
@@ -1519,35 +1519,41 @@ async function mergeTempFilesBatch(inputFiles, outputFile, compareRows) {
                 row: item.row,
                 index
             }))
-            .filter((item) => item.row !== null)
+            .filter((item) => !!item.row)
 
         // Break the loop if there are no more rows
-        if (validRows.length === 0) break
+        if (validRows.length === 0) {
+            // console.log(`\t\tMerged ${i} rows`)
+            break
+        }
 
         // Find the row (in validRows) that has the minimum "value" using the given comparison function
         const minRow = validRows.reduce((min, current) => compareRows(current.row, min.row) < 0 ? current : min)
 
+        // Create a function that guarantees write completion before continuing
+        const writeAsync = (stringifier, data) => new Promise((resolve, reject) => {
+            stringifier.write(data, (error) => {
+                if (error) reject(error)
+                else resolve()
+            })
+        })
+
         // Write the minimum row to the output file
-        stringifier.write(minRow.row)
+        await writeAsync(stringifier, minRow.row)
+        i++
 
         // Fetch the next row from the file which had the minimum row
         try {
             // Use the index in currentRows to get the iterator for the file that contained the minimum row; use the iterator to read the next row
-            const { value: nextRow, done } = await currentRows[minRow.index].iterator.next()
+            const { value: nextRow } = await currentRows[minRow.index].iterator.next()
 
             // Update currentRows to replace the minimum row with the next row, unless the end of the file was reached
-            if (!done) {
-                currentRows[minRow.index] = {
-                    row: nextRow,
-                    iterator: currentRows[minRow.index].iterator
-                }
-            } else {
-                currentRows[minRow.index] = {
-                    row: null,
-                    iterator: currentRows[minRow.index].iterator
-                }
+            currentRows[minRow.index] = {
+                row: nextRow,
+                iterator: currentRows[minRow.index].iterator
             }
         } catch (error) {
+            console.error('Error while reading next line:', error)
             // In case of an error, stop reading the file
             currentRows[minRow.index] = {
                 row: null,
@@ -1565,7 +1571,7 @@ async function mergeTempFilesBatch(inputFiles, outputFile, compareRows) {
  * mergeTempFiles()
  * Merges a list of temporary files containing chunked observation data into a single, sorted file using a given comparison function
  */
-async function mergeTempFiles(tempFiles, outputFilePath, compareRows) {
+async function mergeTempFiles(tempFiles, outputFilePath) {
     // Return immediately if there are no files to merge
     if (!tempFiles) return
 
@@ -1582,11 +1588,11 @@ async function mergeTempFiles(tempFiles, outputFilePath, compareRows) {
         // If the files queue is empty and the batch contains all of the remaining temporary files, this is the last iteration
         if (filesQueue.length === 0 && batch.length === tempFiles.length) {
             // Merge into the output file on the last iteration
-            await mergeTempFilesBatch(batch, outputFilePath, compareRows)
+            await mergeTempFilesBatch(batch, outputFilePath)
         } else {
             // Otherwise, merge into a new temporary file
             const mergedPath = path.join('./api/data/temp', `${Crypto.randomUUID()}.csv`)
-            await mergeTempFilesBatch(batch, mergedPath, compareRows)
+            await mergeTempFilesBatch(batch, mergedPath)
             // Add the new file to the queue and the list of temporary files
             filesQueue.push(mergedPath)
             tempFiles.push(mergedPath)
@@ -1691,7 +1697,15 @@ async function indexData(filePath, year) {
             row[RESOURCE_ID] ||= row[OCCURRENCE_ID]
         }
 
-        stringifier.write(row)
+        // Create a function that guarantees write completion before continuing
+        const writeAsync = (stringifier, data) => new Promise((resolve, reject) => {
+            stringifier.write(data, (error) => {
+                if (error) reject(error)
+                else resolve()
+            })
+        })
+
+        await writeAsync(stringifier, row)
     }
     // Destroy the input and output streams
     stringifier.end()
@@ -1763,6 +1777,7 @@ async function main() {
                 // Separate the provided dataset into chunks and store them in temporary files; also, format and update the data
                 let i = 1
                 for await (const chunk of readObservationsFileChunks(inputFilePath, CHUNK_SIZE)) {
+                    console.log(`\t\tChunk ${i}`)
                     const formattedChunk = await formatChunk(chunk, async (percentage) => {
                         await updateTaskInProgress(taskId, { currentStep: 'Formatting provided dataset', percentage: `Chunk ${i}: ${percentage}%` })
                     })
@@ -1787,7 +1802,7 @@ async function main() {
                 }
 
                 // Merge all chunks into the output file
-                await mergeTempFiles(tempFiles, outputFilePath, compareRows)
+                await mergeTempFiles(tempFiles, outputFilePath)
 
                 await updateTaskInProgress(taskId, { currentStep: 'Indexing merged data' })
                 console.log('\tIndexing merged data...')

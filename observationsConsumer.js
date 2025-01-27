@@ -687,7 +687,7 @@ async function readElevationFromFile(fileKey, latitude, longitude) {
 
         // Calculate the row and column corresponding to the given coordinate
         const latitudeDecimalPart = latitude - Math.floor(latitude)
-        const row = rasters.height - Math.floor(latitudeDecimalPart * rasters.height)
+        const row = rasters.height - Math.floor(latitudeDecimalPart * rasters.height) - 1
 
         const longitudeDecimalPart = longitude - Math.floor(longitude)
         const column = Math.floor(longitudeDecimalPart * rasters.width)
@@ -746,7 +746,7 @@ async function readElevationBatchFromFile(fileName, batch) {
 
             // Calculate the row and column corresponding to the current coordinate
             const latitudeDecimalPart = latitude - Math.floor(latitude)
-            const row = rasters.height - Math.floor(latitudeDecimalPart * rasters.height)
+            const row = rasters.height - Math.floor(latitudeDecimalPart * rasters.height) - 1
 
             const longitudeDecimalPart = longitude - Math.floor(longitude)
             const column = Math.floor(longitudeDecimalPart * rasters.width)
@@ -768,7 +768,8 @@ async function readElevationBatchFromFile(fileName, batch) {
 
         // Return the elevations object
         return elevations
-    } catch (err) {
+    } catch (error) {
+        // console.error(`Error while attempting to read '${fileName}':`, error)
         // Return nothing if the file reading fails (e.g., the file doesn't exist)
         return
     }

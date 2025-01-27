@@ -635,6 +635,42 @@ function includesStreetSuffix(string) {
 }
 
 /*
+ * getElevationFileName()
+ * Takes a coordinate pair as strings and generates the GeoTIFF file name where its elevation data is stored
+ */
+function getElevationFileName(latitude, longitude) {
+    // Check that both latitude and longitude are provided and are parseable as floats
+    if (!latitude || !longitude || !parseFloat(latitude) || !parseFloat(longitude)) {
+        return ''
+    }
+
+    // Split just the integer part of the latitude and longitude
+    let cardinalLatitude = latitude.split('.')[0]
+    const degreesLatitude = parseInt(cardinalLatitude)
+    let cardinalLongitude = longitude.split('.')[0]
+    const degreesLongitude = parseInt(cardinalLongitude)
+
+    // Convert negative latitudes to degrees south
+    if (degreesLatitude < 0) {
+        cardinalLatitude = 's' + `${-degreesLatitude + 1}`
+    } else {
+        cardinalLatitude = 'n' + cardinalLatitude
+    }
+
+    // Convert negative longitudes to degrees west
+    if (degreesLongitude < 0) {
+        cardinalLongitude = 'w' + `${-degreesLongitude + 1}`.padStart(3, '0')
+    } else {
+        cardinalLongitude = 'e' + cardinalLongitude.padStart(3, '0')
+    }
+
+    // Create the file name for the elevation data file in which the coordinates lie
+    const fileName = `elevation/${cardinalLatitude}_${cardinalLongitude}_1arc_v3.tif`
+
+    return fileName
+}
+
+/*
  * readElevationFromFile()
  * Searches for the elevation value of a given coordinate in a given GeoTIFF file
  */
@@ -679,72 +715,11 @@ async function readElevationFromFile(fileKey, latitude, longitude) {
  * Looks up the elevation for a given coordinate using NASA's SRTM 1 Arc-Second Global dataset stored in GeoTIFF files
  */
 async function getElevation(latitude, longitude) {
-    // Check that both latitude and longitude are provided and are parseable as floats
-    if (!latitude || !longitude || !parseFloat(latitude) || !parseFloat(longitude)) {
-        return ''
-    }
-
-    // Split just the integer part of the latitude and longitude
-    let cardinalLatitude = latitude.split('.')[0]
-    const degreesLatitude = parseInt(cardinalLatitude)
-    let cardinalLongitude = longitude.split('.')[0]
-    const degreesLongitude = parseInt(cardinalLongitude)
-
-    // Convert negative latitudes to degrees south
-    if (degreesLatitude < 0) {
-        cardinalLatitude = 's' + `${-degreesLatitude + 1}`
-    } else {
-        cardinalLatitude = 'n' + cardinalLatitude
-    }
-
-    // Convert negative longitudes to degrees west
-    if (degreesLongitude < 0) {
-        cardinalLongitude = 'w' + `${-degreesLongitude + 1}`.padStart(3, '0')
-    } else {
-        cardinalLongitude = 'e' + cardinalLongitude.padStart(3, '0')
-    }
-
-    // Create the file key for the elevation data file in which the coordinates lie
-    const fileKey = `elevation/${cardinalLatitude}_${cardinalLongitude}_1arc_v3.tif`
+    // Create the file name for the elevation data file in which the coordinates lie
+    const fileKey = getElevationFileName(latitude, longitude)
 
     // Get the elevation at the precise coordinate from the elevation data file
     return await readElevationFromFile(fileKey, parseFloat(latitude), parseFloat(longitude))
-}
-
-/*
- * getElevationFileName()
- * Takes a coordinate pair as strings and generates the GeoTIFF file name where its elevation data is stored
- */
-function getElevationFileName(latitude, longitude) {
-    // Check that both latitude and longitude are provided and are parseable as floats
-    if (!latitude || !longitude || !parseFloat(latitude) || !parseFloat(longitude)) {
-        return ''
-    }
-
-    // Split just the integer part of the latitude and longitude
-    let cardinalLatitude = latitude.split('.')[0]
-    const degreesLatitude = parseInt(cardinalLatitude)
-    let cardinalLongitude = longitude.split('.')[0]
-    const degreesLongitude = parseInt(cardinalLongitude)
-
-    // Convert negative latitudes to degrees south
-    if (degreesLatitude < 0) {
-        cardinalLatitude = 's' + `${-degreesLatitude + 1}`
-    } else {
-        cardinalLatitude = 'n' + cardinalLatitude
-    }
-
-    // Convert negative longitudes to degrees west
-    if (degreesLongitude < 0) {
-        cardinalLongitude = 'w' + `${-degreesLongitude + 1}`.padStart(3, '0')
-    } else {
-        cardinalLongitude = 'e' + cardinalLongitude.padStart(3, '0')
-    }
-
-    // Create the file name for the elevation data file in which the coordinates lie
-    const fileName = `elevation/${cardinalLatitude}_${cardinalLongitude}_1arc_v3.tif`
-
-    return fileName
 }
 
 /*
@@ -836,9 +811,9 @@ async function getElevations(coordinates) {
 
 /*
  * formatObservation()
- * Creates a fully formatted observation object from a raw iNaturalist observation (and place and taxonomy data)
+ * Creates a fully formatted observation object from a raw iNaturalist observation (and place, elevation, and taxonomy data)
  */
-async function formatObservation(observation, places, taxa) {
+async function formatObservation(observation, places, elevations, taxa) {
     // Start from template observation object
     const formattedObservation = Object.assign({}, observationTemplate)
 
@@ -919,7 +894,8 @@ async function formatObservation(observation, places, taxa) {
         errorFields.push(LOCALITY)
     }
 
-    formattedObservation[ELEVATION] = await getElevation(formattedLatitude, formattedLongitude)
+    const coordinate = `${formattedLatitude},${formattedLongitude}`
+    formattedObservation[ELEVATION] = elevations[coordinate] || ''
 
     formattedObservation[LATITUDE] = formattedLatitude
     formattedObservation[LONGITUDE] = formattedLongitude
@@ -965,13 +941,28 @@ async function formatObservation(observation, places, taxa) {
 async function formatObservations(observations, updateFormattingProgress) {
     let formattedObservations = []
 
+    // Fetch the elevation data for rows with coordinates
+    let coordinates = new Set()
+    for (const observation of observations) {
+        const latitude = observation.geojson?.coordinates?.at(1)?.toFixed(4)?.toString() ?? ''
+        const longitude = observation.geojson?.coordinates?.at(0)?.toFixed(4)?.toString() ?? ''
+
+        if (!latitude || !longitude) { continue }
+
+        const coordinate = `${latitude},${longitude}`
+        coordinates.add(coordinate)
+    }
+    coordinates = [...coordinates]
+    console.log(`\t\tReading ${coordinates.length} elevations...`)
+    const elevations = await getElevations(coordinates)
+
     // Read known place and taxonomy data from /api/data/places.json and /api/data/taxa.json respectively
     const places = readPlacesFile()
     const taxa = readTaxaFile()
 
     let i = 0
     for (const observation of observations) {
-        const formattedObservation = await formatObservation(observation, places, taxa)
+        const formattedObservation = await formatObservation(observation, places, elevations, taxa)
         await updateFormattingProgress(`${(100 * (i++) / observations.length).toFixed(2)}%`)
 
         // SPECIMEN_ID is initially set to the number of bees collected

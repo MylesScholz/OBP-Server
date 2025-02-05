@@ -542,7 +542,7 @@ function getUserName(user) {
     // Format the outputs if the user was found
     if (userName) {
         firstName = userName.firstName
-        firstNameInitial = firstName[0] + '.'
+        firstNameInitial = userName.firstNameInitial
         lastName = userName.lastName
     }
     
@@ -1685,13 +1685,14 @@ async function indexData(filePath, year) {
             nextObservationNumber = incrementObservationNumber(nextObservationNumber)
         }
 
-        if (!!row[OBSERVATION_NO] && !isNaN(row[OBSERVATION_NO])) {
-            if (row[STATE] === 'WA') {
-                row[OCCURRENCE_ID] ||= `https://wsu.edu/WSU/WSDA_${row[OBSERVATION_NO]}`
-            } else {
+        if (row[STATE] === 'OR') {
+            if (!!row[OBSERVATION_NO] && !isNaN(row[OBSERVATION_NO])) {
                 row[OCCURRENCE_ID] ||= `https://osac.oregonstate.edu/OBS/OBA_${row[OBSERVATION_NO]}`
+                row[RESOURCE_ID] ||= row[OCCURRENCE_ID]
             }
-            row[RESOURCE_ID] ||= row[OCCURRENCE_ID]
+        } else {
+            row[OCCURRENCE_ID] = ''
+            row[RESOURCE_ID] = ''
         }
 
         // Create a function that guarantees write completion before continuing

@@ -878,7 +878,7 @@ async function formatObservation(observation, places, elevations, taxa) {
     formattedObservation[DAY] = formattedDay
     formattedObservation[MONTH] = formattedMonth
     formattedObservation[YEAR] = formattedYear
-    formattedObservation[VERBATIM_DATE] = observation['observed_on_string'] ?? ''
+    formattedObservation[VERBATIM_DATE] = `${formattedMonth}/${formattedDay}/${formattedYear}`
 
     formattedObservation[COUNTRY] = countryAbbreviations[country] ?? country
     formattedObservation[STATE] = stateProvinceAbbreviations[stateProvince] ?? stateProvince
@@ -1047,7 +1047,11 @@ function formatChunkRow(row) {
     const lastName = formattedRow[LAST_NAME]
     formattedRow[RECORDED_BY] ||= `${firstName}${(firstName && lastName) ? ' ' : ''}${lastName}`
 
+    // Set VERBATIM_DATE to default formatting
+    formattedRow[VERBATIM_DATE] = `${formattedRow[MONTH]}/${formattedRow[DAY]}/${formattedRow[YEAR]}`
+
     // Fill START_DAY_OF_YEAR and END_DAY_OF_YEAR if DAY2, MONTH2, and YEAR2 are defined
+    // Overwrite VERBATIM_DATE with two-date format
     if (!!formattedRow[DAY2] && !!formattedRow[MONTH2] && !!formattedRow[YEAR2]) {
         const day1 = parseInt(formattedRow[DAY])
         // Convert month to its index (subtract 1)
@@ -1066,6 +1070,8 @@ function formatChunkRow(row) {
         const date2 = new Date(year2, month2Index, day2, 12)
 
         formattedRow[END_DAY_OF_YEAR] = getDayOfYear(date2)?.toString() ?? ''
+
+        formattedRow[VERBATIM_DATE] = `${formattedRow[YEAR]}-${formattedRow[MONTH]}-${formattedRow[DAY]}/${formattedRow[YEAR2]}-${formattedRow[MONTH2]}-${formattedRow[DAY2]}`
     }
 
     // Enforce 4-decimal-point latitude and longitude

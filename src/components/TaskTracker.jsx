@@ -122,7 +122,7 @@ export default function TaskTracker({ queryResponse, result, setResult }) {
                 </>
             }
             { !queryResponse?.data?.error && !selectedTaskData?.error && !tasksQueryError && !selectedTaskQueryError && !selectedTaskData?.task &&
-                <p>There is no task in progress. Use the task submission form to start one.</p>
+                <p>No task in progress. Use the task submission form to start one.</p>
             }
         </TaskTrackerContainer>
     )

@@ -1691,14 +1691,9 @@ async function indexData(filePath, year) {
             nextObservationNumber = incrementObservationNumber(nextObservationNumber)
         }
 
-        if (row[STATE] === 'OR') {
-            if (!!row[OBSERVATION_NO] && !isNaN(row[OBSERVATION_NO])) {
-                row[OCCURRENCE_ID] ||= `https://osac.oregonstate.edu/OBS/OBA_${row[OBSERVATION_NO]}`
-                row[RESOURCE_ID] ||= row[OCCURRENCE_ID]
-            }
-        } else {
-            row[OCCURRENCE_ID] = ''
-            row[RESOURCE_ID] = ''
+        if (!!row[OBSERVATION_NO] && row[STATE] === 'OR') {
+            row[OCCURRENCE_ID] ||= `https://osac.oregonstate.edu/OBS/OBA_${row[OBSERVATION_NO]}`
+            row[RESOURCE_ID] ||= row[OCCURRENCE_ID]
         }
 
         // Create a function that guarantees write completion before continuing

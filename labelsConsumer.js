@@ -123,7 +123,7 @@ function formatObservation(observation) {
     // Location field
     const country = observation[COUNTRY]
     const stateProvince = observation[STATE]
-    const county = observation[COUNTY] ? `:${observation[COUNTY]}Co` : ''
+    const county = observation[COUNTY] ? `:${observation[COUNTY]}${observation[COUNTRY] !== 'CA' ? 'Co' : ''}` : ''
     const place = observation[LOCALITY]
     const latitude = parseFloat(observation[LATITUDE]).toFixed(3).toString()
     const longitude = parseFloat(observation[LONGITUDE]).toFixed(3).toString()

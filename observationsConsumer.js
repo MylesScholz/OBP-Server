@@ -1575,8 +1575,11 @@ async function mergeTempFilesBatch(inputFiles, outputFile) {
  * Merges a list of temporary files containing chunked observation data into a single, sorted file using a given comparison function
  */
 async function mergeTempFiles(tempFiles, outputFilePath) {
-    // Return immediately if there are no files to merge
-    if (!tempFiles) return
+    // Create a blank output file and return immediately if there are no files to merge
+    if (!tempFiles || tempFiles.length === 0) {
+        writeObservationsFile(outputFilePath, [])
+        return
+    }
 
     // Make a queue out of the given list of temporary files
     const filesQueue = [...tempFiles]
@@ -1664,6 +1667,11 @@ function incrementObservationNumber(observationNumber) {
  * Automatically fills in the OBSERVATION_NO field for a given observations file
  */
 async function indexData(filePath, year) {
+    // Check that the input file path exists
+    if (!fs.existsSync(filePath)) {
+        throw new Error(`File does not exist: ${filePath}`)
+    }
+
     // Search for the highest observation number in the given file
     const lastObservationNumber = await findLastObservationNumber(filePath)
 
@@ -1739,29 +1747,32 @@ async function main() {
 
             console.log(`${new Date().toLocaleTimeString('en-US')} Processing task ${taskId}...`)
 
-            await updateTaskInProgress(taskId, { currentStep: 'Pulling observations from iNaturalist' })
-            console.log('\tPulling observations from iNaturalist...')
+            let formattedObservations = []
+            if (task.sources) {
+                await updateTaskInProgress(taskId, { currentStep: 'Pulling observations from iNaturalist' })
+                console.log('\tPulling observations from iNaturalist...')
 
-            const observations = await pullObservations(task, async (percentage) => {
-                await updateTaskInProgress(taskId, { currentStep: 'Pulling observations from iNaturalist', percentage })
-            })
+                const observations = await pullObservations(task, async (percentage) => {
+                    await updateTaskInProgress(taskId, { currentStep: 'Pulling observations from iNaturalist', percentage })
+                })
 
-            await updateTaskInProgress(taskId, { currentStep: 'Updating place data' })
-            console.log('\tUpdating place data...')
+                await updateTaskInProgress(taskId, { currentStep: 'Updating place data' })
+                console.log('\tUpdating place data...')
 
-            await updatePlaces(observations)
+                await updatePlaces(observations)
 
-            await updateTaskInProgress(taskId, { currentStep: 'Updating taxonomy data' })
-            console.log('\tUpdating taxonomy data...')
+                await updateTaskInProgress(taskId, { currentStep: 'Updating taxonomy data' })
+                console.log('\tUpdating taxonomy data...')
 
-            await updateTaxa(observations)
+                await updateTaxa(observations)
 
-            await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations' })
-            console.log('\tFormatting new observations...')
+                await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations' })
+                console.log('\tFormatting new observations...')
 
-            const formattedObservations = await formatObservations(observations, async (percentage) => {
-                await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations', percentage })
-            })
+                formattedObservations = await formatObservations(observations, async (percentage) => {
+                    await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations', percentage })
+                })
+            }
 
             await updateTaskInProgress(taskId, { currentStep: 'Formatting provided dataset' })
             console.log('\tFormatting provided dataset...')
@@ -1792,7 +1803,7 @@ async function main() {
                 await updateTaskInProgress(taskId, { currentStep: 'Merging new observations with provided dataset' })
                 console.log('\tMerging new observations with provided dataset...')
 
-                // Create a chunk for the new data from iNaturalist
+                // Create a chunk for the new data from iNaturalist and dedupe it
                 if (formattedObservations.length > 0) {
                     const sortedChunk = sortAndDedupeChunk(formattedObservations, seenKeys)
                     if (sortedChunk) {

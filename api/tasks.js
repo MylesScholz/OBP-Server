@@ -12,18 +12,18 @@ const tasksRouter = Router()
 /*
  * POST /api/tasks/observations
  * Creates a task to fetch data updates from iNaturalist.org and merge them into a provided dataset
- * Requires:
- * - req.file: a CSV base observation dataset
+ * Inputs:
+ * - req.file (required): a CSV base observation dataset
  * - req.body.sources: a comma-separated list of iNaturalist project IDs to pull updates from
- * - req.body.minDate: the minimum date of observations to pull
- * - req.body.maxDate: the maximum date of observations to pull
+ * - req.body.minDate (required if sources provided): the minimum date of observations to pull
+ * - req.body.maxDate (required if sources provided): the maximum date of observations to pull
  * Outputs:
  * - Stores a copy of the uploaded base dataset in /api/data/uploads, accessible at the /api/uploads endpoint
  * - Creates a new CSV observation dataset in /api/data/observations, accessible at the /api/observations endpoint
  */
 tasksRouter.post('/observations', upload.single('file'), async (req, res, next) => {
     // Check that required fields exist
-    if (!req.file || !req.body || !req.body.sources || !req.body.minDate || !req.body.maxDate) {
+    if (!req.file || !req.body || (req.body.sources && (!req.body.minDate || !req.body.maxDate))) {
         res.status(400).send({
             error: 'Missing required request field'
         })
@@ -38,19 +38,21 @@ tasksRouter.post('/observations', upload.single('file'), async (req, res, next) 
         const datasetURI = `/api/uploads/${req.file.filename}`
 
         // Parse sources argument and check basic validity
-        const sources = req.body.sources.split(',')
-        for (const source of sources) {
-            if (!parseInt(source)) {
-                res.status(400).send({
-                    error: 'Request field \'sources\' must be a number or a comma-separated list of numbers'
-                })
-                return
+        const sources = req.body.sources?.split(',')
+        if (sources) {
+            for (const source of sources) {
+                if (!parseInt(source)) {
+                    res.status(400).send({
+                        error: 'Request field \'sources\' must be a number or a comma-separated list of numbers'
+                    })
+                    return
+                }
             }
         }
 
         // Parse minDate and maxDate arguments
-        const minDate = new Date(req.body.minDate)
-        const maxDate = new Date(req.body.maxDate)
+        const minDate = req.body.minDate ? new Date(req.body.minDate) : undefined
+        const maxDate = req.body.maxDate ? new Date(req.body.maxDate) : undefined
         if (minDate > maxDate) {
             res.status(400).send({
                 error: 'The \'minDate\' must be before the \'maxDate\''
@@ -58,8 +60,8 @@ tasksRouter.post('/observations', upload.single('file'), async (req, res, next) 
             return
         }
         // Format dates how the API (and iNaturalist) expect (YYYY-MM-DD)
-        const formattedMinDate = `${minDate.getUTCFullYear()}-${(minDate.getUTCMonth() + 1).toString().padStart(2, '0')}-${minDate.getUTCDate().toString().padStart(2, '0')}`
-        const formattedMaxDate = `${maxDate.getUTCFullYear()}-${(maxDate.getUTCMonth() + 1).toString().padStart(2, '0')}-${maxDate.getUTCDate().toString().padStart(2, '0')}`
+        const formattedMinDate = minDate ? `${minDate.getUTCFullYear()}-${(minDate.getUTCMonth() + 1).toString().padStart(2, '0')}-${minDate.getUTCDate().toString().padStart(2, '0')}` : undefined
+        const formattedMaxDate = maxDate ? `${maxDate.getUTCFullYear()}-${(maxDate.getUTCMonth() + 1).toString().padStart(2, '0')}-${maxDate.getUTCDate().toString().padStart(2, '0')}` : undefined
 
         // Create task and send its ID to the RabbitMQ server
         const { id: taskId } = await createTask('observations', datasetURI, sources, formattedMinDate, formattedMaxDate)

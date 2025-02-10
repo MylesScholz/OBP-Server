@@ -15,11 +15,12 @@ const TaskPanelContainer = styled.div`
 export default function TaskPanel() {
     const [ queryResponse, setQueryResponse ] = useState()
     const [ result, setResult ] = useState()
+    const [ formDisabled, setFormDisabled ] = useState(false)
 
     return (
         <TaskPanelContainer>
-            <TaskQueryBuilder queryResponse={queryResponse} setQueryResponse={setQueryResponse} result={result} setResult={setResult} />
-            <TaskTracker queryResponse={queryResponse} result={result} setResult={setResult} />
+            <TaskQueryBuilder setQueryResponse={setQueryResponse} setResult={setResult} formDisabled={formDisabled} setFormDisabled={setFormDisabled} />
+            <TaskTracker queryResponse={queryResponse} result={result} setResult={setResult} setFormDisabled={setFormDisabled} />
         </TaskPanelContainer>
     )
 }

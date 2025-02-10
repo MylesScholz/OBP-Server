@@ -74,7 +74,7 @@ async function getTaskById(id) {
 
     // Check ID argument before attempting query
     if (!ObjectId.isValid(id)) {
-        throw new Error('Invalid field \'id\'')
+        return
     } else {
         const result = await collection.findOne({ _id: new ObjectId(id) })
         return result

@@ -42,7 +42,7 @@ app.use('*', (req, res, next) => {
 })
 
 app.use('*', (err, req, res, next) => {
-    console.error('ERROR:', err)
+    console.error(err)
     res.status(500).send({
         error: 'Unable to complete the request because of a server error'
     })

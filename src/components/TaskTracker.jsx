@@ -26,7 +26,7 @@ const TaskTrackerContainer = styled.div`
     }
 `
 
-export default function TaskTracker({ queryResponse, result, setResult }) {
+export default function TaskTracker({ queryResponse, result, setResult, setFormDisabled }) {
     const [ selectedTaskId, setSelectedTaskId ] = useState()
 
     const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
@@ -79,15 +79,19 @@ export default function TaskTracker({ queryResponse, result, setResult }) {
     // console.log('downloadURL:', downloadURL)
     // console.log('selectedTaskId:', selectedTaskId)
 
+    if (result || queryResponse?.error || selectedTaskData?.error || tasksQueryError || selectedTaskQueryError) {
+        setFormDisabled(false)
+    }
+
     return (
         <TaskTrackerContainer>
             <h2>Task Tracker</h2>
 
-            { queryResponse?.data?.error &&
-                <p>Error: {queryResponse.status} {queryResponse.data.error}</p>
+            { queryResponse?.error &&
+                <p>Error: {queryResponse.status} {queryResponse.error}</p>
             }
             { selectedTaskData?.error &&
-                <p>Error {selectedTaskData.status}: {selectedTaskData.statusText}</p>
+                <p>Error: {selectedTaskData.status} {selectedTaskData.statusText}</p>
             }
             { tasksQueryError &&
                 <p>Error: {tasksQueryError.message}</p>
@@ -121,7 +125,7 @@ export default function TaskTracker({ queryResponse, result, setResult }) {
                     }
                 </>
             }
-            { !queryResponse?.data?.error && !selectedTaskData?.error && !tasksQueryError && !selectedTaskQueryError && !selectedTaskData?.task &&
+            { !queryResponse?.error && !selectedTaskData?.error && !tasksQueryError && !selectedTaskQueryError && !selectedTaskData?.task &&
                 <p>No task in progress. Use the task submission form to start one.</p>
             }
         </TaskTrackerContainer>

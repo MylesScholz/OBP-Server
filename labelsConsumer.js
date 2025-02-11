@@ -179,7 +179,7 @@ function formatObservations(observations, addWarningID) {
     // Filter out observations that have any falsy requiredFields or that have been printed already
     let filteredObservations = observations.filter((observation) => !observation[DATE_LABEL_PRINT] && requiredFields.every((field) => !!observation[field]))
     // Filter out observations where any of the required fields show up in ERROR_FLAGS
-    filteredObservations = filteredObservations.filter((observation) => !requiredFields.some((field) => observation[ERROR_FLAGS].split(';').includes(field)))
+    filteredObservations = filteredObservations.filter((observation) => !requiredFields.some((field) => observation[ERROR_FLAGS]?.split(';')?.includes(field) ?? false))
 
     // Format and add warnings to the remaining observations
     for (let i = 0; i < filteredObservations.length; i++) {

@@ -105,7 +105,7 @@ export default function TaskTracker({ queryResponse, result, setResult, setFormD
                     setResult(undefined)
                 } }>
                     <option value='' disabled selected={!selectedTaskId}>Select a task...</option>
-                    {tasksData.tasks.map((t) => <option value={t._id} key={t._id} selected={t._id === selectedTaskId}>Task {t._id} ({t.type})</option>)}
+                    {tasksData.tasks.map((t) => <option value={t._id} key={t._id} selected={t._id === selectedTaskId}>{t.name}</option>)}
                 </select>
             }
             { selectedTaskData?.task &&

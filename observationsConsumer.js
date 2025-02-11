@@ -1778,7 +1778,7 @@ async function main() {
             console.log('\tFormatting provided dataset...')
 
             const inputFilePath = './api/data' + task.dataset.replace('/api', '')    // task.dataset has a '/api' suffix, which should be removed
-            const outputFileName = `${Crypto.randomUUID()}.csv`
+            const outputFileName = `${task.name}.csv`
             const outputFilePath = './api/data/observations/' + outputFileName
 
             const seenKeys = new Set()

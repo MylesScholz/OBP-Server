@@ -44,11 +44,21 @@ async function createTask(type, dataset, sources, minDate, maxDate) {
         throw new Error('Invalid task field \'type\'')
     }
 
+    const sourceAbbreviations = {
+        '18521': 'OBA',
+        '99706': 'MM',
+        '166376': 'WaBA'
+    }
+    const sourceString = sources?.map((s) => sourceAbbreviations[s] ?? s)?.join('_')
+    const createdAt = new Date()
+    const createdAtDate = `${createdAt.getFullYear()}-${createdAt.getMonth() + 1}-${createdAt.getDate()}`
+    const createdAtTime = `${createdAt.getHours()}.${createdAt.getMinutes()}.${createdAt.getSeconds()}`
     const task = {
+        name: `${type}_${sourceString ? sourceString + '_' : ''}${createdAtDate}T${createdAtTime}`,
         type: type,
         dataset: dataset,
         status: 'Pending',
-        createdAt: new Date().toISOString()     // Current time
+        createdAt: createdAt.toISOString()
     }
     // Optional task fields (only user for 'observations' tasks)
     if (sources) task.sources = sources

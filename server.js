@@ -4,6 +4,8 @@ import cors from 'cors'
 import 'dotenv/config'
 
 import tasksRouter from './api/tasks.js'
+import adminsRouter from './api/admins.js'
+import usernamesRouter from './api/usernames.js'
 import { connectToRabbitMQ } from './api/lib/rabbitmq.js'
 import { connectToDb } from './api/lib/mongo.js'
 import { clearTasks } from './api/models/task.js'
@@ -33,6 +35,8 @@ apiRouter.use('/uploads', express.static('api/data/uploads'))
 apiRouter.use('/observations', express.static('api/data/observations'))
 apiRouter.use('/labels', express.static('api/data/labels'))
 apiRouter.use('/tasks', tasksRouter)
+apiRouter.use('/admins', adminsRouter)
+apiRouter.use('/usernames', usernamesRouter)
 app.use('/api', apiRouter)
 
 app.use('*', (req, res, next) => {

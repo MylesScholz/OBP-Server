@@ -1,6 +1,6 @@
 import Router from 'express'
 
-import upload from './lib/multer.js'
+import { uploadCSV } from './lib/multer.js'
 import { getObservationsChannel, observationsQueueName, getLabelsChannel, labelsQueueName } from './lib/rabbitmq.js'
 import { limitFilesInDirectory } from './lib/utilities.js'
 import { createTask, getTaskById, getTasks } from './models/task.js'
@@ -21,7 +21,7 @@ const tasksRouter = Router()
  * - Stores a copy of the uploaded base dataset in /api/data/uploads, accessible at the /api/uploads endpoint
  * - Creates a new CSV observation dataset in /api/data/observations, accessible at the /api/observations endpoint
  */
-tasksRouter.post('/observations', upload.single('file'), async (req, res, next) => {
+tasksRouter.post('/observations', uploadCSV.single('file'), async (req, res, next) => {
     // Check that required fields exist
     if (!req.file || !req.body || (req.body.sources && (!req.body.minDate || !req.body.maxDate))) {
         res.status(400).send({
@@ -90,7 +90,7 @@ tasksRouter.post('/observations', upload.single('file'), async (req, res, next) 
  * - Stores a copy of the uploaded base dataset in /api/data/uploads, accessible at the /api/uploads endpoint
  * - Creates a PDF document of bee labels in /api/data/labels, accessible at the /api/labels endpoint
  */
-tasksRouter.post('/labels', upload.single('file'), async (req, res, next) => {
+tasksRouter.post('/labels', uploadCSV.single('file'), async (req, res, next) => {
     // Check that required field exists
     if (!req.file) {
         res.status(400).send({

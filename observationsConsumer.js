@@ -4,6 +4,7 @@ import path from 'path'
 import amqp from 'amqplib'
 import { fromFile } from 'geotiff'
 import { parse } from 'csv-parse'
+import { parse as parseSync } from 'csv-parse/sync'
 import { stringify } from 'csv-stringify'
 import { stringify as stringifySync } from 'csv-stringify/sync'
 import 'dotenv/config'
@@ -506,22 +507,24 @@ async function updateTaxa(observations) {
 
 /*
  * readUsernamesFile()
- * Parses /api/data/usernames.json into a JS object
+ * Parses /api/data/usernames.csv into a JS object
  */
 function readUsernamesFile() {
-    // If /api/data/usernames.json doesn't exist locally, create a base version and save it
-    if (!fs.existsSync('./api/data/usernames.json')) {
-        fs.writeFileSync('./api/data/usernames.json', '{}')
+    // If /api/data/usernames.csv doesn't exist locally, create a base version and save it
+    if (!fs.existsSync('./api/data/usernames.csv')) {
+        const header = ['userLogin', 'fullName', 'firstName', 'firstNameInitial', 'lastName']
+        const csv = stringifySync([], { header: true, columns: header })
+        fs.writeFileSync('./api/data/usernames.csv', csv)
     }
     
-    // Read and parse /api/data/usernames.json
-    const usernamesData = fs.readFileSync('./api/data/usernames.json')
-    return JSON.parse(usernamesData || '{}')
+    // Read and parse /api/data/usernames.csv
+    const usernamesData = fs.readFileSync('./api/data/usernames.csv')
+    return parseSync(usernamesData, { columns: true, skip_empty_lines: true, relax_quotes: true })
 }
 
 /*
  * getUserName()
- * Searches for the first name, first initial, and last name of an iNaturalist user in /api/data/usernames.json
+ * Searches for the first name, first initial, and last name of an iNaturalist user in /api/data/usernames.csv
  */
 function getUserName(user) {
     // Default to empty strings
@@ -537,7 +540,7 @@ function getUserName(user) {
 
     // Attempt to extract the user from their iNaturalist alias
     const userAlias = user['login']
-    const userName = usernames[userAlias]
+    const userName = usernames.find((u) => u.userLogin === userAlias)
 
     // Format the outputs if the user was found
     if (userName) {

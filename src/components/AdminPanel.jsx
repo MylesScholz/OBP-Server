@@ -5,6 +5,7 @@ import styled from '@emotion/styled'
 
 import AdminAccountForm from './AdminAccountForm'
 import UsernamesQueryBuilder from './UsernamesQueryBuilder'
+import AdminManagementForm from './AdminManagementForm'
 
 const AdminPanelContainer = styled.div`
     display: flex;
@@ -20,7 +21,7 @@ const AdminPanelContainer = styled.div`
 `
 
 export default function AdminPanel() {
-    const [ loggedIn, setLoggedIn ] = useState(false)
+    const [ loggedIn, setLoggedIn ] = useState()
 
     const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
 
@@ -30,9 +31,9 @@ export default function AdminPanel() {
             const queryURL = `http://${serverAddress}/api/admins/login`
             axios.get(queryURL).then((res) => {
                 if (res.status === 200) {
-                    setLoggedIn(res.data.loggedIn)
+                    setLoggedIn(res.data.username)
                 } else {
-                    setLoggedIn(false)
+                    setLoggedIn(undefined)
                 }
             })
             return
@@ -45,7 +46,10 @@ export default function AdminPanel() {
         <AdminPanelContainer>
             <AdminAccountForm loggedIn={loggedIn} setLoggedIn={setLoggedIn} />
             { loggedIn &&
-                <UsernamesQueryBuilder />
+                <>
+                    <UsernamesQueryBuilder />
+                    <AdminManagementForm />
+                </>
             }
         </AdminPanelContainer>
     )

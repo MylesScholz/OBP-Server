@@ -18,6 +18,12 @@ const AdminAccountFormContainer = styled.form`
         font-size: 16pt;
     }
 
+    p {
+        margin: 0px;
+
+        font-size: 12pt;
+    }
+
     div {
         display: flex;
         flex-direction: row;
@@ -49,7 +55,7 @@ export default function AdminAccountForm({ loggedIn, setLoggedIn }) {
             axios.post(queryURL, credentials).then((res) => {
                 setFormDisabled(false)
                 if (res.status === 200) {
-                    setLoggedIn(true)
+                    setLoggedIn(credentials.username)
                 }
             }).catch((error) => {
                 setFormDisabled(false)
@@ -61,7 +67,7 @@ export default function AdminAccountForm({ loggedIn, setLoggedIn }) {
             axios.post(queryURL).then((res) => {
                 setFormDisabled(false)
                 if (res.status === 200) {
-                    setLoggedIn(false)
+                    setLoggedIn(undefined)
                 }
             }).catch((error) => {
                 setFormDisabled(false)
@@ -76,17 +82,20 @@ export default function AdminAccountForm({ loggedIn, setLoggedIn }) {
                 <>
                     <div>
                         <label for='adminUsername'>Username:</label>
-                        <input type='text' id='adminUsername'></input>
+                        <input type='text' id='adminUsername' />
                     </div>
                     <div>
                         <label for='adminPassword'>Password:</label>
-                        <input type='password' id='adminPassword'></input>
+                        <input type='password' id='adminPassword' />
                     </div>
                     <input type='submit' id='loginSubmit' value='Log In' />
                 </>
             }
-            { loggedIn &&
-                <input type='submit' id='logoutSubmit' value='Log Out' />
+            { !!loggedIn &&
+                <>
+                    <p>Current account: {loggedIn}</p>
+                    <input type='submit' id='logoutSubmit' value='Log Out' />
+                </>
             }
         </AdminAccountFormContainer>
     )

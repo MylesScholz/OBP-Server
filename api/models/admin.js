@@ -29,6 +29,29 @@ async function createAdmin(username, password) {
     }
 }
 
+async function deleteAdminById(id) {
+    if (!ObjectId.isValid(id)) {
+        return false
+    }
+    const db = getDb()
+    const collection = db.collection('admins')
+
+    const { deletedCount } = await collection.deleteOne({ _id: new ObjectId(id) })
+    return deletedCount === 1
+}
+
+/*
+ * getAdmins()
+ * Returns all admins, passwords excluded
+ */
+async function getAdmins() {
+    const db = getDb()
+    const collection = db.collection('admins')
+
+    const result = await collection.find({}).project({ password: false }).toArray()
+    return result
+}
+
 /*
  * getAdminById()
  * Finds a specific admin by Mongo ID
@@ -58,4 +81,4 @@ async function getAdminByUsername(username) {
     return result
 }
 
-export { createAdmin, getAdminById, getAdminByUsername }
+export { createAdmin, deleteAdminById, getAdmins, getAdminById, getAdminByUsername }

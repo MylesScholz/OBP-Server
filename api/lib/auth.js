@@ -27,7 +27,7 @@ function generateAuthToken(adminId) {
 
 /*
  * verifyJWT()
- * Returns a boolean of whether the given JWT is valid
+ * Returns a boolean of whether the given JWT is valid and the corresponding username if it is valid
  */
 async function verifyJWT(token) {
     try {
@@ -36,9 +36,9 @@ async function verifyJWT(token) {
         const admin = await getAdminById(adminId)
 
         if (admin) {
-            return true
+            return { loggedIn: true, username: admin.username }
         } else {
-            return false
+            return { loggedIn: false }
         }
     } catch (error) {
         return false

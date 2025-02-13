@@ -75,6 +75,19 @@ async function createTask(type, dataset, sources, minDate, maxDate) {
 }
 
 /*
+ * getTasks()
+ * Finds all tasks
+ */
+async function getTasks() {
+    const db = getDb()
+    const collection = db.collection('tasks')
+
+    // Get all tasks
+    const result = await collection.find({}).toArray()
+    return result
+}
+
+/*
  * getTaskById()
  * Finds a specific task by its Mongo ID
  */
@@ -89,19 +102,6 @@ async function getTaskById(id) {
         const result = await collection.findOne({ _id: new ObjectId(id) })
         return result
     }
-}
-
-/*
- * getTasks()
- * Finds all tasks
- */
-async function getTasks() {
-    const db = getDb()
-    const collection = db.collection('tasks')
-
-    // Get all tasks
-    const result = await collection.find({}).toArray()
-    return result
 }
 
 /*

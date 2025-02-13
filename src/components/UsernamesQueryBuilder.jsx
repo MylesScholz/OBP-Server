@@ -27,6 +27,7 @@ const UsernamesQueryBuilderContainer = styled.div`
         form {
             display: flex;
             flex-direction: column;
+            flex-grow: 1;
             gap: 10px;
 
             fieldset {
@@ -44,10 +45,15 @@ const UsernamesQueryBuilderContainer = styled.div`
 
                 div {
                     display: flex;
+                    justify-content: stretch;
                     align-items: center;
                     gap: 10px;
 
                     white-space: nowrap;
+
+                    select {
+                        flex-grow: 1;
+                    }
                 }
             }
         }
@@ -123,7 +129,7 @@ export default function UsernamesQueryBuilder() {
                                 setQueryType(event.target.value)
                                 setQueryResponse(undefined)
                             }}>
-                                <option value='get'>Download</option>
+                                <option value='get' selected>Download</option>
                                 <option value='post'>Upload</option>
                             </select>
                         </div>

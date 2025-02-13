@@ -1,6 +1,6 @@
 import Router from 'express'
 
-import { generateAuthToken, requireAuthentication, validateCredentials } from './lib/auth.js'
+import { generateAuthToken, requireAuthentication, validateCredentials, verifyJWT } from './lib/auth.js'
 import { createAdmin } from './models/admin.js'
 
 const adminsRouter = Router()
@@ -34,8 +34,25 @@ adminsRouter.post('/', requireAuthentication, async (req, res, next) => {
 })
 
 /*
+ * GET /api/admins/login
+ * Returns whether the request has a valid JWT
+ * Requires:
+ * - None
+ * Output:
+ * - Boolean of whether the request has a valid JWT
+ */
+adminsRouter.get('/login', async (req, res, next) => {
+    if (!req.cookies.token) {
+        res.status(200).send({ loggedIn: false })
+    } else {
+        const loggedIn = await verifyJWT(req.cookies.token)
+        res.status(200).send({ loggedIn: loggedIn })
+    }
+})
+
+/*
  * POST /api/admins/login
- * The authentication endpoint for admins; returns a signed JWT if credentials are valid
+ * The authentication endpoint for admins; returns a signed JWT in a cookie if credentials are valid
  * Requires:
  * - req.body.username: an admin username
  * - req.body.password: an admin password
@@ -56,9 +73,7 @@ adminsRouter.post('/login', async (req, res, next) => {
         if (adminId) {
             const token = generateAuthToken(adminId)
 
-            res.status(200).send({
-                token
-            })
+            res.cookie('token', token, { httpOnly: true, sameSite: 'strict' }).status(200).send()
         } else {
             res.status(401).send({
                 error: 'Invalid credentials'
@@ -66,6 +81,22 @@ adminsRouter.post('/login', async (req, res, next) => {
         }
     } catch (err) {
         next(err)
+    }
+})
+
+/*
+ * POST /api/admins/logout
+ * Removes a JWT stored in an Http-Only cookie if present
+ * Requires:
+ * - None
+ * Output:
+ * - Removes the 'token' cookie
+ */
+adminsRouter.post('/logout', (req, res, next) => {
+    if (!req.cookies.token) {
+        res.status(200).send()
+    } else {
+        res.clearCookie('token').status(200).send()
     }
 })
 

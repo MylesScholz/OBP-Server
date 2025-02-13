@@ -1,7 +1,7 @@
 import bcryptjs from 'bcryptjs'
 import jsonwebtoken from 'jsonwebtoken'
 
-import { getAdminByUsername } from '../models/admin.js'
+import { getAdminById, getAdminByUsername } from '../models/admin.js'
 
 const serverKey = process.env.SERVER_KEY
 
@@ -26,18 +26,45 @@ function generateAuthToken(adminId) {
 }
 
 /*
+ * verifyJWT()
+ * Returns a boolean of whether the given JWT is valid
+ */
+async function verifyJWT(token) {
+    try {
+        const payload = jsonwebtoken.verify(token, serverKey)
+        const adminId = payload.sub
+        const admin = await getAdminById(adminId)
+
+        if (admin) {
+            return true
+        } else {
+            return false
+        }
+    } catch (error) {
+        return false
+    }
+}
+
+/*
  * requireAuthentication()
  * A middleware function that requires a valid JWT before proceeding
  */
 async function requireAuthentication(req, res, next) {
-    const authHeader = req.get('Authorization') || ''
-    const authHeaderParts = authHeader.split(' ')
-    const token = authHeaderParts[0] === 'Bearer' ? authHeaderParts[1] : null
+    const token = req.cookies.token
 
     try {
         const payload = jsonwebtoken.verify(token, serverKey)
-        req.adminId = payload.sub
-        next()
+        const adminId = payload.sub
+        const admin = await getAdminById(adminId)
+
+        if (admin) {
+            req.adminId = adminId
+            next()
+        } else {
+            res.status(401).send({
+                error: 'Valid authentication token required'
+            })
+        }
     } catch (error) {
         res.status(401).send({
             error: 'Valid authentication token required'
@@ -45,4 +72,4 @@ async function requireAuthentication(req, res, next) {
     }
 }
 
-export { validateCredentials, generateAuthToken, requireAuthentication }
+export { validateCredentials, generateAuthToken, verifyJWT, requireAuthentication }

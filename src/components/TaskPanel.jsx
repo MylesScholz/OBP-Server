@@ -9,7 +9,7 @@ const TaskPanelContainer = styled.div`
     flex-wrap: wrap;
     gap: 10px;
 
-    padding: 0px 10%;
+    margin: 0px 10%;
 `
 
 export default function TaskPanel() {

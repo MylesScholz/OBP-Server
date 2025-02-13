@@ -130,10 +130,11 @@ const TaskQueryBuilderContainer = styled.div`
         display: flex;
         flex-grow: 1;
         flex-direction: column;
+        gap: 10px;
 
         h2 {
             margin: 0px;
-            margin-bottom: 15px;
+            margin-bottom: 5px;
 
             font-size: 16pt;
         }

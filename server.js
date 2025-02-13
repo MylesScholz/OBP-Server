@@ -1,4 +1,5 @@
 import express from 'express'
+import cookieParser from 'cookie-parser'
 import morgan from 'morgan'
 import cors from 'cors'
 import 'dotenv/config'
@@ -19,6 +20,9 @@ const apiRouter = express.Router()
 
 // Enable all Cross-Origin Resource Sharing (CORS), including pre-flight requests
 app.use(cors())
+
+// Parse cookies
+app.use(cookieParser())
 
 // Request logging
 app.use(morgan('dev'))

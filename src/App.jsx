@@ -1,39 +1,50 @@
 import styled from '@emotion/styled'
 
 import TaskPanel from './components/TaskPanel.jsx'
+import AdminPanel from './components/AdminPanel.jsx'
 
 const AppContainer = styled.div`
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
+    gap: 25px;
 
     padding: 50px;
 
-    h1 {
-        margin: 0px;
-        margin-bottom: 10px;
+    min-width: 600px;
 
-        font-size: 24pt;
+    #appTitle {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
 
-        white-space: nowrap;
-    }
+        h1 {
+            margin: 0px;
 
-    h3 {
-        margin: 0px;
-        margin-bottom: 50px;
-        
-        text-align: center;
-        font-weight: normal;
-        font-size: 18pt;
+            font-size: 24pt;
+
+            white-space: nowrap;
+        }
+
+        h3 {
+            margin: 0px;
+            
+            text-align: center;
+            font-weight: normal;
+            font-size: 18pt;
+        }
     }
 `
 
 function App() {
     return (
         <AppContainer>
-            <h1>Beeline</h1>
-            <h3>The Oregon Bee Atlas Automated Interaction-Occurrence Data Pipeline</h3>
+            <div id='appTitle'>
+                <h1>Beeline</h1>
+                <h3>The Oregon Bee Atlas Automated Interaction-Occurrence Data Pipeline</h3>
+            </div>
             <TaskPanel />
+            <AdminPanel />
         </AppContainer>
     )
 }

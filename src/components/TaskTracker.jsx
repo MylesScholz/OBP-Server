@@ -44,7 +44,7 @@ export default function TaskTracker({ queryResponse, result, setResult, setFormD
 
             return resJSON
         },
-        refetchOnMount: "always",
+        refetchOnMount: 'always',
     })
 
     const { error: selectedTaskQueryError, data: selectedTaskData } = useQuery({
@@ -58,7 +58,7 @@ export default function TaskTracker({ queryResponse, result, setResult, setFormD
             return { ...resJSON, status: res.status, statusText: res.statusText }
         },
         refetchInterval: (result ? false : 1000),
-        refetchOnMount: "always",
+        refetchOnMount: 'always',
         enabled: !!selectedTaskId
     })
 
@@ -69,7 +69,7 @@ export default function TaskTracker({ queryResponse, result, setResult, setFormD
             const res = await axios.get(queryURL, { responseType: 'blob' })
             return URL.createObjectURL(res.data)
         },
-        refetchOnMount: "always",
+        refetchOnMount: 'always',
         enabled: !!result
     })
 

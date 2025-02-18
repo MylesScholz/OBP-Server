@@ -50,6 +50,8 @@ services:
             - '27017:27017'
         env_file: ./.env
         volumes:
+            - mongo-data:/data/db
+            - mongo-config:/data/configdb
             - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
     rabbitmq:
         image: 'rabbitmq:management'
@@ -60,3 +62,5 @@ services:
         env_file: ./.env
 volumes:
     app-data:
+    mongo-data:
+    mongo-config:

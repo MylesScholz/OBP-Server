@@ -41,7 +41,7 @@ function App() {
         <AppContainer>
             <div id='appTitle'>
                 <h1>Beeline</h1>
-                <h3>The Oregon Bee Atlas Automated Interaction-Occurrence Data Pipeline</h3>
+                <h3>The Bee Atlas Automated Interaction-Occurrence Data Pipeline</h3>
             </div>
             <TaskPanel />
             <AdminPanel />

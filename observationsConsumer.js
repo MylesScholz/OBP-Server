@@ -835,12 +835,16 @@ async function formatObservation(observation, places, elevations, taxa) {
     /* Read from external files */
 
     // Parse user's name
-    const { firstName, firstNameInitial, lastName } = getUserName(observation['user'])
+    let { firstName, firstNameInitial, lastName } = getUserName(observation['user'])
 
     // Parse country, state/province, and county
     const { country, stateProvince, county } =  getPlaces(observation['place_ids'], places)
 
     /* Formatted fields as constants */
+
+    // Find the observation field values (OFVs) for sampleId and number of bees collected (which will become specimenId)
+    const sampleId = getOFV(observation['ofvs'], 'Sample ID.')
+    const specimenId = getOFV(observation['ofvs'], 'Number of bees collected')
 
     // Attempt to parse 'observed_on_string' as a JavaScript Date object
     const observedDate = observation['observed_on_string'] ? new Date(observation['observed_on_string']) : undefined
@@ -870,18 +874,28 @@ async function formatObservation(observation, places, elevations, taxa) {
     formattedObservation[INATURALIST_ID] = observation.user?.id?.toString() ?? ''
     formattedObservation[INATURALIST_ALIAS] = observation.user?.login ?? ''
 
+    if (observation.user?.login === 'pandg' && observedYear >= 2021) {
+        if (parseInt(sampleId) > 100) {
+            firstName = 'Gretchen'
+            firstNameInitial = 'G.'
+        } else if (parseInt(sampleId) <= 100) {
+            firstName = 'Robert'
+            firstNameInitial = 'R.'
+        }
+    }
+
     formattedObservation[FIRST_NAME] = firstName
     formattedObservation[FIRST_NAME_INITIAL] = firstNameInitial
     formattedObservation[LAST_NAME] = lastName
     formattedObservation[RECORDED_BY] = `${firstName}${(firstName && lastName) ? ' ' : ''}${lastName}`
 
-    formattedObservation[SAMPLE_ID] = getOFV(observation['ofvs'], 'Sample ID.')
-    formattedObservation[SPECIMEN_ID] = getOFV(observation['ofvs'], 'Number of bees collected')
+    formattedObservation[SAMPLE_ID] = sampleId
+    formattedObservation[SPECIMEN_ID] = specimenId
 
     formattedObservation[DAY] = formattedDay
     formattedObservation[MONTH] = formattedMonth
     formattedObservation[YEAR] = formattedYear
-    formattedObservation[VERBATIM_DATE] = `${formattedMonth}/${formattedDay}/${formattedYear}`
+    formattedObservation[VERBATIM_DATE] =  formattedDay && formattedMonth && formattedYear ? `${formattedMonth}/${formattedDay}/${formattedYear}` : ''
 
     formattedObservation[COUNTRY] = countryAbbreviations[country] ?? country
     formattedObservation[STATE] = stateProvinceAbbreviations[stateProvince] ?? stateProvince

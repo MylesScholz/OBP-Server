@@ -5,7 +5,7 @@ import { getObservationsChannel, observationsQueueName, getLabelsChannel, labels
 import { limitFilesInDirectory } from './lib/utilities.js'
 import { createTask, getTaskById, getTasks } from './models/task.js'
 
-const MAX_UPLOADS = 10
+const MAX_UPLOADS = 25
 
 const tasksRouter = Router()
 

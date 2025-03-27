@@ -9,7 +9,7 @@ import adminsRouter from './api/admins.js'
 import usernamesRouter from './api/usernames.js'
 import { connectToRabbitMQ } from './api/lib/rabbitmq.js'
 import { connectToDb } from './api/lib/mongo.js'
-import { clearTasks } from './api/models/task.js'
+import { clearTasksWithoutFiles } from './api/models/task.js'
 import { clearDirectory } from './api/lib/utilities.js'
 
 const port = process.env.PORT || '8080'
@@ -57,12 +57,9 @@ app.use('*', (err, req, res, next) => {
 })
 
 connectToDb().then(async () => {
-    // Tasks are not persistent between server restarts, so clear the database and local files
-    await clearTasks()
-    clearDirectory('./api/data/uploads')
-    clearDirectory('./api/data/observations')
-    clearDirectory('./api/data/labels')
+    // Clean up temp files and tasks with archived files
     clearDirectory('./api/data/temp')
+    clearTasksWithoutFiles()
 
     await connectToRabbitMQ()
 

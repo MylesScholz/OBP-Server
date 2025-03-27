@@ -20,7 +20,7 @@ import { clearDirectory, limitFilesInDirectory } from './api/lib/utilities.js'
 const rabbitmqHost = process.env.RABBITMQ_HOST || 'localhost'
 const rabbitmqURL = `amqp://${rabbitmqHost}`
 // Maximum number of output files stored on the server
-const MAX_OBSERVATIONS = 10
+const MAX_OBSERVATIONS = 25
 // Maximum number of observations to read from a file at once
 const CHUNK_SIZE = 5000
 // Number of temporary files to merge together at once

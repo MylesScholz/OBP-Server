@@ -18,7 +18,7 @@ const rabbitmqHost = process.env.RABBITMQ_HOST || 'localhost'
 const rabbitmqURL = `amqp://${rabbitmqHost}`
 
 // Maximum number of output files stored on the server
-const MAX_LABELS = 10
+const MAX_LABELS = 25
 
 // Data field names
 const ERROR_FLAGS = 'errorFlags'

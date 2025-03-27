@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import AdmZip from 'adm-zip'
 
 /*
  * clearDirectory()
@@ -20,13 +21,25 @@ function clearDirectory(directory) {
 }
 
 /*
+ * compressFile()
+ * Compresses a given file to a zip file
+ */
+function compressFile(filePath) {
+    const zipName = filePath.replace(/\.[a-zA-Z]+\b/, '.zip')
+    const zip = new AdmZip()
+
+    zip.addLocalFile(filePath)
+    zip.writeZip(zipName)
+}
+
+/*
  * limitFilesInDirectory()
  * Limits the number of files in a given directory to a given number; deletes the least recently edited file if over the limit
  */
 function limitFilesInDirectory(directory, maxFiles) {
     try {
         // Read the list of files in the given directory
-        let files = fs.readdirSync(directory)
+        let files = fs.readdirSync(directory).filter((f) => !f.toLowerCase().endsWith('.zip'))
 
         // Delete the least recently edited file while over the limit
         while (files.length > maxFiles) {
@@ -34,14 +47,15 @@ function limitFilesInDirectory(directory, maxFiles) {
             // Filter to only files (not directories)
             // And find the least recently edited file
             const oldestFile = files
-                .map((f) => [path.join(directory, f), fs.statSync(path.join(directory, f))])
-                .filter((f) => f[1].isFile())
-                .reduce((oldest, current) => current[1].mtimeMs < oldest[1].mtimeMs ? current : oldest)
+                .map((f) => ({ name: f, path: path.join(directory, f), stat: fs.statSync(path.join(directory, f)) }))
+                .filter((f) => f.stat.isFile())
+                .reduce((oldest, current) => current.stat.mtimeMs < oldest.stat.mtimeMs ? current : oldest)
             
-            // 'rm' the least recently edited file
-            fs.rmSync(oldestFile[0])
+            // Archive and then 'rm' the least recently edited file
+            compressFile(oldestFile.path)
+            fs.rmSync(oldestFile.path)
             // Reread the list of files in the directory
-            files = fs.readdirSync(directory)
+            files = fs.readdirSync(directory).filter((f) => !f.toLowerCase().endsWith('.zip'))
         }
     } catch (error) {
         console.log('Error while limiting files in directory:', error)

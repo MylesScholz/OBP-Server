@@ -1,4 +1,3 @@
-import Crypto from 'node:crypto'
 import fs from 'fs'
 import amqp from 'amqplib'
 import { parse } from 'csv-parse/sync'
@@ -517,7 +516,7 @@ async function main() {
                 let currentPage = 1
 
                 // Create the output PDF
-                const resultFileName = `${Crypto.randomUUID()}.pdf`
+                const resultFileName = `${task.name}.pdf`
                 const doc = await PDFDocument.create()
                 
                 // Add pages of labels

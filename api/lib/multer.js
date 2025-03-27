@@ -14,8 +14,12 @@ const uploadCSV = multer({
         destination: './api/data/uploads',
         filename: (req, file, cb) => {
             // Create a unique file name
-            const uniqueName = `${Crypto.randomUUID()}.${fileTypes[file.mimetype]}`
-            cb(null, uniqueName)
+            const createdAt = new Date()
+            const createdAtDate = `${createdAt.getFullYear()}-${createdAt.getMonth() + 1}-${createdAt.getDate()}`
+            const createdAtTime = `${createdAt.getHours()}.${createdAt.getMinutes()}.${createdAt.getSeconds()}`
+
+            const fileName = `upload_${createdAtDate}T${createdAtTime}.${fileTypes[file.mimetype]}`
+            cb(null, fileName)
         }
     }),
     fileFilter: (req, file, cb) => {

@@ -7,6 +7,7 @@ import 'dotenv/config'
 import tasksRouter from './api/tasks.js'
 import adminsRouter from './api/admins.js'
 import usernamesRouter from './api/usernames.js'
+import archiveRouter from './api/archive.js'
 import { connectToRabbitMQ } from './api/lib/rabbitmq.js'
 import { connectToDb } from './api/lib/mongo.js'
 import { clearTasksWithoutFiles } from './api/models/task.js'
@@ -38,6 +39,7 @@ app.use(express.static('dist'))
 apiRouter.use('/uploads', express.static('api/data/uploads'))
 apiRouter.use('/observations', express.static('api/data/observations'))
 apiRouter.use('/labels', express.static('api/data/labels'))
+apiRouter.use('/archive', archiveRouter)
 apiRouter.use('/tasks', tasksRouter)
 apiRouter.use('/admins', adminsRouter)
 apiRouter.use('/usernames', usernamesRouter)

@@ -1178,8 +1178,8 @@ async function updateChunkRow(row, observation, elevations, taxa) {
 
     // Update the coordinate fields if the accuracy is better (smaller) or as good
     const prevAccuracy = parseInt(row[ACCURACY])
-    const newAccuracy = observation?.positional_accuracy ?? Infinity
-    if (newAccuracy < prevAccuracy) {
+    const newAccuracy = observation?.positional_accuracy ?? ''
+    if (newAccuracy === '' || newAccuracy < prevAccuracy) {
         const latitude = observation?.geojson?.coordinates?.at(1)?.toFixed(4)?.toString() || row[LATITUDE]
         const longitude = observation?.geojson?.coordinates?.at(0)?.toFixed(4)?.toString() || row[LONGITUDE]
 

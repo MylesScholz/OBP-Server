@@ -8,14 +8,13 @@ const archiveRouter = Router()
 function createReadDirMiddleware(directory, uriStem) {
     return (req, res, next) => {
         try {
-            // Query directory for zip files
-            const zipFiles = fs.readdirSync(directory)
-                .filter((f) => f.toLowerCase().endsWith('.zip'))
+            // Query directory for files
+            const files = fs.readdirSync(directory)
                 .map((f) => ({ fileName: f, uri: uriStem + f }))
 
             // Send zip file HATEOAS links
             res.status(200).send({
-                files: zipFiles
+                files
             })
         } catch (err) {
             // Forward to 500-code middleware

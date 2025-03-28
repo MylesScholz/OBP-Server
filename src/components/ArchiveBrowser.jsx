@@ -19,6 +19,12 @@ const ArchiveBrowserContainer = styled.div`
 
         font-size: 16pt;
     }
+
+    div {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+    }
 `
 
 export default function ArchiveBrowser() {
@@ -36,6 +42,7 @@ export default function ArchiveBrowser() {
 
             return resJSON
         },
+        refetchInterval: selectedFileType ? 1000 : false,
         refetchOnMount: 'always',
         enabled: !!selectedFileType
     })
@@ -55,23 +62,31 @@ export default function ArchiveBrowser() {
         <ArchiveBrowserContainer>
             <h2>Archive Browser</h2>
 
-            <select onChange={ (event) => {
-                setSelectedFileType(event.target.value)
-                setSelectedFileURI(undefined)
-            } }>
-                <option value='' disabled selected={!selectedFileType}>Select an archive file type...</option>
-                <option value='uploads'>Uploads</option>
-                <option value='observations'>Observations</option>
-                <option value='labels'>Labels</option>
-            </select>
+            <div>
+                <label for='archiveFileTypeSelect'>File Type:</label>
+                <select id='archiveFileTypeSelect' onChange={ (event) => {
+                    setSelectedFileType(event.target.value)
+                    setSelectedFileURI(undefined)
+                } }>
+                    <option value='' disabled selected={!selectedFileType}>Select an archive file type...</option>
+                    <option value='uploads'>Uploads</option>
+                    <option value='observations'>Observations</option>
+                    <option value='labels'>Labels</option>
+                </select>
+            </div>            
 
-            <select onChange={ (event) => {
-                setSelectedFileURI(event.target.value)
-                downloadURL = undefined
-            } }>
-                <option value='' disabled selected={!selectedFileURI}>Select an archive file...</option>
-                {archiveData?.files && archiveData.files.map((f) => <option value={f.uri} key={f.fileName} selected={f.uri === selectedFileURI}>{f.fileName}</option>)}
-            </select>
+            { selectedFileType &&
+                <div>
+                    <label for='archiveFileSelect'>File:</label>
+                    <select id='archiveFileSelect' onChange={ (event) => {
+                        setSelectedFileURI(event.target.value)
+                        downloadURL = undefined
+                    } }>
+                        <option value='' disabled selected={!selectedFileURI}>Select an archive file...</option>
+                        {archiveData?.files && archiveData.files.map((f) => <option value={f.uri} key={f.fileName} selected={f.uri === selectedFileURI}>{f.fileName}</option>)}
+                    </select>
+                </div>
+            }
 
             { downloadURL &&
                 <a href={downloadURL} download={selectedFileURI.substring(selectedFileURI.lastIndexOf('/') + 1)}>Download File</a>

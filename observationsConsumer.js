@@ -27,6 +27,7 @@ const CHUNK_SIZE = 5000
 const BATCH_SIZE = 2
 // Field names
 const ERROR_FLAGS = 'errorFlags'
+const DATE_LABEL_PRINT = 'dateLabelPrint'
 const OBSERVATION_NO = 'fieldNumber'
 const OCCURRENCE_ID = 'occurrenceID'
 const INATURALIST_ID = 'userId'
@@ -1265,20 +1266,73 @@ async function formatChunk(chunk, updateChunkProgress) {
     // Read known taxonomy data from /api/data/taxa.json
     const taxa = readTaxaFile()
 
-    // Update rows with the new data from iNaturalist
-    let i = 1
     console.log(`\t\t\tFormatting ${formattedChunk.length} rows...`)
-    for (const row of formattedChunk) {
-        // Find the corresponding iNaturalist observation for the current row by matching the iNaturalist URL
-        const matchingObservation = observations.find((observation) => observation['uri'] && (observation['uri'] === row[INATURALIST_URL]))
-        // Update the row data
-        await updateChunkRow(row, matchingObservation, elevations, taxa)
 
-        await updateChunkProgress((100 * (i++) / formattedChunk.length).toFixed(2).toString())
+    // Create a map of each observation to its matching chunk rows (keyed by URI)
+    let observationsMap = {}
+    for (const observation of observations) {
+        const observationKey = observation['uri']
+        if (!observationKey) continue
+        
+        // Initialize the mapping if undefined
+        if (!observationsMap[observationKey]) {
+            observationsMap[observationKey] = {
+                observation: observation,
+                rows: []
+            }
+        }
+    }
+    // Add the chunk rows to their corresponding observation mapping
+    for (const row of formattedChunk) {
+        const rowKey = row[INATURALIST_URL]
+        // If the mapping is undefined, there is no matching observation for this row
+        if (!observationsMap[rowKey]) continue
+
+        // Otherwise, add this row to the mapping
+        observationsMap[rowKey].rows.push(row)
+    }
+
+    // Update rows with the new data from iNaturalist; create new rows if the number of bees increased
+    let i = 1
+    const newRows = []
+    for (const observationUri in observationsMap) {
+        const observation = observationsMap[observationUri].observation
+        const rows = observationsMap[observationUri].rows
+
+        // Skip empty observation mappings (for safety--empty mappings should be impossible)
+        if (rows.length < 1) continue
+
+        for (const row of rows) {
+            // Update the row data from the matching observation
+            await updateChunkRow(row, observation, elevations, taxa)
+
+            await updateChunkProgress((100 * (i++) / formattedChunk.length).toFixed(2).toString())
+        }
+
+        // Check for an increase in the number of bees collected; create new rows to match
+        const beesCollected = parseInt(getOFV(observation['ofvs'], 'Number of bees collected'))
+        if (beesCollected > rows.length) {
+            // Find the maximum SPECIMEN_ID in rows as a basis for the numbering of the new rows
+            const maxSpecimenId = rows
+                .map((row) => parseInt(row[SPECIMEN_ID]))
+                .reduce((prev, curr) => curr > prev ? curr : prev)
+            
+            // Create new rows to make up the difference between the existing rows and the new number of bees collected
+            for (let j = 1; j < beesCollected - rows.length + 1; j++) {
+                // Duplicate the first row and set its SPECIMEN_ID
+                const duplicateRow = Object.assign({}, rows[0])
+                duplicateRow[SPECIMEN_ID] = (maxSpecimenId + j).toString()
+                // Clear OBSERVATION_NO and DATE_LABEL_PRINT fields so they can be assigned properly later
+                duplicateRow[OBSERVATION_NO] = ''
+                duplicateRow[DATE_LABEL_PRINT] = ''
+
+                newRows.push(duplicateRow)
+            }
+        }
     }
 
     await updateChunkProgress('100.00')
-    return formattedChunk
+    return { formattedChunk, newRows }
 }
 
 /*
@@ -1800,14 +1854,18 @@ async function main() {
 
             const seenKeys = new Set()
             const tempFiles = []
+            // A collection of all new data to be merged into the input dataset; initialize with data already pulled from iNaturalist
+            const newData = [...formattedObservations]
             try {
                 // Separate the provided dataset into chunks and store them in temporary files; also, format and update the data
                 let i = 1
                 for await (const chunk of readObservationsFileChunks(inputFilePath, CHUNK_SIZE)) {
                     console.log(`\t\tChunk ${i}`)
-                    const formattedChunk = await formatChunk(chunk, async (percentage) => {
+                    const { formattedChunk, newRows } = await formatChunk(chunk, async (percentage) => {
                         await updateTaskInProgress(taskId, { currentStep: 'Formatting provided dataset', percentage: `Chunk ${i}: ${percentage}%` })
                     })
+                    // Add any rows created from iNaturalist updates to the pool of new data
+                    newData.concat(newRows)
 
                     const sortedChunk = sortAndDedupeChunk(formattedChunk, seenKeys)
                     if (sortedChunk) {
@@ -1821,8 +1879,9 @@ async function main() {
                 console.log('\tMerging new observations with provided dataset...')
 
                 // Create a chunk for the new data from iNaturalist and dedupe it
-                if (formattedObservations.length > 0) {
-                    const sortedChunk = sortAndDedupeChunk(formattedObservations, seenKeys)
+                if (newData.length > 0) {
+                    const sortedChunk = sortAndDedupeChunk(newData, seenKeys)
+
                     if (sortedChunk) {
                         writeChunkToTempFile(sortedChunk, tempFiles)
                     }

@@ -6,6 +6,7 @@ import styled from '@emotion/styled'
 import AdminAccountForm from './AdminAccountForm'
 import UsernamesQueryBuilder from './UsernamesQueryBuilder'
 import AdminManagementForm from './AdminManagementForm'
+import ArchiveBrowser from './ArchiveBrowser'
 
 const AdminPanelContainer = styled.div`
     display: flex;
@@ -49,6 +50,7 @@ export default function AdminPanel() {
                 <>
                     <UsernamesQueryBuilder />
                     <AdminManagementForm />
+                    <ArchiveBrowser />
                 </>
             }
         </AdminPanelContainer>

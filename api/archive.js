@@ -11,7 +11,7 @@ function createReadDirMiddleware(directory, uriStem) {
             // Query directory for zip files
             const zipFiles = fs.readdirSync(directory)
                 .filter((f) => f.toLowerCase().endsWith('.zip'))
-                .map((f) => uriStem + f)
+                .map((f) => ({ fileName: f, uri: uriStem + f }))
 
             // Send zip file HATEOAS links
             res.status(200).send({

@@ -1173,23 +1173,27 @@ async function updateChunkRow(row, observation, elevations, taxa) {
         return
     }
 
-    // Overwrite the current elevation
+    // Overwrite the current elevation at the current coordinates
     const coordinate = `${row[LATITUDE]},${row[LONGITUDE]}`
     row[ELEVATION] = elevations[coordinate] || ''
 
     // Update the coordinate fields if the accuracy is better (smaller) or as good
-    const prevAccuracy = parseInt(row[ACCURACY])
+    const prevAccuracy = parseInt(row[ACCURACY]) || ''
     const newAccuracy = observation?.positional_accuracy ?? ''
     if (newAccuracy === '' || newAccuracy < prevAccuracy) {
-        const latitude = observation?.geojson?.coordinates?.at(1)?.toFixed(4)?.toString() || row[LATITUDE]
-        const longitude = observation?.geojson?.coordinates?.at(0)?.toFixed(4)?.toString() || row[LONGITUDE]
+        const prevLatitude = row[LATITUDE]
+        const prevLongitude = row[LONGITUDE]
+        const newLatitude = observation?.geojson?.coordinates?.at(1)?.toFixed(4)?.toString() || ''
+        const newLongitude = observation?.geojson?.coordinates?.at(0)?.toFixed(4)?.toString() || ''
+        const newCoordinate = `${newLatitude},${newLongitude}`
 
-        // Update the elevation in case the location changed
-        row[ELEVATION] = await getElevation(latitude, longitude) || ''
-
-        row[LATITUDE] = latitude
-        row[LONGITUDE] = longitude
-        row[ACCURACY] = newAccuracy.toString() || ''
+        // Check that either coordinate changed before updating the row fields
+        if (newLatitude !== prevLatitude || newLongitude !== prevLongitude) {
+            row[ELEVATION] = elevations[newCoordinate] || await getElevation(newLatitude, newLongitude) || ''
+            row[LATITUDE] = newLatitude
+            row[LONGITUDE] = newLongitude
+            row[ACCURACY] = newAccuracy.toString() || ''
+        }
     }
 
     if (observation) {
@@ -1237,28 +1241,55 @@ async function formatChunk(chunk, updateChunkProgress) {
     // Apply standard formatting
     const formattedChunk = chunk.map((row) => formatChunkRow(row))
 
-    // Fetch the iNaturalist observations for rows that have an iNaturalist URL
+    // Create a map of each observation URI to its matching chunk rows
+    // Also, create a set of unique observation IDs and a set of unique coordinates to query
+    let observationsMap = {}
     let observationIds = new Set()
-    for (let i = 0; i < chunk.length; i++) {
-        const url = chunk[i][INATURALIST_URL]
-        const urlId = url?.split('/')?.pop()
+    let coordinates = new Set()
+    for (const row of formattedChunk) {
+        const uri = row[INATURALIST_URL]
 
-        if (!!urlId && !isNaN(urlId)) {
-            observationIds.add(urlId)
+        const uriId = uri?.split('/')?.pop()
+        if (!!uriId && !isNaN(uriId)) {
+            observationIds.add(uriId)
         }
+
+        if (!!row[LATITUDE] && !!row[LONGITUDE]) {
+            const coordinate = `${row[LATITUDE]},${row[LONGITUDE]}`
+            coordinates.add(coordinate)
+        }
+
+        // Initialize the mapping if undefined
+        if (!observationsMap[uri]) {
+            observationsMap[uri] = {
+                observation: null,
+                rows: []
+            }
+        }
+        // Add the chunk row to its corresponding observation mapping
+        observationsMap[uri].rows.push(row)
     }
+
+    // Fetch the iNaturalist observations for rows that have an iNaturalist URI
     observationIds = [...observationIds]
     console.log(`\t\t\tFetching ${observationIds.length} observations...`)
     const observations = await fetchObservationsById(observationIds)
 
-    // Fetch the elevation data for rows with coordinates
-    let coordinates = new Set()
-    for (let i = 0; i < chunk.length; i++) {
-        if (!chunk[i][LATITUDE] || !chunk[i][LONGITUDE]) { continue }
+    // Assign each observation to its corresponding mapping
+    for (const observation of observations) {
+        const uri = observation['uri']
+        if (observationsMap[uri]) {
+            observationsMap[uri].observation = observation
 
-        const coordinate = `${chunk[i][LATITUDE]},${chunk[i][LONGITUDE]}`
-        coordinates.add(coordinate)
+            // Add the observation's coordinates (if unique) to the query set
+            const latitude = observation?.geojson?.coordinates?.at(1)?.toFixed(4)?.toString() || ''
+            const longitude = observation?.geojson?.coordinates?.at(0)?.toFixed(4)?.toString() || ''
+            const coordinate = `${latitude},${longitude}`
+            coordinates.add(coordinate)
+        }
     }
+
+    // Fetch the elevation data for rows with coordinates
     coordinates = [...coordinates]
     console.log(`\t\t\tReading ${coordinates.length} elevations...`)
     const elevations = await getElevations(coordinates)
@@ -1268,30 +1299,6 @@ async function formatChunk(chunk, updateChunkProgress) {
 
     console.log(`\t\t\tFormatting ${formattedChunk.length} rows...`)
 
-    // Create a map of each observation to its matching chunk rows (keyed by URI)
-    let observationsMap = {}
-    for (const observation of observations) {
-        const observationKey = observation['uri']
-        if (!observationKey) continue
-        
-        // Initialize the mapping if undefined
-        if (!observationsMap[observationKey]) {
-            observationsMap[observationKey] = {
-                observation: observation,
-                rows: []
-            }
-        }
-    }
-    // Add the chunk rows to their corresponding observation mapping
-    for (const row of formattedChunk) {
-        const rowKey = row[INATURALIST_URL]
-        // If the mapping is undefined, there is no matching observation for this row
-        if (!observationsMap[rowKey]) continue
-
-        // Otherwise, add this row to the mapping
-        observationsMap[rowKey].rows.push(row)
-    }
-
     // Update rows with the new data from iNaturalist; create new rows if the number of bees increased
     let i = 1
     const newRows = []
@@ -1299,8 +1306,8 @@ async function formatChunk(chunk, updateChunkProgress) {
         const observation = observationsMap[observationUri].observation
         const rows = observationsMap[observationUri].rows
 
-        // Skip empty observation mappings (for safety--empty mappings should be impossible)
-        if (rows.length < 1) continue
+        // Skip empty observation mappings
+        if (rows.length < 1 || !observation) continue
 
         for (const row of rows) {
             // Update the row data from the matching observation
@@ -1855,7 +1862,7 @@ async function main() {
             const seenKeys = new Set()
             const tempFiles = []
             // A collection of all new data to be merged into the input dataset; initialize with data already pulled from iNaturalist
-            const newData = [...formattedObservations]
+            let newData = [...formattedObservations]
             try {
                 // Separate the provided dataset into chunks and store them in temporary files; also, format and update the data
                 let i = 1
@@ -1865,7 +1872,7 @@ async function main() {
                         await updateTaskInProgress(taskId, { currentStep: 'Formatting provided dataset', percentage: `Chunk ${i}: ${percentage}%` })
                     })
                     // Add any rows created from iNaturalist updates to the pool of new data
-                    newData.concat(newRows)
+                    newData = newData.concat(newRows)
 
                     const sortedChunk = sortAndDedupeChunk(formattedChunk, seenKeys)
                     if (sortedChunk) {

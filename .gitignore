@@ -4,7 +4,9 @@ docker_commands.txt
 # API Data
 api/data/elevation
 api/data/labels
-api/data/observations
+api/data/occurrences
+api/data/pulls
+api/data/flags
 api/data/temp
 api/data/uploads
 api/data/usernames.csv

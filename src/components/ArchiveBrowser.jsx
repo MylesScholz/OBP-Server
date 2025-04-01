@@ -70,7 +70,9 @@ export default function ArchiveBrowser() {
                 } }>
                     <option value='' disabled selected={!selectedFileType}>Select an archive file type...</option>
                     <option value='uploads'>Uploads</option>
-                    <option value='observations'>Observations</option>
+                    <option value='occurrences'>Occurrences</option>
+                    <option value='pulls'>Pulls</option>
+                    <option value='flags'>Flags</option>
                     <option value='labels'>Labels</option>
                 </select>
             </div>            

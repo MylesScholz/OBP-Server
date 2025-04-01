@@ -516,7 +516,7 @@ async function main() {
                 let currentPage = 1
 
                 // Create the output PDF
-                const resultFileName = `${task.name}.pdf`
+                const labelsFileName = `labels_${task.tag}.pdf`
                 const doc = await PDFDocument.create()
                 
                 // Add pages of labels
@@ -534,9 +534,13 @@ async function main() {
 
                 // Save the document to a file
                 const docBuffer = await doc.save()
-                fs.writeFileSync(`./api/data/labels/${resultFileName}`, docBuffer)
+                fs.writeFileSync(`./api/data/labels/${labelsFileName}`, docBuffer)
 
-                await updateTaskResult(taskId, { uri: `/api/labels/${resultFileName}`, fileName: resultFileName })
+                await updateTaskResult(taskId, {
+                    outputs: [
+                        { uri: `/api/labels/${labelsFileName}`, fileName: labelsFileName, type: 'labels' }
+                    ]
+                })
                 console.log('Completed task', taskId)
 
                 limitFilesInDirectory('./api/data/labels', MAX_LABELS)

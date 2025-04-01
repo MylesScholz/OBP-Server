@@ -25,7 +25,11 @@ function createReadDirMiddleware(directory, uriStem) {
 
 archiveRouter.get('/uploads', requireAuthentication, createReadDirMiddleware('./api/data/uploads', '/api/uploads/'))
 
-archiveRouter.get('/observations', requireAuthentication, createReadDirMiddleware('./api/data/observations', '/api/observations/'))
+archiveRouter.get('/occurrences', requireAuthentication, createReadDirMiddleware('./api/data/occurrences', '/api/occurrences/'))
+
+archiveRouter.get('/pulls', requireAuthentication, createReadDirMiddleware('./api/data/pulls', '/api/pulls/'))
+
+archiveRouter.get('/flags', requireAuthentication, createReadDirMiddleware('./api/data/flags', '/api/flags/'))
 
 archiveRouter.get('/labels', requireAuthentication, createReadDirMiddleware('./api/data/labels', '/api/labels/'))
 

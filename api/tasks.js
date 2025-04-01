@@ -13,13 +13,12 @@ const tasksRouter = Router()
  * POST /api/tasks/observations
  * Creates a task to fetch data updates from iNaturalist.org and merge them into a provided dataset
  * Inputs:
- * - req.file (required): a CSV base observation dataset
+ * - req.file (required): a CSV base occurrence dataset
  * - req.body.sources: a comma-separated list of iNaturalist project IDs to pull updates from
  * - req.body.minDate (required if sources provided): the minimum date of observations to pull
  * - req.body.maxDate (required if sources provided): the maximum date of observations to pull
  * Outputs:
  * - Stores a copy of the uploaded base dataset in /api/data/uploads, accessible at the /api/uploads endpoint
- * - Creates a new CSV observation dataset in /api/data/observations, accessible at the /api/observations endpoint
  */
 tasksRouter.post('/observations', uploadCSV.single('file'), async (req, res, next) => {
     // Check that required fields exist
@@ -83,12 +82,11 @@ tasksRouter.post('/observations', uploadCSV.single('file'), async (req, res, nex
 
 /*
  * POST /api/tasks/labels
- * Creates a task to create a PDF document of bee labels from a provided observation dataset
+ * Creates a task to create a PDF document of bee labels from a provided occurrence dataset
  * Requires:
- * - req.file: a CSV observations dataset from which to make labels
+ * - req.file: a CSV occurrence dataset from which to make labels
  * Outputs:
  * - Stores a copy of the uploaded base dataset in /api/data/uploads, accessible at the /api/uploads endpoint
- * - Creates a PDF document of bee labels in /api/data/labels, accessible at the /api/labels endpoint
  */
 tasksRouter.post('/labels', uploadCSV.single('file'), async (req, res, next) => {
     // Check that required field exists

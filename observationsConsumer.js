@@ -19,8 +19,10 @@ import { clearDirectory, limitFilesInDirectory } from './api/lib/utilities.js'
 // RabbitMQ connection URL
 const rabbitmqHost = process.env.RABBITMQ_HOST || 'localhost'
 const rabbitmqURL = `amqp://${rabbitmqHost}`
-// Maximum number of output files stored on the server
-const MAX_OBSERVATIONS = 25
+// Maximum number of output files stored on the server for each output type
+const MAX_OCCURRENCES = 25
+const MAX_PULLS = 25
+const MAX_FLAGS = 25
 // Maximum number of observations to read from a file at once
 const CHUNK_SIZE = 5000
 // Number of temporary files to merge together at once
@@ -815,6 +817,33 @@ async function getElevations(coordinates) {
 }
 
 /*
+ * updateErrorFlags()
+ * Checks a given observation/occurrence row for errors and updates the ERROR_FLAGS field
+ */
+function updateErrorFlags(row) {
+    // A list of fields to flag in addition to the non-empty fields
+    let errorFields = []
+
+    // Flag COUNTRY and STATE if they are too long (unabbreviated)
+    if (row[COUNTRY].length > 3) { errorFields.push(COUNTRY) }
+    if (row[STATE].length > 2) { errorFields.push(STATE) }
+
+    // Flag LOCALITY if it contains street suffixes or is too long
+    if (includesStreetSuffix(row[LOCALITY]) || row[LOCALITY].length > 18) { errorFields.push(LOCALITY) }
+
+    // Flag ACCURACY if it is greater than 250 meters
+    if (parseInt(row[ACCURACY]) > 250) { errorFields.push(ACCURACY) }    
+
+    // Flag all plant taxonomy fields if the phylum is defined but is not Tracheophyta
+    if (!!row[PLANT_PHYLUM] && row[PLANT_PHYLUM].toLowerCase() !== 'tracheophyta') {
+        errorFields = errorFields.concat([PLANT_PHYLUM, PLANT_ORDER, PLANT_FAMILY, PLANT_GENUS, PLANT_SPECIES, PLANT_TAXON_RANK])
+    }
+
+    // Set error flags as a semicolon-separated list of fields (non-empty fields and additional flags)
+    row[ERROR_FLAGS] = nonEmptyFields.filter((field) => !row[field]).concat(errorFields).join(';')
+}
+
+/*
  * formatObservation()
  * Creates a fully formatted observation object from a raw iNaturalist observation (and place, elevation, and taxonomy data)
  */
@@ -867,9 +896,6 @@ async function formatObservation(observation, places, elevations, taxa) {
     const formattedLatitude = observation.geojson?.coordinates?.at(1)?.toFixed(4)?.toString() ?? ''
     const formattedLongitude = observation.geojson?.coordinates?.at(0)?.toFixed(4)?.toString() ?? ''
 
-    // A list of fields to flag in addition to the non-empty fields
-    let errorFields = []
-
     /* Final formatting */
 
     formattedObservation[INATURALIST_ID] = observation.user?.id?.toString() ?? ''
@@ -902,16 +928,7 @@ async function formatObservation(observation, places, elevations, taxa) {
     formattedObservation[STATE] = stateProvinceAbbreviations[stateProvince] ?? stateProvince
     formattedObservation[COUNTY] = county
 
-    // Flag COUNTRY and STATE if they have an unexpected value
-    if (!countryAbbreviations[country]) { errorFields.push(COUNTRY) }
-    if (!stateProvinceAbbreviations[stateProvince]) { errorFields.push(STATE) }
-
     formattedObservation[LOCALITY] = formattedLocation
-
-    // Flag LOCALITY if formattedLocation contains any street suffixes
-    if (includesStreetSuffix(formattedLocation)) {
-        errorFields.push(LOCALITY)
-    }
 
     const coordinate = `${formattedLatitude},${formattedLongitude}`
     formattedObservation[ELEVATION] = elevations[coordinate] || ''
@@ -919,9 +936,6 @@ async function formatObservation(observation, places, elevations, taxa) {
     formattedObservation[LATITUDE] = formattedLatitude
     formattedObservation[LONGITUDE] = formattedLongitude
     formattedObservation[ACCURACY] = observation.positional_accuracy?.toString() ?? ''
-
-    // Flag ACCURACY if positional_accuracy is greater than 250 meters
-    if (observation.positional_accuracy > 250) { errorFields.push(ACCURACY) }
 
     formattedObservation[SAMPLING_PROTOCOL] = 'aerial net'
 
@@ -940,15 +954,10 @@ async function formatObservation(observation, places, elevations, taxa) {
     const minRank = ['species', 'genus', 'family', 'order', 'phylum'].find((rank) => !!plantAncestry[rank])
     formattedObservation[PLANT_TAXON_RANK] = observation.taxon?.rank || minRank || ''
 
-    // Flag all plant ancestry fields if the phylum is defined but is not Tracheophyta
-    if (!!formattedObservation[PLANT_PHYLUM] && formattedObservation[PLANT_PHYLUM].toLowerCase() !== 'tracheophyta') {
-        errorFields = errorFields.concat([PLANT_PHYLUM, PLANT_ORDER, PLANT_FAMILY, PLANT_GENUS, PLANT_SPECIES, PLANT_TAXON_RANK])
-    }
-
     formattedObservation[INATURALIST_URL] = observation['uri'] ?? ''
 
-    // Set error flags as a semicolon-separated list of fields (non-empty fields and additional flags)
-    formattedObservation[ERROR_FLAGS] = nonEmptyFields.filter((field) => !formattedObservation[field]).concat(errorFields).join(';')
+    // Set error flags
+    updateErrorFlags(formattedObservation)
 
     return formattedObservation
 }
@@ -1006,10 +1015,10 @@ async function formatObservations(observations, updateFormattingProgress) {
 }
 
 /*
- * readObservationsFileChunks()
- * A generator function that reads a given observations CSV file into memory in chunks of a given size
+ * readOccurrencesFileChunks()
+ * A generator function that reads a given occurrences CSV file into memory in chunks of a given size
  */
-async function* readObservationsFileChunks(filePath, chunkSize) {
+async function* readOccurrencesFileChunks(filePath, chunkSize) {
     // Create the read stream and pipe it to a CSV parser
     const fileStream = fs.createReadStream(filePath, { encoding: 'utf-8' })
     const parser = parse({ columns: true, skip_empty_lines: true, relax_quotes: true })
@@ -1098,22 +1107,8 @@ function formatChunkRow(row) {
     formattedRow[LATITUDE] = !isNaN(latitude) ? latitude.toFixed(4).toString() : formattedRow[LATITUDE]
     formattedRow[LONGITUDE] = !isNaN(longitude) ? longitude.toFixed(4).toString() : formattedRow[LONGITUDE]
 
-    // A list of fields to flag in addition to the non-empty fields
-    let errorFields = []
-
-    // Flag LOCALITY if it contains street suffixes
-    if (includesStreetSuffix(formattedRow[LOCALITY])) { errorFields.push(LOCALITY) }
-
-    // Flag ACCURACY if it is greater than 250 meters
-    if (parseInt(formattedRow[ACCURACY]) > 250) { errorFields.push(ACCURACY) }    
-
-    // Flag all plant taxonomy fields if the phylum is defined but is not Tracheophyta
-    if (!!formattedRow[PLANT_PHYLUM] && formattedRow[PLANT_PHYLUM].toLowerCase() !== 'tracheophyta') {
-        errorFields = errorFields.concat([PLANT_PHYLUM, PLANT_ORDER, PLANT_FAMILY, PLANT_GENUS, PLANT_SPECIES, PLANT_TAXON_RANK])
-    }
-
-    // Set error flags as a semicolon-separated list of fields (non-empty fields and additional flags)
-    formattedRow[ERROR_FLAGS] = nonEmptyFields.filter((field) => !formattedRow[field]).concat(errorFields).join(';')
+    // Set error flags
+    updateErrorFlags(formattedRow)
 
     return formattedRow
 }
@@ -1214,21 +1209,7 @@ async function updateChunkRow(row, observation, elevations, taxa) {
     }
 
     // Rewrite the ERROR_FLAGS field based on the new data
-    let errorFields = []
-
-    // Flag LOCALITY if it contains street suffixes
-    if (includesStreetSuffix(row[LOCALITY])) { errorFields.push(LOCALITY) }
-
-    // Flag ACCURACY if it is greater than 250 meters
-    if (parseInt(row[ACCURACY]) > 250) { errorFields.push(ACCURACY) }
-
-    // Flag all plant taxonomy fields if the phylum is defined but is not Tracheophyta
-    if (!!row[PLANT_PHYLUM] && row[PLANT_PHYLUM].toLowerCase() !== 'tracheophyta') {
-        errorFields = errorFields.concat([PLANT_PHYLUM, PLANT_ORDER, PLANT_FAMILY, PLANT_GENUS, PLANT_SPECIES, PLANT_TAXON_RANK])
-    }
-
-    // Set error flags as a semicolon-separated list of fields (non-empty fields and additional flags)
-    row[ERROR_FLAGS] = nonEmptyFields.filter((field) => !row[field]).concat(errorFields).join(';')
+    updateErrorFlags(row)
 }
 
 /*
@@ -1478,7 +1459,7 @@ function compareRows(row1, row2) {
 
 /*
  * sortAndDedupeChunk()
- * Sorts a chunk of observvation data and removes duplicate entries
+ * Sorts a chunk of observation data and removes duplicate entries
  */
 function sortAndDedupeChunk(chunk, seenKeys) {
     // The resulting chunk of unique, sorted data
@@ -1516,12 +1497,33 @@ function sortAndDedupeChunk(chunk, seenKeys) {
 }
 
 /*
- * writeObservationsFile()
- * Writes a list of observation objects to a CSV file at the given file path
+ * filterRows()
+ * Divides a given list of formatted observations into those fit for printing and those unfit for printing
  */
-function writeObservationsFile(filePath, observations) {
+function filterRows(data) {
+    const passedData = []
+    const failedData = []
+
+    for (const row of data) {
+        const errorFlags = row[ERROR_FLAGS]?.split(';') ?? []
+
+        if (nonEmptyFields.some((field) => errorFlags.includes(field)) || errorFlags.includes(ACCURACY)) {
+            failedData.push(row)
+        } else {
+            passedData.push(row)
+        }
+    }
+
+    return { passedData, failedData }
+}
+
+/*
+ * writeOccurrencesFile()
+ * Writes a list of occurrence objects to a CSV file at the given file path
+ */
+function writeOccurrencesFile(filePath, occurrences) {
     const header = Object.keys(observationTemplate)
-    const csv = stringifySync(observations, { header: true, columns: header })
+    const csv = stringifySync(occurrences, { header: true, columns: header })
 
     fs.writeFileSync(filePath, csv)
 }
@@ -1536,7 +1538,7 @@ function writeChunkToTempFile(chunk, tempFiles) {
     const tempFilePath = path.join('./api/data/temp/', tempFileName)
     tempFiles.push(tempFilePath)
 
-    writeObservationsFile(tempFilePath, chunk)
+    writeOccurrencesFile(tempFilePath, chunk)
 
     return tempFilePath
 }
@@ -1655,7 +1657,7 @@ async function mergeTempFilesBatch(inputFiles, outputFile) {
 async function mergeTempFiles(tempFiles, outputFilePath) {
     // Create a blank output file and return immediately if there are no files to merge
     if (!tempFiles || tempFiles.length === 0) {
-        writeObservationsFile(outputFilePath, [])
+        writeOccurrencesFile(outputFilePath, [])
         return
     }
 
@@ -1855,9 +1857,14 @@ async function main() {
             await updateTaskInProgress(taskId, { currentStep: 'Formatting provided dataset' })
             console.log('\tFormatting provided dataset...')
 
-            const inputFilePath = './api/data' + task.dataset.replace('/api', '')    // task.dataset has a '/api' suffix, which should be removed
-            const outputFileName = `${task.name}.csv`
-            const outputFilePath = './api/data/observations/' + outputFileName
+            // Input and output file names
+            const uploadFilePath = './api/data' + task.dataset.replace('/api', '')    // task.dataset has a '/api' suffix, which should be removed
+            const occurrencesFileName = `occurrences_${task.tag}.csv`
+            const occurrencesFilePath = './api/data/occurrences/' + occurrencesFileName
+            const pullsFileName = `pulls_${task.tag}.csv`
+            const pullsFilePath = './api/data/pulls/' + pullsFileName
+            const flagsFileName = `flags_${task.tag}.csv`
+            const flagsFilePath = './api/data/flags/' + flagsFileName
 
             const seenKeys = new Set()
             const tempFiles = []
@@ -1866,7 +1873,7 @@ async function main() {
             try {
                 // Separate the provided dataset into chunks and store them in temporary files; also, format and update the data
                 let i = 1
-                for await (const chunk of readObservationsFileChunks(inputFilePath, CHUNK_SIZE)) {
+                for await (const chunk of readOccurrencesFileChunks(uploadFilePath, CHUNK_SIZE)) {
                     console.log(`\t\tChunk ${i}`)
                     const { formattedChunk, newRows } = await formatChunk(chunk, async (percentage) => {
                         await updateTaskInProgress(taskId, { currentStep: 'Formatting provided dataset', percentage: `Chunk ${i}: ${percentage}%` })
@@ -1882,28 +1889,41 @@ async function main() {
                     i++
                 }
 
-                await updateTaskInProgress(taskId, { currentStep: 'Merging new observations with provided dataset' })
-                console.log('\tMerging new observations with provided dataset...')
+                await updateTaskInProgress(taskId, { currentStep: 'Merging new observations with provided occurrences dataset' })
+                console.log('\tMerging new observations with provided occurrences dataset...')
 
-                // Create a chunk for the new data from iNaturalist and dedupe it
+                // Create a chunk for the new data and dedupe it
                 if (newData.length > 0) {
                     const sortedChunk = sortAndDedupeChunk(newData, seenKeys)
 
-                    if (sortedChunk) {
-                        writeChunkToTempFile(sortedChunk, tempFiles)
+                    // Divide data into rows fit for printing and rows with errors
+                    const { passedData, failedData } = filterRows(sortedChunk)
+
+                    // Write passed and failed data to their respective output file paths
+                    writeOccurrencesFile(pullsFilePath, passedData)
+                    writeOccurrencesFile(flagsFilePath, failedData)
+
+                    if (passedData) {
+                        writeChunkToTempFile(passedData, tempFiles)
                     }
                 }
 
-                // Merge all chunks into the output file
-                await mergeTempFiles(tempFiles, outputFilePath)
+                // Merge all chunks into the output occurrences file
+                await mergeTempFiles(tempFiles, occurrencesFilePath)
 
                 await updateTaskInProgress(taskId, { currentStep: 'Indexing merged data' })
                 console.log('\tIndexing merged data...')
 
                 const year = (new Date()).getUTCFullYear()
-                await indexData(outputFilePath, year)
+                await indexData(occurrencesFilePath, year)
 
-                await updateTaskResult(taskId, { uri: `/api/observations/${outputFileName}`, fileName: outputFileName })
+                await updateTaskResult(taskId, {
+                    outputs: [
+                        { uri: `/api/occurrences/${occurrencesFileName}`, fileName: occurrencesFileName, type: 'occurrences' },
+                        { uri: `/api/pulls/${pullsFileName}`, fileName: pullsFileName, type: 'pulls' },
+                        { uri: `/api/flags/${flagsFileName}`, fileName: flagsFileName, type: 'flags' },
+                    ]
+                })
             } catch (error) {
                 console.error(error)
                 await updateTaskFailure(taskId)
@@ -1911,7 +1931,9 @@ async function main() {
             
             console.log(`${new Date().toLocaleTimeString('en-US')} Completed task ${taskId}`)
 
-            limitFilesInDirectory('./api/data/observations', MAX_OBSERVATIONS)
+            limitFilesInDirectory('./api/data/occurrences', MAX_OCCURRENCES)
+            limitFilesInDirectory('./api/data/pulls', MAX_PULLS)
+            limitFilesInDirectory('./api/data/flags', MAX_FLAGS)
             clearTasksWithoutFiles()
 
             clearDirectory('./api/data/temp')

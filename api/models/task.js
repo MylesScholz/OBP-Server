@@ -26,7 +26,7 @@ async function clearTasksWithoutFiles() {
     // Find tasks with missing files (dataset or result)
     const tasks = await collection.find({}).toArray()
     const taskIdsWithoutFiles = tasks
-        .filter((t) => (t.status !== 'Completed' && !fs.existsSync(t.dataset)) || (t.result && !fs.existsSync(`./api/data/${t.type}/${t.result.fileName}`)))
+        .filter((t) => (t.status !== 'Completed' && !fs.existsSync(t.dataset)) || (t.result && t.result.outputs.some((o) => !fs.existsSync(`./api/data/${o.type}/${o.fileName}`))))
         .map((t) => t._id)
 
     // Delete tasks with missing files
@@ -53,8 +53,10 @@ async function createTask(type, dataset, sources, minDate, maxDate) {
     const createdAt = new Date()
     const createdAtDate = `${createdAt.getFullYear()}-${createdAt.getMonth() + 1}-${createdAt.getDate()}`
     const createdAtTime = `${createdAt.getHours()}.${createdAt.getMinutes()}.${createdAt.getSeconds()}`
+    const taskTag = `${sourceString ? sourceString + '_' : ''}${createdAtDate}T${createdAtTime}`
     const task = {
-        name: `${type}_${sourceString ? sourceString + '_' : ''}${createdAtDate}T${createdAtTime}`,
+        name: `${type}Task_${taskTag}`,
+        tag: taskTag,
         type: type,
         dataset: dataset,
         status: 'Pending',

@@ -37,7 +37,9 @@ app.use(express.static('dist'))
 
 // API routes
 apiRouter.use('/uploads', express.static('api/data/uploads'))
-apiRouter.use('/observations', express.static('api/data/observations'))
+apiRouter.use('/occurrences', express.static('api/data/occurrences'))
+apiRouter.use('/pulls', express.static('api/data/pulls'))
+apiRouter.use('/flags', express.static('api/data/flags'))
 apiRouter.use('/labels', express.static('api/data/labels'))
 apiRouter.use('/archive', archiveRouter)
 apiRouter.use('/tasks', tasksRouter)

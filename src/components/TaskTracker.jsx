@@ -62,12 +62,22 @@ export default function TaskTracker({ queryResponse, result, setResult, setFormD
         enabled: !!selectedTaskId
     })
 
-    const { data: downloadURL } = useQuery({
+    const { data: downloads } = useQuery({
         queryKey: ['resultData', result],
         queryFn: async () => {
-            const queryURL = `http://${serverAddress}${result.uri}`
-            const res = await axios.get(queryURL, { responseType: 'blob' })
-            return URL.createObjectURL(res.data)
+            const downloads = []
+            for (const output of result.outputs) {
+                const queryUrl = `http://${serverAddress}${output.uri}`
+                const res = await axios.get(queryUrl, { responseType: 'blob' })
+
+                downloads.push({
+                    url: URL.createObjectURL(res.data),
+                    fileName: output.fileName,
+                    type: output.type
+                })
+            }
+            
+            return downloads
         },
         refetchOnMount: 'always',
         enabled: !!result
@@ -115,8 +125,8 @@ export default function TaskTracker({ queryResponse, result, setResult, setFormD
                             { selectedTaskData.task.progress.percentage && <p>{selectedTaskData.task.progress.percentage}</p> }
                         </>
                     }
-                    { result && downloadURL &&
-                        <a href={downloadURL} download={result.fileName}>Download Results</a>
+                    { downloads &&
+                        downloads.map((d) => <a href={d.url} download={d.fileName}>Download {d.type} file</a>)
                     }
                     { selectedTaskData.task.warning &&
                         <p>Warning: {selectedTaskData.task.warning.message}</p>

@@ -27,7 +27,7 @@ const MAX_FLAGS = 25
 const CHUNK_SIZE = 5000
 // Number of temporary files to merge together at once
 const BATCH_SIZE = 2
-// Field names
+// Occurrence field names
 const ERROR_FLAGS = 'errorFlags'
 const DATE_LABEL_PRINT = 'dateLabelPrint'
 const OBSERVATION_NO = 'fieldNumber'
@@ -68,9 +68,8 @@ const PLANT_GENUS = 'genusPlant'
 const PLANT_SPECIES = 'speciesPlant'
 const PLANT_TAXON_RANK = 'taxonRankPlant'
 const INATURALIST_URL = 'url'
-
-// Template object for observations; static values are provided as strings, data-dependent values are set to null
-const observationTemplate = {
+// Template object for occurrences; static values are provided as strings, data-dependent values are set to null
+const occurrenceTemplate = {
     'errorFlags': null,
     'dateLabelPrint': '',
     'fieldNumber': null,
@@ -849,7 +848,7 @@ function updateErrorFlags(row) {
  */
 async function formatObservation(observation, places, elevations, taxa) {
     // Start from template observation object
-    const formattedObservation = Object.assign({}, observationTemplate)
+    const formattedObservation = Object.assign({}, occurrenceTemplate)
 
     // Return empty template if no observation is provided
     if (!observation) {
@@ -995,18 +994,13 @@ async function formatObservations(observations, updateFormattingProgress) {
 
         // SPECIMEN_ID is initially set to the number of bees collected
         // Now, duplicate observations a number of times equal to this value and overwrite SPECIMEN_ID to index the duplications
-        if (formattedObservation[SPECIMEN_ID] !== '') {
-            try {
-                const beesCollected = parseInt(formattedObservation[SPECIMEN_ID])
+        const beesCollected = parseInt(formattedObservation[SPECIMEN_ID])
+        if (!isNaN(beesCollected)) {
+            for (let i = 1; i < beesCollected + 1; i++) {
+                const duplicateObservation = Object.assign({}, formattedObservation)
+                duplicateObservation[SPECIMEN_ID] = i.toString()
 
-                for (let i = 1; i < beesCollected + 1; i++) {
-                    const duplicateObservation = Object.assign({}, formattedObservation)
-                    duplicateObservation[SPECIMEN_ID] = i.toString()
-
-                    formattedObservations.push(duplicateObservation)
-                }
-            } catch (err) {
-                formattedObservations.push(formattedObservation)
+                formattedObservations.push(duplicateObservation)
             }
         }
     }
@@ -1067,7 +1061,7 @@ function getDayOfYear(date) {
 function formatChunkRow(row) {
     // The final field set should be a union of the standard template and the given row
     // The given row's values will overwrite the template's values
-    const formattedRow = Object.assign({}, observationTemplate, row)
+    const formattedRow = Object.assign({}, occurrenceTemplate, row)
 
     // Fill RECORDED_BY if empty
     const firstName = formattedRow[FIRST_NAME]
@@ -1522,7 +1516,7 @@ function filterRows(data) {
  * Writes a list of occurrence objects to a CSV file at the given file path
  */
 function writeOccurrencesFile(filePath, occurrences) {
-    const header = Object.keys(observationTemplate)
+    const header = Object.keys(occurrenceTemplate)
     const csv = stringifySync(occurrences, { header: true, columns: header })
 
     fs.writeFileSync(filePath, csv)
@@ -1530,7 +1524,7 @@ function writeOccurrencesFile(filePath, occurrences) {
 
 /*
  * writeChunkToTempFile()
- * Creates a temporary file for a chunk of observation data and writes to it
+ * Creates a temporary file for a chunk of occurrence data and writes to it
  */
 function writeChunkToTempFile(chunk, tempFiles) {
     // Generate a unique file path in the temporary files directory
@@ -1590,7 +1584,7 @@ async function mergeTempFilesBatch(inputFiles, outputFile) {
 
     // Open a write stream and stringifier for the output file
     const outputFileStream = fs.createWriteStream(outputFile, { encoding: 'utf-8' })
-    const stringifier = stringify({ header: true, columns: Object.keys(observationTemplate) })
+    const stringifier = stringify({ header: true, columns: Object.keys(occurrenceTemplate) })
     stringifier.pipe(outputFileStream)
 
     let i = 0
@@ -1767,7 +1761,7 @@ async function indexData(filePath, year) {
 
     const tempFilePath = `./api/data/temp/${Crypto.randomUUID()}.csv`
     const outputFileStream = fs.createWriteStream(tempFilePath, { encoding: 'utf-8' })
-    const stringifier = stringify({ header: true, columns: Object.keys(observationTemplate) })
+    const stringifier = stringify({ header: true, columns: Object.keys(occurrenceTemplate) })
     stringifier.pipe(outputFileStream)
 
     // Add each non-empty row from the input file to the temporary output file; fill in the observation number, occurrence ID, and resource ID if empty
@@ -1827,7 +1821,10 @@ async function main() {
 
             console.log(`${new Date().toLocaleTimeString('en-US')} Processing task ${taskId}...`)
 
-            let formattedObservations = []
+            // A collection of formatted records pulled from iNaturalist
+            let pulledFormattedRecords = []
+            // A collection of all new records that may be merged into the output occurrence dataset
+            let newRecords = []
             if (task.sources) {
                 await updateTaskInProgress(taskId, { currentStep: 'Pulling observations from iNaturalist' })
                 console.log('\tPulling observations from iNaturalist...')
@@ -1849,9 +1846,10 @@ async function main() {
                 await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations' })
                 console.log('\tFormatting new observations...')
 
-                formattedObservations = await formatObservations(observations, async (percentage) => {
+                pulledFormattedRecords = await formatObservations(observations, async (percentage) => {
                     await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations', percentage })
                 })
+                newRecords = [...pulledFormattedRecords]
             }
 
             await updateTaskInProgress(taskId, { currentStep: 'Formatting provided dataset' })
@@ -1868,8 +1866,6 @@ async function main() {
 
             const seenKeys = new Set()
             const tempFiles = []
-            // A collection of all new data to be merged into the input dataset; initialize with data already pulled from iNaturalist
-            let newData = [...formattedObservations]
             try {
                 // Separate the provided dataset into chunks and store them in temporary files; also, format and update the data
                 let i = 1
@@ -1878,8 +1874,8 @@ async function main() {
                     const { formattedChunk, newRows } = await formatChunk(chunk, async (percentage) => {
                         await updateTaskInProgress(taskId, { currentStep: 'Formatting provided dataset', percentage: `Chunk ${i}: ${percentage}%` })
                     })
-                    // Add any rows created from iNaturalist updates to the pool of new data
-                    newData = newData.concat(newRows)
+                    // Add any rows created from iNaturalist updates to the pool of new records
+                    newRecords = newRecords.concat(newRows)
 
                     const sortedChunk = sortAndDedupeChunk(formattedChunk, seenKeys)
                     if (sortedChunk) {
@@ -1893,13 +1889,13 @@ async function main() {
                 console.log('\tMerging new observations with provided occurrences dataset...')
 
                 // Create a chunk for the new data and dedupe it
-                if (newData.length > 0) {
-                    const sortedChunk = sortAndDedupeChunk(newData, seenKeys)
+                if (newRecords.length > 0) {
+                    const sortedChunk = sortAndDedupeChunk(newRecords, seenKeys)
 
                     // Divide data into rows fit for printing and rows with errors
                     const { passedData, failedData } = filterRows(sortedChunk)
 
-                    // Write passed and failed data to their respective output file paths
+                    // Write the passed records to an output file
                     writeOccurrencesFile(pullsFilePath, passedData)
                     writeOccurrencesFile(flagsFilePath, failedData)
 

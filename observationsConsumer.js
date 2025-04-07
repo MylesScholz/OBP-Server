@@ -1895,7 +1895,7 @@ async function main() {
                     // Divide data into rows fit for printing and rows with errors
                     const { passedData, failedData } = filterRows(sortedChunk)
 
-                    // Write the passed records to an output file
+                    // Write passed and failed data to their respective output file paths
                     writeOccurrencesFile(pullsFilePath, passedData)
                     writeOccurrencesFile(flagsFilePath, failedData)
 

@@ -4,6 +4,7 @@ import { uploadCSV } from './lib/multer.js'
 import { getTasksChannel, tasksQueueName } from './lib/rabbitmq.js'
 import { limitFilesInDirectory } from './lib/utilities.js'
 import { createTask, getTaskById, getTasks } from './models/task.js'
+import { requireAuthentication } from './lib/auth.js'
 
 const MAX_UPLOADS = 25
 
@@ -106,6 +107,49 @@ tasksRouter.post('/labels', uploadCSV.single('file'), async (req, res, next) => 
 
         // Create task and send its ID to the RabbitMQ server
         const { id: taskId } = await createTask('labels', datasetURI)
+        const task = await getTaskById(taskId)
+
+        const tasksChannel = getTasksChannel()
+        tasksChannel.sendToQueue(tasksQueueName, Buffer.from(taskId.toString()))
+
+        // Return 'Accepted' response and HATEOAS link
+        res.status(202).send({
+            uri: `/api/tasks/${task._id}`,
+            createdAt: task.createdAt
+        })
+    } catch (err) {
+        // Forward to 500-code middleware
+        next(err)
+    }
+})
+
+/*
+ * POST /api/tasks/addresses
+ * Creates a task to compile a list of user addresses for printable labels
+ * Requires:
+ * - Valid JWT in the 'token' cookie
+ * - req.file: a printable CSV occurrence dataset with which to filter the user data
+ * Outputs:
+ * - Stores a copy of the uploaded base dataset in /api/data/uploads, accessible at the /api/uploads endpoint
+ */
+tasksRouter.post('/addresses', requireAuthentication, uploadCSV.single('file'), async (req, res, next) => {
+    // Check that required field exists
+    if (!req.file) {
+        res.status(400).send({
+            error: 'Missing required request field'
+        })
+        return
+    }
+
+    try {
+        // If there are too many files in the uploads directory, find and delete the oldest one (by timestamp of last modification)
+        limitFilesInDirectory('./api/data/uploads', MAX_UPLOADS)
+
+        // URI of the uploaded base dataset--not the file location
+        const datasetURI = `/api/uploads/${req.file.filename}`
+
+        // Create task and send its ID to the RabbitMQ server
+        const { id: taskId } = await createTask('addresses', datasetURI)
         const task = await getTaskById(taskId)
 
         const tasksChannel = getTasksChannel()

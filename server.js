@@ -12,6 +12,7 @@ import { connectToRabbitMQ } from './api/lib/rabbitmq.js'
 import { connectToDb } from './api/lib/mongo.js'
 import { clearTasksWithoutFiles } from './api/models/task.js'
 import { clearDirectory } from './api/lib/utilities.js'
+import { requireAuthentication } from './api/lib/auth.js'
 
 const port = process.env.PORT || '8080'
 // Router for website
@@ -41,6 +42,7 @@ apiRouter.use('/occurrences', express.static('api/data/occurrences'))
 apiRouter.use('/pulls', express.static('api/data/pulls'))
 apiRouter.use('/flags', express.static('api/data/flags'))
 apiRouter.use('/labels', express.static('api/data/labels'))
+apiRouter.use('/addresses', requireAuthentication, express.static('api/data/addresses'))
 apiRouter.use('/archive', archiveRouter)
 apiRouter.use('/tasks', tasksRouter)
 apiRouter.use('/admins', adminsRouter)

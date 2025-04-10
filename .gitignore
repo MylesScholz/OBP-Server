@@ -7,6 +7,8 @@ api/data/labels
 api/data/occurrences
 api/data/pulls
 api/data/flags
+api/data/addresses
+api/data/emails
 api/data/temp
 api/data/uploads
 api/data/usernames.csv

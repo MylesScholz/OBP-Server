@@ -40,7 +40,7 @@ async function clearTasksWithoutFiles() {
  */
 async function createTask(type, dataset, sources, minDate, maxDate) {
     // Limit 'type' argument to either 'observations' or 'labels'
-    if (type !== 'observations' && type !== 'labels') {
+    if (type !== 'observations' && type !== 'labels' && type !== 'addresses' && type !== 'emails') {
         throw new Error('Invalid task field \'type\'')
     }
 

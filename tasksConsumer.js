@@ -4,6 +4,7 @@ import { connectToRabbitMQ, getTasksChannel, tasksQueueName } from './api/lib/ra
 import { getTaskById } from './api/models/task.js'
 import processObservationsTask from './api/lib/observations.js'
 import processLabelsTask from './api/lib/labels.js'
+import processAddressesTask from './api/lib/addresses.js'
 
 async function main() {
     try {
@@ -25,6 +26,8 @@ async function main() {
                 await processObservationsTask(task)
             } else if (task.type === 'labels') {
                 await processLabelsTask(task)
+            } else if (task.type === 'addresses') {
+                await processAddressesTask(task)
             }
 
             console.log(`${new Date().toLocaleTimeString('en-US')} Completed task ${taskId}`)

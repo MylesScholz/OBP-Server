@@ -208,21 +208,9 @@ export default function TaskQueryBuilder({ setQueryResponse, setResult, formDisa
                         <select id='queryType' onChange={ (event) => setTaskType(event.target.value) }>
                             <option value='observations'>Format Observations</option>
                             <option value='labels'>Create Labels</option>
+                            <option value='addresses'>Compile Addresses</option>
                         </select>
                     </div>
-                    
-                    { taskType === 'labels' &&
-                        <div>
-                            <label for='fileUpload'>File:</label>
-                            <input
-                                type='file'
-                                accept='.csv'
-                                id='fileUpload'
-                                required
-                                onChange={ (event) => setFile(event.target.files[0]) }
-                            />
-                        </div>
-                    }
 
                     { taskType === 'observations' &&
                         <>
@@ -260,6 +248,32 @@ export default function TaskQueryBuilder({ setQueryResponse, setResult, formDisa
                                 </>
                             }
                         </>
+                    }
+
+                    { taskType === 'labels' &&
+                        <div>
+                            <label for='fileUpload'>File:</label>
+                            <input
+                                type='file'
+                                accept='.csv'
+                                id='fileUpload'
+                                required
+                                onChange={ (event) => setFile(event.target.files[0]) }
+                            />
+                        </div>
+                    }
+
+                    { taskType === 'addresses' &&
+                        <div>
+                            <label for='fileUpload'>File:</label>
+                            <input
+                                type='file'
+                                accept='.csv'
+                                id='fileUpload'
+                                required
+                                onChange={ (event) => setFile(event.target.files[0]) }
+                            />
+                        </div>
                     }
 
                     <input type='submit' value='Submit' />

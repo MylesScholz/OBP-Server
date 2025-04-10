@@ -74,6 +74,7 @@ export default function ArchiveBrowser() {
                     <option value='pulls'>Pulls</option>
                     <option value='flags'>Flags</option>
                     <option value='labels'>Labels</option>
+                    <option value='addresses'>Addresses</option>
                 </select>
             </div>            
 

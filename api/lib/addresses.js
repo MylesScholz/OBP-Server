@@ -2,7 +2,7 @@ import fs from 'fs'
 import { parse as parseSync } from 'csv-parse/sync'
 import { stringify as stringifySync } from 'csv-stringify/sync'
 
-import { clearTasksWithoutFiles, updateTaskInProgress } from "../models/task.js"
+import { clearTasksWithoutFiles, updateTaskInProgress, updateTaskResult } from "../models/task.js"
 import { limitFilesInDirectory } from "./utilities.js"
 
 /* Constants */
@@ -10,6 +10,8 @@ import { limitFilesInDirectory } from "./utilities.js"
 // Maximum number of output files stored on the server
 const MAX_ADDRESSES = 25
 // Field names
+const ERROR_FLAGS = 'errorFlags'
+const DATE_LABEL_PRINT = 'dateLabelPrint'
 const USER_LOGIN = 'userLogin'
 const FULL_NAME = 'fullName'
 const ADDRESS = 'address'
@@ -59,8 +61,21 @@ function readUsernamesFile() {
  * Filters a given list of user data down to rows with USER_LOGIN values that occur in a given occurrence dataset
  */
 function filterUsersByOccurrences(users, occurrences) {
-    const uniqueUserLogins = new Set(occurrences.map((o) => o[USER_LOGIN]))
-    const filteredUsers = users.filter((user) => uniqueUserLogins.has(user[USER_LOGIN]))
+    const uniqueUserLogins = new Set()
+    for (const occurrence of occurrences) {
+        if (occurrence[USER_LOGIN] && !occurrence[ERROR_FLAGS] && !occurrence[DATE_LABEL_PRINT]) {
+            uniqueUserLogins.add(occurrence[USER_LOGIN])
+        }
+    }
+
+    const uniqueUserNames = new Set()
+    const filteredUsers = []
+    for (const user of users) {
+        if (user[USER_LOGIN] && uniqueUserLogins.has(user[USER_LOGIN]) && !uniqueUserNames.has(user[FULL_NAME])) {
+            uniqueUserNames.add(user[FULL_NAME])
+            filteredUsers.push(user)
+        }
+    }
 
     return filteredUsers
 }
@@ -102,6 +117,12 @@ export default async function processAddressesTask(task) {
     const addressesFileName = `addresses_${task.tag}.csv`
     const addressesFilePath = './api/data/addresses/' + addressesFileName
     writeAddressesFile(addressesFilePath, filteredUsers)
+
+    await updateTaskResult(taskId, {
+        outputs: [
+            { uri: `/api/addresses/${addressesFileName}`, fileName: addressesFileName, type: 'addresses' }
+        ]
+    })
 
     limitFilesInDirectory('./api/data/addresses', MAX_ADDRESSES)
     clearTasksWithoutFiles()

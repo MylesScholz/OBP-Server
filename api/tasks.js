@@ -1,7 +1,7 @@
 import Router from 'express'
 
 import { uploadCSV } from './lib/multer.js'
-import { getObservationsChannel, observationsQueueName, getLabelsChannel, labelsQueueName } from './lib/rabbitmq.js'
+import { getTasksChannel, tasksQueueName } from './lib/rabbitmq.js'
 import { limitFilesInDirectory } from './lib/utilities.js'
 import { createTask, getTaskById, getTasks } from './models/task.js'
 
@@ -66,8 +66,8 @@ tasksRouter.post('/observations', uploadCSV.single('file'), async (req, res, nex
         const { id: taskId } = await createTask('observations', datasetURI, sources, formattedMinDate, formattedMaxDate)
         const task = await getTaskById(taskId)
 
-        const channel = getObservationsChannel()
-        channel.sendToQueue(observationsQueueName, Buffer.from(taskId.toString()))
+        const tasksChannel = getTasksChannel()
+        tasksChannel.sendToQueue(tasksQueueName, Buffer.from(taskId.toString()))
 
         // Return 'Accepted' response and HATEOAS link
         res.status(202).send({
@@ -108,8 +108,8 @@ tasksRouter.post('/labels', uploadCSV.single('file'), async (req, res, next) => 
         const { id: taskId } = await createTask('labels', datasetURI)
         const task = await getTaskById(taskId)
 
-        const channel = getLabelsChannel()
-        channel.sendToQueue(labelsQueueName, Buffer.from(taskId.toString()))
+        const tasksChannel = getTasksChannel()
+        tasksChannel.sendToQueue(tasksQueueName, Buffer.from(taskId.toString()))
 
         // Return 'Accepted' response and HATEOAS link
         res.status(202).send({

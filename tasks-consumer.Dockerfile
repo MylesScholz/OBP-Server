@@ -4,4 +4,4 @@ WORKDIR /app
 COPY . .
 RUN npm install
 
-CMD [ "node", "labelsConsumer.js" ]
+CMD [ "node", "tasksConsumer.js" ]

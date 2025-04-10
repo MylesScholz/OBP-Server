@@ -1,21 +1,14 @@
 import fs from 'fs'
-import amqp from 'amqplib'
 import { parse } from 'csv-parse/sync'
 import { PageSizes, PDFDocument, degrees } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
 import { datamatrixrectangularextension } from 'bwip-js/node'
 import 'dotenv/config'
 
-import { connectToDb } from './api/lib/mongo.js'
-import { labelsQueueName } from './api/lib/rabbitmq.js'
-import { clearTasksWithoutFiles, getTaskById, updateTaskInProgress, updateTaskResult, updateTaskWarning } from './api/models/task.js'
-import { limitFilesInDirectory } from './api/lib/utilities.js'
+import { clearTasksWithoutFiles, updateTaskInProgress, updateTaskResult, updateTaskWarning } from '../models/task.js'
+import { limitFilesInDirectory } from './utilities.js'
 
 /* Constants */
-
-// RabbitMQ connection URL
-const rabbitmqHost = process.env.RABBITMQ_HOST || 'localhost'
-const rabbitmqURL = `amqp://${rabbitmqHost}`
 
 // Maximum number of output files stored on the server
 const MAX_LABELS = 25
@@ -475,86 +468,61 @@ async function writePDFPage(doc, observations, updateLabelsProgress) {
     }
 }
 
-/*
- * main()
- * Listens for tasks on a RabbitMQ queue; creates a PDF document of labels from a formatted CSV file of observation data
- */
-async function main() {
-    try {
-        const connection = await amqp.connect(rabbitmqURL)
-        const labelsChannel = await connection.createChannel()
-        await labelsChannel.assertQueue(labelsQueueName)
+export default async function processLabelsTask(task) {
+    if (!task) { return }
 
-        console.log(`Consuming queue '${labelsQueueName}'...`)
-        labelsChannel.consume(labelsQueueName, async (msg) => {
-            if (msg) {
-                const taskId = msg.content.toString()
-                const task = await getTaskById(taskId)
+    const taskId = task._id
 
-                console.log(`Processing task ${taskId}...`)
-                await updateTaskInProgress(taskId, { currentStep: 'Generating labels from provided dataset' })
-                console.log('\tGenerating labels from provided dataset...')
+    await updateTaskInProgress(taskId, { currentStep: 'Generating labels from provided dataset' })
+    console.log('\tGenerating labels from provided dataset...')
 
-                const observations = readObservationsFile('./api/data' + task.dataset.replace('/api', '')) // task.dataset has a '/api' suffix, which should be removed
+    const observations = readObservationsFile('./api/data' + task.dataset.replace('/api', '')) // task.dataset has a '/api' suffix, which should be removed
 
-                // Filter and process the observations into formatted label fields and check the data for warnings
-                const warnings = []
-                const formattedObservations = formatObservations(observations, (warningId) => {
-                    warnings.push(warningId)
-                })
-                // Send warnings, if any
-                if (warnings.length > 0) {
-                    const warningMessage = `Potentially incompatible data for observations: [ ${warnings.join(', ')} ]`
-                    await updateTaskWarning(taskId, { message: warningMessage })
-                }
-
-                // Paginate the data
-                const partitionSize = nRows * nColumns
-                const nPartitions = Math.floor(formattedObservations.length / partitionSize) + 1
-                let partitionStart = 0
-                let partitionEnd = Math.min(partitionSize, formattedObservations.length)
-                let currentPage = 1
-
-                // Create the output PDF
-                const labelsFileName = `labels_${task.tag}.pdf`
-                const doc = await PDFDocument.create()
-                
-                // Add pages of labels
-                for (let i = 0; i < nPartitions; i++) {
-                    await writePDFPage(doc, formattedObservations.slice(partitionStart, partitionEnd), async (labelsFinished) => {
-                        const percentage = `${(100 * (i * partitionSize + labelsFinished) / formattedObservations.length).toFixed(2)}%`
-                        await updateTaskInProgress(taskId, { currentStep: 'Generating labels from provided dataset', percentage })
-                    })
-
-                    // Update the partition markers
-                    partitionStart = partitionEnd
-                    partitionEnd = Math.min(partitionEnd + partitionSize, formattedObservations.length)
-                    currentPage++
-                }
-
-                // Save the document to a file
-                const docBuffer = await doc.save()
-                fs.writeFileSync(`./api/data/labels/${labelsFileName}`, docBuffer)
-
-                await updateTaskResult(taskId, {
-                    outputs: [
-                        { uri: `/api/labels/${labelsFileName}`, fileName: labelsFileName, type: 'labels' }
-                    ]
-                })
-                console.log('Completed task', taskId)
-
-                limitFilesInDirectory('./api/data/labels', MAX_LABELS)
-                clearTasksWithoutFiles()
-
-                labelsChannel.ack(msg)
-            }
-        })
-    } catch (err) {
-        // console.error(err)
-        throw err
+    // Filter and process the observations into formatted label fields and check the data for warnings
+    const warnings = []
+    const formattedObservations = formatObservations(observations, (warningId) => {
+        warnings.push(warningId)
+    })
+    // Send warnings, if any
+    if (warnings.length > 0) {
+        const warningMessage = `Potentially incompatible data for observations: [ ${warnings.join(', ')} ]`
+        await updateTaskWarning(taskId, { message: warningMessage })
     }
-}
 
-connectToDb().then(() => {
-    main()
-})
+    // Paginate the data
+    const partitionSize = nRows * nColumns
+    const nPartitions = Math.floor(formattedObservations.length / partitionSize) + 1
+    let partitionStart = 0
+    let partitionEnd = Math.min(partitionSize, formattedObservations.length)
+    let currentPage = 1
+
+    // Create the output PDF
+    const labelsFileName = `labels_${task.tag}.pdf`
+    const doc = await PDFDocument.create()
+    
+    // Add pages of labels
+    for (let i = 0; i < nPartitions; i++) {
+        await writePDFPage(doc, formattedObservations.slice(partitionStart, partitionEnd), async (labelsFinished) => {
+            const percentage = `${(100 * (i * partitionSize + labelsFinished) / formattedObservations.length).toFixed(2)}%`
+            await updateTaskInProgress(taskId, { currentStep: 'Generating labels from provided dataset', percentage })
+        })
+
+        // Update the partition markers
+        partitionStart = partitionEnd
+        partitionEnd = Math.min(partitionEnd + partitionSize, formattedObservations.length)
+        currentPage++
+    }
+
+    // Save the document to a file
+    const docBuffer = await doc.save()
+    fs.writeFileSync(`./api/data/labels/${labelsFileName}`, docBuffer)
+
+    await updateTaskResult(taskId, {
+        outputs: [
+            { uri: `/api/labels/${labelsFileName}`, fileName: labelsFileName, type: 'labels' }
+        ]
+    })
+
+    limitFilesInDirectory('./api/data/labels', MAX_LABELS)
+    clearTasksWithoutFiles()
+}

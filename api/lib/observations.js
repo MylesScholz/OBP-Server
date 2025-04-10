@@ -1,7 +1,6 @@
 import Crypto from 'node:crypto'
 import fs from 'fs'
 import path from 'path'
-import amqp from 'amqplib'
 import { fromFile } from 'geotiff'
 import { parse } from 'csv-parse'
 import { parse as parseSync } from 'csv-parse/sync'
@@ -9,16 +8,11 @@ import { stringify } from 'csv-stringify'
 import { stringify as stringifySync } from 'csv-stringify/sync'
 import 'dotenv/config'
 
-import { connectToDb } from './api/lib/mongo.js'
-import { observationsQueueName } from './api/lib/rabbitmq.js'
-import { clearTasksWithoutFiles, getTaskById, updateTaskFailure, updateTaskInProgress, updateTaskResult } from './api/models/task.js'
-import { clearDirectory, limitFilesInDirectory } from './api/lib/utilities.js'
+import { clearTasksWithoutFiles, updateTaskFailure, updateTaskInProgress, updateTaskResult } from '../models/task.js'
+import { clearDirectory, limitFilesInDirectory } from './utilities.js'
 
 /* Constants */
 
-// RabbitMQ connection URL
-const rabbitmqHost = process.env.RABBITMQ_HOST || 'localhost'
-const rabbitmqURL = `amqp://${rabbitmqHost}`
 // Maximum number of output files stored on the server for each output type
 const MAX_OCCURRENCES = 25
 const MAX_PULLS = 25
@@ -514,7 +508,7 @@ async function updateTaxa(observations) {
 function readUsernamesFile() {
     // If /api/data/usernames.csv doesn't exist locally, create a base version and save it
     if (!fs.existsSync('./api/data/usernames.csv')) {
-        const header = ['userLogin', 'fullName', 'firstName', 'firstNameInitial', 'lastName']
+        const header = ['userLogin', 'fullName', 'firstName', 'firstNameInitial', 'lastName', 'email', 'address', 'city', 'stateProvince', 'country', 'zip']
         const csv = stringifySync([], { header: true, columns: header })
         fs.writeFileSync('./api/data/usernames.csv', csv)
     }
@@ -1799,148 +1793,119 @@ async function indexData(filePath, year) {
     fs.renameSync(tempFilePath, filePath)
 }
 
-/*
- * main()
- * Listens for tasks on a RabbitMQ queue; pulls iNaturalist data, merges it with a provided dataset, and formats and indexes the combined data
- */
-async function main() {
-    try {
-        const connection = await amqp.connect(rabbitmqURL)
-        const observationsChannel = await connection.createChannel()
-        await observationsChannel.assertQueue(observationsQueueName)
+export default async function processObservationsTask(task) {
+    if (!task) { return }
 
-        console.log(`Consuming queue '${observationsQueueName}'...`)
-        observationsChannel.consume(observationsQueueName, async (msg) => {
-            if (!msg) { return }
+    const taskId = task._id
 
-            const taskId = msg.content.toString()
-            const task = await getTaskById(taskId)
+    // A collection of formatted records pulled from iNaturalist
+    let pulledFormattedRecords = []
+    // A collection of all new records that may be merged into the output occurrence dataset
+    let newRecords = []
+    if (task.sources) {
+        await updateTaskInProgress(taskId, { currentStep: 'Pulling observations from iNaturalist' })
+        console.log('\tPulling observations from iNaturalist...')
 
-            // ACK immediately to prevent timeout
-            observationsChannel.ack(msg)
-
-            console.log(`${new Date().toLocaleTimeString('en-US')} Processing task ${taskId}...`)
-
-            // A collection of formatted records pulled from iNaturalist
-            let pulledFormattedRecords = []
-            // A collection of all new records that may be merged into the output occurrence dataset
-            let newRecords = []
-            if (task.sources) {
-                await updateTaskInProgress(taskId, { currentStep: 'Pulling observations from iNaturalist' })
-                console.log('\tPulling observations from iNaturalist...')
-
-                const observations = await pullObservations(task, async (percentage) => {
-                    await updateTaskInProgress(taskId, { currentStep: 'Pulling observations from iNaturalist', percentage })
-                })
-
-                await updateTaskInProgress(taskId, { currentStep: 'Updating place data' })
-                console.log('\tUpdating place data...')
-
-                await updatePlaces(observations)
-
-                await updateTaskInProgress(taskId, { currentStep: 'Updating taxonomy data' })
-                console.log('\tUpdating taxonomy data...')
-
-                await updateTaxa(observations)
-
-                await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations' })
-                console.log('\tFormatting new observations...')
-
-                pulledFormattedRecords = await formatObservations(observations, async (percentage) => {
-                    await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations', percentage })
-                })
-                newRecords = [...pulledFormattedRecords]
-            }
-
-            await updateTaskInProgress(taskId, { currentStep: 'Formatting provided dataset' })
-            console.log('\tFormatting provided dataset...')
-
-            // Input and output file names
-            const uploadFilePath = './api/data' + task.dataset.replace('/api', '')    // task.dataset has a '/api' suffix, which should be removed
-            const occurrencesFileName = `occurrences_${task.tag}.csv`
-            const occurrencesFilePath = './api/data/occurrences/' + occurrencesFileName
-            const pullsFileName = `pulls_${task.tag}.csv`
-            const pullsFilePath = './api/data/pulls/' + pullsFileName
-            const flagsFileName = `flags_${task.tag}.csv`
-            const flagsFilePath = './api/data/flags/' + flagsFileName
-
-            const seenKeys = new Set()
-            const tempFiles = []
-            try {
-                // Separate the provided dataset into chunks and store them in temporary files; also, format and update the data
-                let i = 1
-                for await (const chunk of readOccurrencesFileChunks(uploadFilePath, CHUNK_SIZE)) {
-                    console.log(`\t\tChunk ${i}`)
-                    const { formattedChunk, newRows } = await formatChunk(chunk, async (percentage) => {
-                        await updateTaskInProgress(taskId, { currentStep: 'Formatting provided dataset', percentage: `Chunk ${i}: ${percentage}%` })
-                    })
-                    // Add any rows created from iNaturalist updates to the pool of new records
-                    newRecords = newRecords.concat(newRows)
-
-                    const sortedChunk = sortAndDedupeChunk(formattedChunk, seenKeys)
-                    if (sortedChunk) {
-                        writeChunkToTempFile(sortedChunk, tempFiles)
-                    }
-
-                    i++
-                }
-
-                await updateTaskInProgress(taskId, { currentStep: 'Merging new observations with provided occurrences dataset' })
-                console.log('\tMerging new observations with provided occurrences dataset...')
-
-                // Create a chunk for the new data and dedupe it
-                if (newRecords.length > 0) {
-                    const sortedChunk = sortAndDedupeChunk(newRecords, seenKeys)
-
-                    // Divide data into rows fit for printing and rows with errors
-                    const { passedData, failedData } = filterRows(sortedChunk)
-
-                    // Write passed and failed data to their respective output file paths
-                    writeOccurrencesFile(pullsFilePath, passedData)
-                    writeOccurrencesFile(flagsFilePath, failedData)
-
-                    if (passedData) {
-                        writeChunkToTempFile(passedData, tempFiles)
-                    }
-                }
-
-                // Merge all chunks into the output occurrences file
-                await mergeTempFiles(tempFiles, occurrencesFilePath)
-
-                await updateTaskInProgress(taskId, { currentStep: 'Indexing merged data' })
-                console.log('\tIndexing merged data...')
-
-                const year = (new Date()).getUTCFullYear()
-                await indexData(occurrencesFilePath, year)
-
-                await updateTaskResult(taskId, {
-                    outputs: [
-                        { uri: `/api/occurrences/${occurrencesFileName}`, fileName: occurrencesFileName, type: 'occurrences' },
-                        { uri: `/api/pulls/${pullsFileName}`, fileName: pullsFileName, type: 'pulls' },
-                        { uri: `/api/flags/${flagsFileName}`, fileName: flagsFileName, type: 'flags' },
-                    ]
-                })
-            } catch (error) {
-                console.error(error)
-                await updateTaskFailure(taskId)
-            }
-            
-            console.log(`${new Date().toLocaleTimeString('en-US')} Completed task ${taskId}`)
-
-            limitFilesInDirectory('./api/data/occurrences', MAX_OCCURRENCES)
-            limitFilesInDirectory('./api/data/pulls', MAX_PULLS)
-            limitFilesInDirectory('./api/data/flags', MAX_FLAGS)
-            clearTasksWithoutFiles()
-
-            clearDirectory('./api/data/temp')
+        const observations = await pullObservations(task, async (percentage) => {
+            await updateTaskInProgress(taskId, { currentStep: 'Pulling observations from iNaturalist', percentage })
         })
-    } catch (err) {
-        // console.error(err)
-        throw err
-    }
-}
 
-// Connect to the Mongo Server before running the main process
-connectToDb().then(() => {
-    main()
-})
+        await updateTaskInProgress(taskId, { currentStep: 'Updating place data' })
+        console.log('\tUpdating place data...')
+
+        await updatePlaces(observations)
+
+        await updateTaskInProgress(taskId, { currentStep: 'Updating taxonomy data' })
+        console.log('\tUpdating taxonomy data...')
+
+        await updateTaxa(observations)
+
+        await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations' })
+        console.log('\tFormatting new observations...')
+
+        pulledFormattedRecords = await formatObservations(observations, async (percentage) => {
+            await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations', percentage })
+        })
+        newRecords = [...pulledFormattedRecords]
+    }
+
+    await updateTaskInProgress(taskId, { currentStep: 'Formatting provided dataset' })
+    console.log('\tFormatting provided dataset...')
+
+    // Input and output file names
+    const uploadFilePath = './api/data' + task.dataset.replace('/api', '')    // task.dataset has a '/api' suffix, which should be removed
+    const occurrencesFileName = `occurrences_${task.tag}.csv`
+    const occurrencesFilePath = './api/data/occurrences/' + occurrencesFileName
+    const pullsFileName = `pulls_${task.tag}.csv`
+    const pullsFilePath = './api/data/pulls/' + pullsFileName
+    const flagsFileName = `flags_${task.tag}.csv`
+    const flagsFilePath = './api/data/flags/' + flagsFileName
+
+    const seenKeys = new Set()
+    const tempFiles = []
+    try {
+        // Separate the provided dataset into chunks and store them in temporary files; also, format and update the data
+        let i = 1
+        for await (const chunk of readOccurrencesFileChunks(uploadFilePath, CHUNK_SIZE)) {
+            console.log(`\t\tChunk ${i}`)
+            const { formattedChunk, newRows } = await formatChunk(chunk, async (percentage) => {
+                await updateTaskInProgress(taskId, { currentStep: 'Formatting provided dataset', percentage: `Chunk ${i}: ${percentage}%` })
+            })
+            // Add any rows created from iNaturalist updates to the pool of new records
+            newRecords = newRecords.concat(newRows)
+
+            const sortedChunk = sortAndDedupeChunk(formattedChunk, seenKeys)
+            if (sortedChunk) {
+                writeChunkToTempFile(sortedChunk, tempFiles)
+            }
+
+            i++
+        }
+
+        await updateTaskInProgress(taskId, { currentStep: 'Merging new observations with provided occurrences dataset' })
+        console.log('\tMerging new observations with provided occurrences dataset...')
+
+        // Create a chunk for the new data and dedupe it
+        if (newRecords.length > 0) {
+            const sortedChunk = sortAndDedupeChunk(newRecords, seenKeys)
+
+            // Divide data into rows fit for printing and rows with errors
+            const { passedData, failedData } = filterRows(sortedChunk)
+
+            // Write passed and failed data to their respective output file paths
+            writeOccurrencesFile(pullsFilePath, passedData)
+            writeOccurrencesFile(flagsFilePath, failedData)
+
+            if (passedData) {
+                writeChunkToTempFile(passedData, tempFiles)
+            }
+        }
+
+        // Merge all chunks into the output occurrences file
+        await mergeTempFiles(tempFiles, occurrencesFilePath)
+
+        await updateTaskInProgress(taskId, { currentStep: 'Indexing merged data' })
+        console.log('\tIndexing merged data...')
+
+        const year = (new Date()).getUTCFullYear()
+        await indexData(occurrencesFilePath, year)
+
+        await updateTaskResult(taskId, {
+            outputs: [
+                { uri: `/api/occurrences/${occurrencesFileName}`, fileName: occurrencesFileName, type: 'occurrences' },
+                { uri: `/api/pulls/${pullsFileName}`, fileName: pullsFileName, type: 'pulls' },
+                { uri: `/api/flags/${flagsFileName}`, fileName: flagsFileName, type: 'flags' },
+            ]
+        })
+    } catch (error) {
+        console.error(error)
+        await updateTaskFailure(taskId)
+    }
+
+    limitFilesInDirectory('./api/data/occurrences', MAX_OCCURRENCES)
+    limitFilesInDirectory('./api/data/pulls', MAX_PULLS)
+    limitFilesInDirectory('./api/data/flags', MAX_FLAGS)
+    clearTasksWithoutFiles()
+
+    clearDirectory('./api/data/temp')
+}

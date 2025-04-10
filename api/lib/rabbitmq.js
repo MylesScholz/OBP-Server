@@ -5,12 +5,8 @@ import 'dotenv/config'
 const rabbitmqHost = process.env.RABBITMQ_HOST || 'localhost'
 const rabbitmqURL = `amqp://${rabbitmqHost}`
 
-// Separate queues and channels for observations tasks and labels tasks
-const observationsQueueName = 'observations'
-let _observationsChannel = null
-
-const labelsQueueName = 'labels'
-let _labelsChannel = null
+const tasksQueueName = 'tasks'
+let _tasksChannel = null
 
 /*
  * connectToRabbitMQ()
@@ -19,31 +15,18 @@ let _labelsChannel = null
 async function connectToRabbitMQ() {
     const connection = await amqp.connect(rabbitmqURL)
 
-    _observationsChannel = await connection.createChannel()
-    await _observationsChannel.assertQueue(observationsQueueName)
-    // Empty the queue since tasks are not persistent
-    _observationsChannel.purgeQueue(observationsQueueName)
-
-    _labelsChannel = await connection.createChannel()
-    await _labelsChannel.assertQueue(labelsQueueName)
-    // Empty the queue since tasks are not persistent
-    _observationsChannel.purgeQueue(labelsQueueName)
+    _tasksChannel = await connection.createChannel()
+    await _tasksChannel.assertQueue(tasksQueueName)
+    // Empty the queue since unacked tasks are not persistent
+    _tasksChannel.purgeQueue(tasksQueueName)
 }
 
 /*
- * getObservationsChannel()
- * Returns the channel for observations tasks
+ * getTasksChannel()
+ * Returns the channel for tasks
  */
-function getObservationsChannel() {
-    return _observationsChannel
+function getTasksChannel() {
+    return _tasksChannel
 }
 
-/*
- * getLabelsChannel()
- * Returns the channel for labels tasks
- */
-function getLabelsChannel() {
-    return _labelsChannel
-}
-
-export { connectToRabbitMQ, getObservationsChannel, observationsQueueName, getLabelsChannel, labelsQueueName }
+export { connectToRabbitMQ, getTasksChannel, tasksQueueName }

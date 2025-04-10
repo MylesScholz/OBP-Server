@@ -15,7 +15,7 @@ services:
         env_file: ./.env
         volumes:
             - app-data:/app
-    labels-consumer:
+    tasks-consumer:
         depends_on:
             - mongo
             - rabbitmq
@@ -23,21 +23,8 @@ services:
         restart: on-failure
         build:
             context: .
-            dockerfile: labels-consumer.Dockerfile
-        container_name: labels-consumer
-        env_file: ./.env
-        volumes:
-            - app-data:/app
-    observations-consumer:
-        depends_on:
-            - mongo
-            - rabbitmq
-            - server
-        restart: on-failure
-        build:
-            context: .
-            dockerfile: observations-consumer.Dockerfile
-        container_name: observations-consumer
+            dockerfile: tasks-consumer.Dockerfile
+        container_name: tasks-consumer
         env_file: ./.env
         volumes:
             - app-data:/app

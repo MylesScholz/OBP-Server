@@ -95,105 +95,105 @@ const horizontalSpacing = (letterPaperWidth - (2 * horizontalMargin) - (nColumns
 const verticalSpacing = (letterPaperHeight - (2 * verticalMargin) - (nRows * labelHeight)) / (nRows - 1)
 
 /*
- * readObservationsFile()
- * Parses an input observations CSV file into a list of objects
+ * readOccurrencesFile()
+ * Parses an input occurrences CSV file into a list of objects
  */
-function readObservationsFile(filePath) {
-    const observationsBuffer = fs.readFileSync(filePath)
-    const observations = parse(observationsBuffer, { columns: true })
+function readOccurrencesFile(filePath) {
+    const occurrencesBuffer = fs.readFileSync(filePath)
+    const occurrences = parse(occurrencesBuffer, { columns: true })
 
-    return observations
+    return occurrences
 }
 
 /*
- * formatObservation()
- * Creates an object containing formatted label fields from a given observation object
+ * formatOccurrence()
+ * Creates an object containing formatted label fields from a given occurrence object
  */
-function formatObservation(observation) {
-    const formattedObservation = {}
+function formatOccurrence(occurrence) {
+    const formattedOccurrence = {}
 
     // Location field
-    const country = observation[COUNTRY]
-    const stateProvince = observation[STATE]
-    const county = observation[COUNTY] ? `:${observation[COUNTY]}${observation[COUNTRY] !== 'CA' ? 'Co' : ''}` : ''
-    const place = observation[LOCALITY]
-    const latitude = parseFloat(observation[LATITUDE]).toFixed(3).toString()
-    const longitude = parseFloat(observation[LONGITUDE]).toFixed(3).toString()
-    const elevation = observation[ELEVATION] ? ` ${observation[ELEVATION]}m` : ''
+    const country = occurrence[COUNTRY]
+    const stateProvince = occurrence[STATE]
+    const county = occurrence[COUNTY] ? `:${occurrence[COUNTY]}${occurrence[COUNTRY] !== 'CA' ? 'Co' : ''}` : ''
+    const place = occurrence[LOCALITY]
+    const latitude = parseFloat(occurrence[LATITUDE]).toFixed(3).toString()
+    const longitude = parseFloat(occurrence[LONGITUDE]).toFixed(3).toString()
+    const elevation = occurrence[ELEVATION] ? ` ${occurrence[ELEVATION]}m` : ''
     const locationText = `${country}:${stateProvince}${county} ${place} ${latitude} ${longitude}${elevation}`
-    formattedObservation.location = locationText
+    formattedOccurrence.location = locationText
 
     // Date field
-    const day1 = observation[DAY]
-    const month1 = monthNumerals[observation[MONTH] - 1]
-    const year = observation[YEAR]
+    const day1 = occurrence[DAY]
+    const month1 = monthNumerals[occurrence[MONTH] - 1]
+    const year = occurrence[YEAR]
     // Optional second date (for trap observations)
-    const day2 = observation[DAY_2]
-    const month2 = monthNumerals[observation[MONTH_2] - 1]
+    const day2 = occurrence[DAY_2]
+    const month2 = monthNumerals[occurrence[MONTH_2] - 1]
     const duration = `-${day2}.${month2}`
     // Sample and specimen IDs
-    const sampleID = observation[SAMPLE_ID].replace('-', '')
-    const specimenID = observation[SPECIMEN_ID]
+    const sampleID = occurrence[SAMPLE_ID].replace('-', '')
+    const specimenID = occurrence[SPECIMEN_ID]
     const dateText = `${day1}.${month1}${(day2 && month2) ? duration : ''}${year}-${sampleID}.${specimenID}`
-    formattedObservation.date = dateText
+    formattedOccurrence.date = dateText
 
     // Collector field
-    const firstNameInitial = observation[FIRST_NAME_INITIAL]
-    const lastName = observation[LAST_NAME]
+    const firstNameInitial = occurrence[FIRST_NAME_INITIAL]
+    const lastName = occurrence[LAST_NAME]
     const nameText = `${firstNameInitial}${lastName}`
-    formattedObservation.name = nameText
+    formattedOccurrence.name = nameText
 
     // Collection method field
-    let methodText = observation[SAMPLING_PROTOCOL].toLowerCase() ?? ''
+    let methodText = occurrence[SAMPLING_PROTOCOL].toLowerCase() ?? ''
     if (methodText.includes('net')) { methodText = 'net' }
     if (methodText.includes('trap')) { methodText = 'trap' }
     if (methodText.includes('nest')) { methodText = 'nest' }
-    formattedObservation.method = methodText
+    formattedOccurrence.method = methodText
 
     // Observation number field
-    const numberText = observation[OBSERVATION_NO]
-    formattedObservation.number = numberText
+    const numberText = occurrence[OBSERVATION_NO]
+    formattedOccurrence.number = numberText
 
-    return formattedObservation
+    return formattedOccurrence
 }
 
 /*
- * formatObservations()
- * Filters, formats, and adds warnings for a given list of observations
+ * formatOccurrencess()
+ * Filters, formats, and adds warnings for a given list of occurrences
  */
-function formatObservations(observations, addWarningID) {
+function formatOccurrences(occurrences, addWarningID) {
     // Optional fields that should throw warnings
     const warningFields = [
         COUNTY,
         ELEVATION
     ]
 
-    // Filter out observations that have any falsy requiredFields or that have been printed already
-    let filteredObservations = observations.filter((observation) => !observation[DATE_LABEL_PRINT] && requiredFields.every((field) => !!observation[field]))
-    // Filter out observations where any of the required fields show up in ERROR_FLAGS
-    filteredObservations = filteredObservations.filter((observation) => !requiredFields.some((field) => observation[ERROR_FLAGS]?.split(';')?.includes(field) ?? false))
+    // Filter out occurrences that have any falsy requiredFields or that have been printed already
+    let unprintedOccurrences = occurrences.filter((occurrence) => !occurrence[DATE_LABEL_PRINT] && requiredFields.every((field) => !!occurrence[field]))
+    // Filter out occurrences where any of the required fields show up in ERROR_FLAGS
+    unprintedOccurrences = unprintedOccurrences.filter((occurrence) => !requiredFields.some((field) => occurrence[ERROR_FLAGS]?.split(';')?.includes(field) ?? false))
 
-    // Format and add warnings to the remaining observations
-    for (let i = 0; i < filteredObservations.length; i++) {
-        const observation = filteredObservations[i]
-        const formattedObservation = formatObservation(observation)
+    // Format and add warnings to the remaining occurrences
+    for (let i = 0; i < unprintedOccurrences.length; i++) {
+        const occurrence = unprintedOccurrences[i]
+        const formattedOccurrence = formatOccurrence(occurrence)
 
         // Add warnings for falsy warningFields and fields that are too long (highly specific, may need tuning)
         if (
-            warningFields.some((field) => !observation[field]) ||
-            observation[COUNTRY].length > 3 ||
-            observation[STATE].length > 2 ||
-            observation[COUNTY].length + observation[LOCALITY].length > 25 ||
-            formattedObservation.name.length > 19 ||
-            formattedObservation.method.length > 5
+            warningFields.some((field) => !occurrence[field]) ||
+            occurrence[COUNTRY].length > 3 ||
+            occurrence[STATE].length > 2 ||
+            occurrence[COUNTY].length + occurrence[LOCALITY].length > 25 ||
+            formattedOccurrence.name.length > 19 ||
+            formattedOccurrence.method.length > 5
         ) {
-            addWarningID(observation[OBSERVATION_NO])
+            addWarningID(occurrence[OBSERVATION_NO])
         }
 
-        filteredObservations[i] = formattedObservation
+        unprintedOccurrences[i] = formattedOccurrence
     }
 
-    return filteredObservations
+    return unprintedOccurrences
 }
 
 /*
@@ -315,9 +315,9 @@ async function getFontData(fileKey) {
 
 /*
  * addLabel()
- * Adds a label for the given formatted observation to the PDFPage at the given position
+ * Adds a label for the given formatted occurrence to the PDFPage at the given position
  */
-async function addLabel(page, observation, basisX, basisY, fonts) {
+async function addLabel(page, occurrence, basisX, basisY, fonts) {
     // An optional bounding rectangle for making adjustments to the layout
     // page.drawRectangle({
     //     x: basisX,
@@ -329,7 +329,7 @@ async function addLabel(page, observation, basisX, basisY, fonts) {
     // })
 
     // Define the layout for the location label field
-    const locationText = observation.location ?? ''
+    const locationText = occurrence.location ?? ''
     const locationLayout = {
         x: 0.005 * PostScriptPointsPerInch,
         y: 0.145 * PostScriptPointsPerInch,
@@ -348,7 +348,7 @@ async function addLabel(page, observation, basisX, basisY, fonts) {
     addTextBox(page, locationText, basisX, basisY, locationLayout)
 
     // Define the layout for the date label field
-    const dateText = observation.date ?? ''
+    const dateText = occurrence.date ?? ''
     const dateLayout = {
         x: 0.005 * PostScriptPointsPerInch,
         y: 0.075 * PostScriptPointsPerInch,
@@ -368,7 +368,7 @@ async function addLabel(page, observation, basisX, basisY, fonts) {
     addTextBox(page, dateText, basisX, basisY, dateLayout)
 
     // Define the layout for the collector name label field
-    const nameText = observation.name ?? ''
+    const nameText = occurrence.name ?? ''
     const nameLayout = {
         x: 0.005 * PostScriptPointsPerInch,
         y: 0.005 * PostScriptPointsPerInch,
@@ -388,7 +388,7 @@ async function addLabel(page, observation, basisX, basisY, fonts) {
     addTextBox(page, nameText, basisX, basisY, nameLayout)
 
     // Define the layout for the collection method label field
-    const methodText = observation.method ?? ''
+    const methodText = occurrence.method ?? ''
     const methodLayout = {
         x: 0.36 * PostScriptPointsPerInch,
         y: 0.005 * PostScriptPointsPerInch,
@@ -408,7 +408,7 @@ async function addLabel(page, observation, basisX, basisY, fonts) {
     addTextBox(page, methodText, basisX, basisY, methodLayout)
 
     // Define the layout for the observation number label field
-    const numberText = observation.number ?? ''
+    const numberText = occurrence.number ?? ''
     const numberLayout = {
         x: 0.661 * PostScriptPointsPerInch,
         y: 0.005 * PostScriptPointsPerInch,
@@ -439,9 +439,9 @@ async function addLabel(page, observation, basisX, basisY, fonts) {
 
 /*
  * writePDFPage()
- * Creates a PDFPage in the given PDFDocument and populates it with labels from the given list of formatted observations
+ * Creates a PDFPage in the given PDFDocument and populates it with labels from the given list of formatted occurrences
  */
-async function writePDFPage(doc, observations, updateLabelsProgress) {
+async function writePDFPage(doc, occurrences, updateLabelsProgress) {
     // Create the PDFPage
     const page = doc.addPage(PageSizes.Letter)
 
@@ -450,8 +450,8 @@ async function writePDFPage(doc, observations, updateLabelsProgress) {
     const oxygenMonoData = await getFontData('fonts/OxygenMono-Regular.ttf')
     const oxygenMonoFont = await doc.embedFont(oxygenMonoData)
 
-    // Add a label for each formatted observation in rows and columns
-    for (let i = 0; i < observations.length; i++) {
+    // Add a label for each formatted occurrence in rows and columns
+    for (let i = 0; i < occurrences.length; i++) {
         // Calculate the current row and column
         const currentRow = nRows - Math.floor(i / nColumns) - 1
         const currentColumn = i % nColumns
@@ -461,7 +461,7 @@ async function writePDFPage(doc, observations, updateLabelsProgress) {
         const basisY = verticalMargin + (currentRow * (labelHeight + verticalSpacing))
 
         // Add the label
-        await addLabel(page, observations[i], basisX, basisY, { oxygenMonoFont })
+        await addLabel(page, occurrences[i], basisX, basisY, { oxygenMonoFont })
 
         // Provide a progress update
         updateLabelsProgress(i)
@@ -476,24 +476,24 @@ export default async function processLabelsTask(task) {
     await updateTaskInProgress(taskId, { currentStep: 'Generating labels from provided dataset' })
     console.log('\tGenerating labels from provided dataset...')
 
-    const observations = readObservationsFile('./api/data' + task.dataset.replace('/api', '')) // task.dataset has a '/api' suffix, which should be removed
+    const occurrences = readOccurrencesFile('./api/data' + task.dataset.replace('/api', '')) // task.dataset has a '/api' suffix, which should be removed
 
-    // Filter and process the observations into formatted label fields and check the data for warnings
+    // Filter and process the occurrences into formatted label fields and check the data for warnings
     const warnings = []
-    const formattedObservations = formatObservations(observations, (warningId) => {
+    const formattedOccurrences = formatOccurrences(occurrences, (warningId) => {
         warnings.push(warningId)
     })
     // Send warnings, if any
     if (warnings.length > 0) {
-        const warningMessage = `Potentially incompatible data for observations: [ ${warnings.join(', ')} ]`
+        const warningMessage = `Potentially incompatible data for occurrences: [ ${warnings.join(', ')} ]`
         await updateTaskWarning(taskId, { message: warningMessage })
     }
 
     // Paginate the data
     const partitionSize = nRows * nColumns
-    const nPartitions = Math.floor(formattedObservations.length / partitionSize) + 1
+    const nPartitions = Math.floor(formattedOccurrences.length / partitionSize) + 1
     let partitionStart = 0
-    let partitionEnd = Math.min(partitionSize, formattedObservations.length)
+    let partitionEnd = Math.min(partitionSize, formattedOccurrences.length)
     let currentPage = 1
 
     // Create the output PDF
@@ -502,14 +502,14 @@ export default async function processLabelsTask(task) {
     
     // Add pages of labels
     for (let i = 0; i < nPartitions; i++) {
-        await writePDFPage(doc, formattedObservations.slice(partitionStart, partitionEnd), async (labelsFinished) => {
-            const percentage = `${(100 * (i * partitionSize + labelsFinished) / formattedObservations.length).toFixed(2)}%`
+        await writePDFPage(doc, formattedOccurrences.slice(partitionStart, partitionEnd), async (labelsFinished) => {
+            const percentage = `${(100 * (i * partitionSize + labelsFinished) / formattedOccurrences.length).toFixed(2)}%`
             await updateTaskInProgress(taskId, { currentStep: 'Generating labels from provided dataset', percentage })
         })
 
         // Update the partition markers
         partitionStart = partitionEnd
-        partitionEnd = Math.min(partitionEnd + partitionSize, formattedObservations.length)
+        partitionEnd = Math.min(partitionEnd + partitionSize, formattedOccurrences.length)
         currentPage++
     }
 

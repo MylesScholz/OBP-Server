@@ -827,9 +827,9 @@ function updateErrorFlags(row) {
     // Flag ACCURACY if it is greater than 250 meters
     if (parseInt(row[ACCURACY]) > 250) { errorFields.push(ACCURACY) }    
 
-    // Flag all plant taxonomy fields if the phylum is defined but is not Tracheophyta
+    // Flag PLANT_PHYLUM if it is defined but is not 'tracheophyta'
     if (!!row[PLANT_PHYLUM] && row[PLANT_PHYLUM].toLowerCase() !== 'tracheophyta') {
-        errorFields = errorFields.concat([PLANT_PHYLUM, PLANT_ORDER, PLANT_FAMILY, PLANT_GENUS, PLANT_SPECIES, PLANT_TAXON_RANK])
+        errorFields.push(PLANT_PHYLUM)
     }
 
     // Set error flags as a semicolon-separated list of fields (non-empty fields and additional flags)

@@ -209,6 +209,7 @@ export default function TaskQueryBuilder({ setQueryResponse, setResult, formDisa
                             <option value='observations'>Format Observations</option>
                             <option value='labels'>Create Labels</option>
                             <option value='addresses'>Compile Mailing Addresses</option>
+                            <option value='emails'>Compile Email Addresses</option>
                         </select>
                     </div>
 
@@ -264,6 +265,19 @@ export default function TaskQueryBuilder({ setQueryResponse, setResult, formDisa
                     }
 
                     { taskType === 'addresses' &&
+                        <div>
+                            <label for='fileUpload'>File:</label>
+                            <input
+                                type='file'
+                                accept='.csv'
+                                id='fileUpload'
+                                required
+                                onChange={ (event) => setFile(event.target.files[0]) }
+                            />
+                        </div>
+                    }
+
+                    { taskType === 'emails' &&
                         <div>
                             <label for='fileUpload'>File:</label>
                             <input

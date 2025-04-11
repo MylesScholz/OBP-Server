@@ -35,4 +35,6 @@ archiveRouter.get('/labels', requireAuthentication, createReadDirMiddleware('./a
 
 archiveRouter.get('/addresses', requireAuthentication, createReadDirMiddleware('./api/data/addresses', '/api/addresses/'))
 
+archiveRouter.get('/emails', requireAuthentication, createReadDirMiddleware('./api/data/emails', '/api/emails/'))
+
 export default archiveRouter

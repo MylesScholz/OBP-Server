@@ -5,6 +5,7 @@ import { getTaskById } from './api/models/task.js'
 import processObservationsTask from './api/lib/observations.js'
 import processLabelsTask from './api/lib/labels.js'
 import processAddressesTask from './api/lib/addresses.js'
+import processEmailsTask from './api/lib/emails.js'
 
 async function main() {
     try {
@@ -28,6 +29,8 @@ async function main() {
                 await processLabelsTask(task)
             } else if (task.type === 'addresses') {
                 await processAddressesTask(task)
+            } else if (task.type === 'emails') {
+                await processEmailsTask(task)
             }
 
             console.log(`${new Date().toLocaleTimeString('en-US')} Completed task ${taskId}`)

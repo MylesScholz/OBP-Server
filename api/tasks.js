@@ -31,7 +31,7 @@ tasksRouter.post('/observations', uploadCSV.single('file'), async (req, res, nex
     }
 
     try {
-        // If there are too many files in the uploads directory, find and delete the oldest one (by timestamp of last modification)
+        // If there are too many files in the uploads directory, find and archive the oldest one (by timestamp of last modification)
         limitFilesInDirectory('./api/data/uploads', MAX_UPLOADS)
 
         // URI of the uploaded base dataset--not the file location
@@ -99,7 +99,7 @@ tasksRouter.post('/labels', uploadCSV.single('file'), async (req, res, next) => 
     }
 
     try {
-        // If there are too many files in the uploads directory, find and delete the oldest one (by timestamp of last modification)
+        // If there are too many files in the uploads directory, find and archive the oldest one (by timestamp of last modification)
         limitFilesInDirectory('./api/data/uploads', MAX_UPLOADS)
 
         // URI of the uploaded base dataset--not the file location
@@ -142,7 +142,7 @@ tasksRouter.post('/addresses', requireAuthentication, uploadCSV.single('file'), 
     }
 
     try {
-        // If there are too many files in the uploads directory, find and delete the oldest one (by timestamp of last modification)
+        // If there are too many files in the uploads directory, find and archive the oldest one (by timestamp of last modification)
         limitFilesInDirectory('./api/data/uploads', MAX_UPLOADS)
 
         // URI of the uploaded base dataset--not the file location
@@ -150,6 +150,49 @@ tasksRouter.post('/addresses', requireAuthentication, uploadCSV.single('file'), 
 
         // Create task and send its ID to the RabbitMQ server
         const { id: taskId } = await createTask('addresses', datasetURI)
+        const task = await getTaskById(taskId)
+
+        const tasksChannel = getTasksChannel()
+        tasksChannel.sendToQueue(tasksQueueName, Buffer.from(taskId.toString()))
+
+        // Return 'Accepted' response and HATEOAS link
+        res.status(202).send({
+            uri: `/api/tasks/${task._id}`,
+            createdAt: task.createdAt
+        })
+    } catch (err) {
+        // Forward to 500-code middleware
+        next(err)
+    }
+})
+
+/*
+ * POST /api/tasks/emails
+ * Creates a task to compile a list of user email addresses for error notifications
+ * Requires:
+ * - Valid JWT in the 'token' cookie
+ * - req.file: a printable CSV occurrence dataset with which to filter the user data
+ * Outputs:
+ * - Stores a copy of the uploaded base dataset in /api/data/uploads, accessible at the /api/uploads endpoint
+ */
+tasksRouter.post('/emails', requireAuthentication, uploadCSV.single('file'), async (req, res, next) => {
+    // Check that required field exists
+    if (!req.file) {
+        res.status(400).send({
+            error: 'Missing required request field'
+        })
+        return
+    }
+
+    try {
+        // If there are too many files in the uploads directory, find and archive the oldest one (by timestamp of last modification)
+        limitFilesInDirectory('./api/data/uploads', MAX_UPLOADS)
+
+        // URI of the uploaded base dataset--not the file location
+        const datasetURI = `/api/uploads/${req.file.filename}`
+
+        // Create task and send its ID to the RabbitMQ server
+        const { id: taskId } = await createTask('emails', datasetURI)
         const task = await getTaskById(taskId)
 
         const tasksChannel = getTasksChannel()

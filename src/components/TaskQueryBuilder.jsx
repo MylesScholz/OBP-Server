@@ -208,7 +208,7 @@ export default function TaskQueryBuilder({ setQueryResponse, setResult, formDisa
                         <select id='queryType' onChange={ (event) => setTaskType(event.target.value) }>
                             <option value='observations'>Format Observations</option>
                             <option value='labels'>Create Labels</option>
-                            <option value='addresses'>Compile Addresses</option>
+                            <option value='addresses'>Compile Mailing Addresses</option>
                         </select>
                     </div>
 

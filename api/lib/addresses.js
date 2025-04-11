@@ -1,4 +1,5 @@
 import fs from 'fs'
+import { parse as parseAsync } from 'csv-parse'
 import { parse as parseSync } from 'csv-parse/sync'
 import { stringify as stringifySync } from 'csv-stringify/sync'
 
@@ -9,11 +10,17 @@ import { limitFilesInDirectory } from "./utilities.js"
 
 // Maximum number of output files stored on the server
 const MAX_ADDRESSES = 25
+// Maximum number of observations to read from a file at once
+const CHUNK_SIZE = 5000
 // Field names
 const ERROR_FLAGS = 'errorFlags'
 const DATE_LABEL_PRINT = 'dateLabelPrint'
 const USER_LOGIN = 'userLogin'
 const FULL_NAME = 'fullName'
+const FIRST_NAME = 'firstName'
+const FIRST_NAME_INITIAL = 'firstNameInitial'
+const LAST_NAME = 'lastName'
+const EMAIL = 'email'
 const ADDRESS = 'address'
 const CITY = 'city'
 const STATE = 'stateProvince'
@@ -29,24 +36,13 @@ const addressFields = [
 ]
 
 /*
- * readOccurrencesFile()
- * Parses an input occurrences CSV file into a list of objects
- */
-function readOccurrencesFile(filePath) {
-    const occurrencesBuffer = fs.readFileSync(filePath)
-    const occurrences = parseSync(occurrencesBuffer, { columns: true })
-
-    return occurrences
-}
-
-/*
  * readUsernamesFile()
  * Parses /api/data/usernames.csv into a JS object
  */
 function readUsernamesFile() {
     // If /api/data/usernames.csv doesn't exist locally, create a base version and save it
     if (!fs.existsSync('./api/data/usernames.csv')) {
-        const header = ['userLogin', 'fullName', 'firstName', 'firstNameInitial', 'lastName', 'email', 'address', 'city', 'stateProvince', 'country', 'zip']
+        const header = [USER_LOGIN, FULL_NAME, FIRST_NAME, FIRST_NAME_INITIAL, LAST_NAME, EMAIL, ADDRESS, CITY, STATE, COUNTRY, ZIP_CODE]
         const csv = stringifySync([], { header: true, columns: header })
         fs.writeFileSync('./api/data/usernames.csv', csv)
     }
@@ -57,17 +53,41 @@ function readUsernamesFile() {
 }
 
 /*
- * filterUsersByOccurrences()
- * Filters a given list of user data down to rows with USER_LOGIN values that occur in a given occurrence dataset
+ * readOccurrencesFileChunks()
+ * A generator function that reads a given occurrences CSV file into memory in chunks of a given size
  */
-function filterUsersByOccurrences(users, occurrences) {
-    const uniqueUserLogins = new Set()
-    for (const occurrence of occurrences) {
-        if (occurrence[USER_LOGIN] && !occurrence[ERROR_FLAGS] && !occurrence[DATE_LABEL_PRINT]) {
-            uniqueUserLogins.add(occurrence[USER_LOGIN])
+async function* readOccurrencesFileChunks(filePath, chunkSize) {
+    // Create the read stream and pipe it to a CSV parser
+    const fileStream = fs.createReadStream(filePath, { encoding: 'utf-8' })
+    const parser = parseAsync({ columns: true, skip_empty_lines: true, relax_quotes: true })
+    const csvStream = fileStream.pipe(parser)
+
+    // Create a chunk to store rows
+    let chunk = []
+
+    // Read the file, yielding chunks as they are filled
+    for await (const row of csvStream) {
+        // Add the current row to the chunk
+        chunk.push(row)
+
+        // If the chunk is large enough, yield it and reset the chunk for the next call
+        if (chunk.length >= chunkSize) {
+            yield chunk
+            chunk = []
         }
     }
 
+    // Yield any remaining rows (a partial chunk)
+    if (chunk.length > 0) {
+        yield chunk
+    }
+}
+
+/*
+ * filterUsersByUserLogins()
+ * Filters a given list of user data down to rows with USER_LOGIN values that occur in a given set
+ */
+function filterUsersByUserLogins(users, uniqueUserLogins) {
     const uniqueUserNames = new Set()
     const filteredUsers = []
     for (const user of users) {
@@ -103,15 +123,25 @@ export default async function processAddressesTask(task) {
     
     const taskId = task._id
 
-    await updateTaskInProgress(taskId, { currentStep: 'Compiling user addresses...' })
-    console.log('\tCompiling user addresses...')
+    await updateTaskInProgress(taskId, { currentStep: 'Compiling user mailing addresses...' })
+    console.log('\tCompiling user mailing addresses...')
 
-    // Read datasets into memory
-    const occurrences = readOccurrencesFile('./api/data' + task.dataset.replace('/api', '')) // task.dataset has a '/api' suffix, which should be removed
+    // Read users dataset
     const users = readUsernamesFile()
 
+    // Read occurrences dataset in chunks, keeping a record of unique userLogins found
+    const uniqueUserLogins = new Set()
+    const occurrencesFilePath = './api/data' + task.dataset.replace('/api', '') // task.dataset has a '/api' suffix, which should be removed
+    for await (const chunk of readOccurrencesFileChunks(occurrencesFilePath, CHUNK_SIZE)) {
+        for (const occurrence of chunk) {
+            if (occurrence[USER_LOGIN] && !occurrence[ERROR_FLAGS] && !occurrence[DATE_LABEL_PRINT]) {
+                uniqueUserLogins.add(occurrence[USER_LOGIN])
+            }
+        }
+    }
+
     // Filter users down to those with USER_LOGIN values in the provided occurrence dataset
-    const filteredUsers = filterUsersByOccurrences(users, occurrences)
+    const filteredUsers = filterUsersByUserLogins(users, uniqueUserLogins)
 
     // Write to the output file
     const addressesFileName = `addresses_${task.tag}.csv`

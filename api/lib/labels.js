@@ -1,5 +1,5 @@
 import fs from 'fs'
-import { parse } from 'csv-parse/sync'
+import { parse as parseSync } from 'csv-parse/sync'
 import { PageSizes, PDFDocument, degrees } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
 import { datamatrixrectangularextension } from 'bwip-js/node'
@@ -100,7 +100,7 @@ const verticalSpacing = (letterPaperHeight - (2 * verticalMargin) - (nRows * lab
  */
 function readOccurrencesFile(filePath) {
     const occurrencesBuffer = fs.readFileSync(filePath)
-    const occurrences = parse(occurrencesBuffer, { columns: true })
+    const occurrences = parseSync(occurrencesBuffer, { columns: true })
 
     return occurrences
 }

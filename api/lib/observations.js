@@ -2,7 +2,7 @@ import Crypto from 'node:crypto'
 import fs from 'fs'
 import path from 'path'
 import { fromFile } from 'geotiff'
-import { parse } from 'csv-parse'
+import { parse as parseAsync } from 'csv-parse'
 import { parse as parseSync } from 'csv-parse/sync'
 import { stringify } from 'csv-stringify'
 import { stringify as stringifySync } from 'csv-stringify/sync'
@@ -1009,7 +1009,7 @@ async function formatObservations(observations, updateFormattingProgress) {
 async function* readOccurrencesFileChunks(filePath, chunkSize) {
     // Create the read stream and pipe it to a CSV parser
     const fileStream = fs.createReadStream(filePath, { encoding: 'utf-8' })
-    const parser = parse({ columns: true, skip_empty_lines: true, relax_quotes: true })
+    const parser = parseAsync({ columns: true, skip_empty_lines: true, relax_quotes: true })
     const csvStream = fileStream.pipe(parser)
 
     // Create a chunk to store rows
@@ -1537,7 +1537,7 @@ function writeChunkToTempFile(chunk, tempFiles) {
  */
 function createParser(filePath) {
     const stream = fs.createReadStream(filePath, { encoding: 'utf-8' })
-    const parser = stream.pipe(parse({ columns: true, skip_empty_lines: true, relax_quotes: true }))
+    const parser = stream.pipe(parseAsync({ columns: true, skip_empty_lines: true, relax_quotes: true }))
 
     return { stream, parser }
 }

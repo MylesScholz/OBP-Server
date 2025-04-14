@@ -167,12 +167,14 @@ export default function TaskQueryBuilder({ setQueryResponse, setResult, formDisa
     const [ file, setFile ] = useState()
     const [ pullSources, setPullSources ] = useState('yes')
 
-    const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
-
     const firstDay = new Date(new Date().getFullYear(), 0, 1)
     const firstDayFormatted = `${firstDay.getFullYear()}-${(firstDay.getMonth() + 1).toString().padStart(2, '0')}-${firstDay.getDate().toString().padStart(2, '0')}`
     const currentDate = new Date()
     const currentDateFormatted = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`
+    const [ minDate, setMinDate ] = useState(firstDayFormatted)
+    const [ maxDate, setMaxDate ] = useState(currentDateFormatted)
+
+    const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
 
     function handleSubmit(event) {
         event.preventDefault()
@@ -239,12 +241,12 @@ export default function TaskQueryBuilder({ setQueryResponse, setResult, formDisa
 
                                     <div>
                                         <label for='minDate'>Minimum Date:</label>
-                                        <input type='date' id='minDate' value={firstDayFormatted} required />
+                                        <input type='date' id='minDate' value={minDate} onChange={(e) => setMinDate(e.target.value)} required />
                                     </div>
 
                                     <div>
                                         <label for='maxDate'>Maximum Date:</label>
-                                        <input type='date' id='maxDate' value={currentDateFormatted} required />
+                                        <input type='date' id='maxDate' value={maxDate} onChange={(e) => setMaxDate(e.target.value)} required />
                                     </div>
                                 </>
                             }

@@ -870,12 +870,12 @@ async function formatObservation(observation, places, elevations, taxa) {
     const specimenId = getOFV(observation['ofvs'], 'Number of bees collected')
 
     // Attempt to parse 'observed_on_string' as a JavaScript Date object
-    const observedDate = observation['observed_on_string'] ? new Date(observation['observed_on_string']) : undefined
+    const observedDate = observation['observed_on'] ? new Date(observation['observed_on']) : undefined
 
     // Extract the day, month, and year from the Date object
-    const observedDay = observedDate?.getDate()
-    const observedMonth = observedDate?.getMonth() + 1
-    const observedYear = observedDate?.getFullYear()
+    const observedDay = observedDate?.getUTCDate()
+    const observedMonth = observedDate?.getUTCMonth() + 1
+    const observedYear = observedDate?.getUTCFullYear()
 
     // Format the day, month, and year
     const formattedDay = !isNaN(observedDay) ? observedDay.toString() : ''

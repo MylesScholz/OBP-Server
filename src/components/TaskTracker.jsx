@@ -129,7 +129,7 @@ export default function TaskTracker({ queryResponse, result, setResult, setFormD
                         downloads.map((d) => <a href={d.url} download={d.fileName}>Download {d.type} file</a>)
                     }
                     { selectedTaskData.task.warning &&
-                        <p>Warning: {selectedTaskData.task.warning.message}</p>
+                        selectedTaskData.task.warning.messages.map((message) => <p>{message}</p>)
                     }
                 </>
             }

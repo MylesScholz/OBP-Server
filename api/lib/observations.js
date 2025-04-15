@@ -1449,7 +1449,7 @@ function compareRows(row1, row2) {
  * sortAndDedupeChunk()
  * Sorts a chunk of observation data and removes duplicate entries
  */
-function sortAndDedupeChunk(chunk, seenKeys, seenSampleIdDates) {
+function sortAndDedupeChunk(chunk, seenKeys) {
     // The resulting chunk of unique, sorted data
     const uniqueRows = []
 
@@ -1482,16 +1482,6 @@ function sortAndDedupeChunk(chunk, seenKeys, seenSampleIdDates) {
 
     // Sort the output using the custom comparison function for formatted rows
     const sortedChunk = uniqueRows.sort(compareRows)
-
-    // Flag duplicate INATURALIST_ALIAS-SAMPLE_ID-SPECIMEN_ID-YEAR-MONTH-DAY combinations
-    for (const row of sortedChunk) {
-        const sampleIdDate = `${row[INATURALIST_ALIAS] ?? ''}-${row[SAMPLE_ID] ?? ''}-${row[SPECIMEN_ID] ?? ''}-${row[YEAR] ?? ''}-${row[MONTH] ?? ''}-${row[DAY] ?? ''}`
-
-        if (seenSampleIdDates.has(sampleIdDate)) {
-            row[ERROR_FLAGS] = `${row[ERROR_FLAGS] ? row[ERROR_FLAGS] + ';' : ''}repeatSample`
-        }
-        seenSampleIdDates.add(sampleIdDate)
-    }
 
     return sortedChunk
 }
@@ -1852,7 +1842,6 @@ export default async function processObservationsTask(task) {
     const flagsFilePath = './api/data/flags/' + flagsFileName
 
     const seenKeys = new Set()
-    const seenSampleIdDates = new Set()
     const tempFiles = []
     try {
         // Separate the provided dataset into chunks and store them in temporary files; also, format and update the data
@@ -1865,7 +1854,7 @@ export default async function processObservationsTask(task) {
             // Add any rows created from iNaturalist updates to the pool of new records
             newRecords = newRecords.concat(newRows)
 
-            const sortedChunk = sortAndDedupeChunk(formattedChunk, seenKeys, seenSampleIdDates)
+            const sortedChunk = sortAndDedupeChunk(formattedChunk, seenKeys)
             if (sortedChunk) {
                 writeChunkToTempFile(sortedChunk, tempFiles)
             }
@@ -1878,7 +1867,7 @@ export default async function processObservationsTask(task) {
 
         // Create a chunk for the new data and dedupe it
         if (newRecords.length > 0) {
-            const sortedChunk = sortAndDedupeChunk(newRecords, seenKeys, seenSampleIdDates)
+            const sortedChunk = sortAndDedupeChunk(newRecords, seenKeys)
 
             // Divide data into rows fit for printing and rows with errors
             const { passedData, failedData } = filterRows(sortedChunk)

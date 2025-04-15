@@ -480,13 +480,18 @@ export default async function processLabelsTask(task) {
 
     // Filter and process the occurrences into formatted label fields and check the data for warnings
     const warnings = []
+    const numUnfilteredOccurrences = occurrences.length
     const formattedOccurrences = formatOccurrences(occurrences, (warningId) => {
         warnings.push(warningId)
     })
+    const numFilteredOut = numUnfilteredOccurrences - formattedOccurrences.length
+
     // Send warnings, if any
     if (warnings.length > 0) {
-        const warningMessage = `Potentially incompatible data for occurrences: [ ${warnings.join(', ')} ]`
-        await updateTaskWarning(taskId, { message: warningMessage })
+        await updateTaskWarning(taskId, { messages: [
+            `Filtered out ${numFilteredOut} occurrences that were already printed or had faulty data.`,
+            `Potentially incompatible data for occurrences: [ ${warnings.join(', ')} ]`
+        ] })
     }
 
     // Paginate the data

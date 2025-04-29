@@ -24,7 +24,7 @@ const BATCH_SIZE = 2
 // Occurrence field names
 const ERROR_FLAGS = 'errorFlags'
 const DATE_LABEL_PRINT = 'dateLabelPrint'
-const OBSERVATION_NO = 'fieldNumber'
+const FIELD_NO = 'fieldNumber'
 const OCCURRENCE_ID = 'occurrenceID'
 const INATURALIST_ID = 'userId'
 const INATURALIST_ALIAS = 'userLogin'
@@ -535,8 +535,8 @@ function getUserName(user) {
     const usernames = readUsernamesFile()
 
     // Attempt to extract the user from their iNaturalist alias
-    const userAlias = user['login']
-    const userName = usernames.find((u) => u.userLogin === userAlias)
+    const userLogin = user['login']
+    const userName = usernames.find((u) => u.userLogin === userLogin)
 
     // Format the outputs if the user was found
     if (userName) {
@@ -866,8 +866,11 @@ async function formatObservation(observation, places, elevations, taxa) {
     /* Formatted fields as constants */
 
     // Find the observation field values (OFVs) for sampleId and number of bees collected (which will become specimenId)
-    const sampleId = getOFV(observation['ofvs'], 'Sample ID.')
-    const specimenId = getOFV(observation['ofvs'], 'Number of bees collected')
+    const rawSampleId = getOFV(observation['ofvs'], 'Sample ID.')
+    const rawSpecimenId = getOFV(observation['ofvs'], 'Number of bees collected')
+    
+    const sampleId = !isNaN(parseInt(rawSampleId)) ? parseInt(rawSampleId).toString() : ''
+    const specimenId = !isNaN(parseInt(rawSpecimenId)) ? parseInt(rawSpecimenId).toString() : ''
 
     // Attempt to parse 'observed_on_string' as a JavaScript Date object
     const observedDate = observation['observed_on'] ? new Date(observation['observed_on']) : undefined
@@ -1299,7 +1302,7 @@ async function formatChunk(chunk, updateChunkProgress) {
                 const duplicateRow = Object.assign({}, rows[0])
                 duplicateRow[SPECIMEN_ID] = (maxSpecimenId + j).toString()
                 // Clear OBSERVATION_NO and DATE_LABEL_PRINT fields so they can be assigned properly later
-                duplicateRow[OBSERVATION_NO] = ''
+                duplicateRow[FIELD_NO] = ''
                 duplicateRow[DATE_LABEL_PRINT] = ''
 
                 newRows.push(duplicateRow)
@@ -1393,7 +1396,7 @@ function compareNumericStrings(str1, str2) {
  * 7. SPECIMEN_ID
  */
 function compareRows(row1, row2) {
-    const observationNumberComparison = compareNumericStrings(row1[OBSERVATION_NO], row2[OBSERVATION_NO])
+    const observationNumberComparison = compareNumericStrings(row1[FIELD_NO], row2[FIELD_NO])
     if (observationNumberComparison !== 0) {
         return observationNumberComparison
     }
@@ -1438,15 +1441,15 @@ function compareRows(row1, row2) {
 
 /*
  * sortAndDedupeChunk()
- * Sorts a chunk of observation data and removes duplicate entries
+ * Sorts a chunk of occurrence data and removes duplicate entries
  */
 function sortAndDedupeChunk(chunk, seenKeys) {
     // The resulting chunk of unique, sorted data
     const uniqueRows = []
 
-    // First, add rows with observation numbers since these are presumed to be unique
+    // First, add rows with field numbers since these are presumed to be unique
     for (const row of chunk) {
-        if (!!row[OBSERVATION_NO]) {
+        if (!!row[FIELD_NO]) {
             // Create a key for this row and add it to the set of seen keys
             const key = generateRowKey(row)
             seenKeys.add(key)
@@ -1457,7 +1460,7 @@ function sortAndDedupeChunk(chunk, seenKeys) {
 
     // Next, add other rows if they are unique
     for (const row of chunk) {
-        if (isRowEmpty(row) || !!row[OBSERVATION_NO]) {
+        if (isRowEmpty(row) || !!row[FIELD_NO]) {
             continue
         }
 
@@ -1472,9 +1475,7 @@ function sortAndDedupeChunk(chunk, seenKeys) {
     }
 
     // Sort the output using the custom comparison function for formatted rows
-    const sortedChunk = uniqueRows.sort(compareRows)
-
-    return sortedChunk
+    return uniqueRows.sort(compareRows)
 }
 
 /*
@@ -1683,9 +1684,9 @@ async function findLastObservationNumber(filePath) {
 
     // Search linearly for the highest OBSERVATION_NO
     for await (const row of parser) {
-        if (!!row[OBSERVATION_NO]) {
+        if (!!row[FIELD_NO]) {
             // Parse OBSERVATION_NO as an integer and update lastObservationNumber
-            const currentObservationNumber = row[OBSERVATION_NO]
+            const currentObservationNumber = row[FIELD_NO]
 
             if (!isNaN(currentObservationNumber) && (!lastObservationNumber || currentObservationNumber > lastObservationNumber)) {
                 lastObservationNumber = parseInt(currentObservationNumber)
@@ -1753,13 +1754,13 @@ async function indexData(filePath, year) {
     for await (const row of parser) {
         if (isRowEmpty(row)) continue
 
-        if (!row[OBSERVATION_NO]) {
-            row[OBSERVATION_NO] = nextObservationNumber
+        if (!row[FIELD_NO]) {
+            row[FIELD_NO] = nextObservationNumber
             nextObservationNumber = incrementObservationNumber(nextObservationNumber)
         }
 
-        if (!!row[OBSERVATION_NO] && row[STATE] === 'OR') {
-            row[OCCURRENCE_ID] ||= `https://osac.oregonstate.edu/OBS/OBA_${row[OBSERVATION_NO]}`
+        if (!!row[FIELD_NO] && row[STATE] === 'OR') {
+            row[OCCURRENCE_ID] ||= `https://osac.oregonstate.edu/OBS/OBA_${row[FIELD_NO]}`
             row[RESOURCE_ID] ||= row[OCCURRENCE_ID]
         }
 

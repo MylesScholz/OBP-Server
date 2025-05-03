@@ -24,15 +24,15 @@ const EMAIL = 'email'
 const ADDRESS = 'address'
 const CITY = 'city'
 const STATE = 'stateProvince'
+const ZIP_POSTAL = 'zipPostal'
 const COUNTRY = 'country'
-const ZIP_CODE = 'zip'
 const addressFields = [
     FULL_NAME,
     ADDRESS,
     CITY,
     STATE,
+    ZIP_POSTAL,
     COUNTRY,
-    ZIP_CODE
 ]
 
 /*
@@ -42,7 +42,7 @@ const addressFields = [
 function readUsernamesFile() {
     // If /api/data/usernames.csv doesn't exist locally, create a base version and save it
     if (!fs.existsSync('./api/data/usernames.csv')) {
-        const header = [USER_LOGIN, FULL_NAME, FIRST_NAME, FIRST_NAME_INITIAL, LAST_NAME, EMAIL, ADDRESS, CITY, STATE, COUNTRY, ZIP_CODE]
+        const header = [USER_LOGIN, FULL_NAME, FIRST_NAME, FIRST_NAME_INITIAL, LAST_NAME, EMAIL, ADDRESS, CITY, STATE, ZIP_POSTAL, COUNTRY]
         const csv = stringifySync([], { header: true, columns: header })
         fs.writeFileSync('./api/data/usernames.csv', csv)
     }

@@ -23,14 +23,18 @@ async function main() {
 
             console.log(`${new Date().toLocaleTimeString('en-US')} Processing task ${taskId}...`)
 
-            if (task.type === 'observations') {
-                await processObservationsTask(task)
-            } else if (task.type === 'labels') {
-                await processLabelsTask(task)
-            } else if (task.type === 'addresses') {
-                await processAddressesTask(task)
-            } else if (task.type === 'emails') {
-                await processEmailsTask(task)
+            try {
+                if (task.type === 'observations') {
+                    await processObservationsTask(task)
+                } else if (task.type === 'labels') {
+                    await processLabelsTask(task)
+                } else if (task.type === 'addresses') {
+                    await processAddressesTask(task)
+                } else if (task.type === 'emails') {
+                    await processEmailsTask(task)
+                }
+            } catch (err) {
+                console.error(err)
             }
 
             console.log(`${new Date().toLocaleTimeString('en-US')} Completed task ${taskId}`)

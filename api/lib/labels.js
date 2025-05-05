@@ -16,7 +16,7 @@ const MAX_LABELS = 25
 // Data field names
 const ERROR_FLAGS = 'errorFlags'
 const DATE_LABEL_PRINT = 'dateLabelPrint'
-const OBSERVATION_NO = 'fieldNumber'
+const FIELD_NO = 'fieldNumber'
 const FIRST_NAME_INITIAL = 'firstNameInitial'
 const LAST_NAME = 'lastName'
 const SAMPLE_ID = 'sampleId'
@@ -37,7 +37,7 @@ const SAMPLING_PROTOCOL = 'samplingProtocol'
 
 // List of mandatory fields for a label to be printed
 const requiredFields = [
-    OBSERVATION_NO,
+    FIELD_NO,
     FIRST_NAME_INITIAL,
     LAST_NAME,
     SAMPLE_ID,
@@ -150,8 +150,8 @@ function formatOccurrence(occurrence) {
     if (methodText.includes('nest')) { methodText = 'nest' }
     formattedOccurrence.method = methodText
 
-    // Observation number field
-    const numberText = occurrence[OBSERVATION_NO]
+    // Field number field
+    const numberText = occurrence[FIELD_NO]
     formattedOccurrence.number = numberText
 
     return formattedOccurrence
@@ -187,7 +187,7 @@ function formatOccurrences(occurrences, addWarningID) {
             formattedOccurrence.name.length > 19 ||
             formattedOccurrence.method.length > 5
         ) {
-            addWarningID(occurrence[OBSERVATION_NO])
+            addWarningID(occurrence[FIELD_NO])
         }
 
         unprintedOccurrences[i] = formattedOccurrence
@@ -407,7 +407,7 @@ async function addLabel(page, occurrence, basisX, basisY, fonts) {
     // Add the collection method field to the page
     addTextBox(page, methodText, basisX, basisY, methodLayout)
 
-    // Define the layout for the observation number label field
+    // Define the layout for the field number label field
     const numberText = occurrence.number ?? ''
     const numberLayout = {
         x: 0.661 * PostScriptPointsPerInch,
@@ -423,7 +423,7 @@ async function addLabel(page, occurrence, basisX, basisY, fonts) {
             y: -5,
         }
     }
-    // Add the observation number field to the page
+    // Add the field number field to the page
     addTextBox(page, numberText, basisX, basisY, numberLayout)
 
     // Define the layout for the data matrix

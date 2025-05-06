@@ -218,7 +218,7 @@ export default function TaskQueryBuilder({ setQueryResponse, setResult, formDisa
                     { taskType === 'observations' &&
                         <>
                             <div>
-                                <label for='fileUpload'>File:</label>
+                                <label for='fileUpload'>Occurrences File:</label>
                                 <input
                                     type='file'
                                     accept='.csv'
@@ -255,7 +255,7 @@ export default function TaskQueryBuilder({ setQueryResponse, setResult, formDisa
 
                     { taskType === 'labels' &&
                         <div>
-                            <label for='fileUpload'>File:</label>
+                            <label for='fileUpload'>Occurrences File:</label>
                             <input
                                 type='file'
                                 accept='.csv'
@@ -268,7 +268,7 @@ export default function TaskQueryBuilder({ setQueryResponse, setResult, formDisa
 
                     { taskType === 'addresses' &&
                         <div>
-                            <label for='fileUpload'>File:</label>
+                            <label for='fileUpload'>Pulls File:</label>
                             <input
                                 type='file'
                                 accept='.csv'
@@ -281,7 +281,7 @@ export default function TaskQueryBuilder({ setQueryResponse, setResult, formDisa
 
                     { taskType === 'emails' &&
                         <div>
-                            <label for='fileUpload'>File:</label>
+                            <label for='fileUpload'>Flags File:</label>
                             <input
                                 type='file'
                                 accept='.csv'

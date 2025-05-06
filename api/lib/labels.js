@@ -161,7 +161,7 @@ function formatOccurrence(occurrence) {
  * formatOccurrencess()
  * Filters, formats, and adds warnings for a given list of occurrences
  */
-function formatOccurrences(occurrences, addWarningID) {
+function formatOccurrences(occurrences, addWarning) {
     // Optional fields that should throw warnings
     const warningFields = [
         COUNTY,
@@ -179,15 +179,17 @@ function formatOccurrences(occurrences, addWarningID) {
         const formattedOccurrence = formatOccurrence(occurrence)
 
         // Add warnings for falsy warningFields and fields that are too long (highly specific, may need tuning)
-        if (
-            warningFields.some((field) => !occurrence[field]) ||
-            occurrence[COUNTRY].length > 3 ||
+        const warningReasons = warningFields.filter((field) => !occurrence[field])
+        if (occurrence[COUNTRY].length > 3 ||
             occurrence[STATE].length > 2 ||
             occurrence[COUNTY].length + occurrence[LOCALITY].length > 25 ||
             formattedOccurrence.name.length > 19 ||
             formattedOccurrence.method.length > 5
         ) {
-            addWarningID(occurrence[FIELD_NO])
+            warningReasons.push('field length')
+        }
+        if (warningReasons.length > 0) {
+            addWarning(occurrence[FIELD_NO], warningReasons.join(', '))
         }
 
         unprintedOccurrences[i] = formattedOccurrence
@@ -481,8 +483,8 @@ export default async function processLabelsTask(task) {
     // Filter and process the occurrences into formatted label fields and check the data for warnings
     const warnings = []
     const numUnfilteredOccurrences = occurrences.length
-    const formattedOccurrences = formatOccurrences(occurrences, (warningId) => {
-        warnings.push(warningId)
+    const formattedOccurrences = formatOccurrences(occurrences, (warningId, reason) => {
+        warnings.push(`${warningId}${reason ? ` (${reason})` : ''}`)
     })
     const numFilteredOut = numUnfilteredOccurrences - formattedOccurrences.length
 

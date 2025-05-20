@@ -139,7 +139,6 @@ const nonEmptyFields = [
     STATE,
     COUNTY,
     LOCALITY,
-    ELEVATION,
     LATITUDE,
     LONGITUDE,
     SAMPLING_PROTOCOL
@@ -515,7 +514,7 @@ function readUsernamesFile() {
     
     // Read and parse /api/data/usernames.csv
     const usernamesData = fs.readFileSync('./api/data/usernames.csv')
-    return parseSync(usernamesData, { columns: true, skip_empty_lines: true, relax_quotes: true })
+    return parseSync(usernamesData, { columns: true, skip_empty_lines: true, relax_quotes: true, trim: true })
 }
 
 /*
@@ -1012,7 +1011,7 @@ async function formatObservations(observations, updateFormattingProgress) {
 async function* readOccurrencesFileChunks(filePath, chunkSize) {
     // Create the read stream and pipe it to a CSV parser
     const fileStream = fs.createReadStream(filePath, { encoding: 'utf-8' })
-    const parser = parseAsync({ columns: true, skip_empty_lines: true, relax_quotes: true })
+    const parser = parseAsync({ columns: true, skip_empty_lines: true, relax_quotes: true, trim: true })
     const csvStream = fileStream.pipe(parser)
 
     // Create a chunk to store rows
@@ -1529,7 +1528,7 @@ function writeChunkToTempFile(chunk, tempFiles) {
  */
 function createParser(filePath) {
     const stream = fs.createReadStream(filePath, { encoding: 'utf-8' })
-    const parser = stream.pipe(parseAsync({ columns: true, skip_empty_lines: true, relax_quotes: true }))
+    const parser = stream.pipe(parseAsync({ columns: true, skip_empty_lines: true, relax_quotes: true, trim: true }))
 
     return { stream, parser }
 }

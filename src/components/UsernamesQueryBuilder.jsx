@@ -87,7 +87,6 @@ export default function UsernamesQueryBuilder() {
 
     function handleSubmit(event) {
         event.preventDefault()
-        event.target.reset()
 
         setFormDisabled(true)
         setQueryResponse(undefined)
@@ -126,11 +125,11 @@ export default function UsernamesQueryBuilder() {
                         <div>
                             <label for='usernamesQueryType'>Operation:</label>
                             <select id='usernamesQueryType' onChange={(event) => {
-                                setQueryType(event.target.value)
                                 setQueryResponse(undefined)
+                                setQueryType(event.target.value)
                             }}>
-                                <option value='get' selected>Download</option>
-                                <option value='post'>Upload</option>
+                                <option value='get' selected={queryType === 'get'}>Download</option>
+                                <option value='post' selected={queryType === 'post'}>Upload</option>
                             </select>
                         </div>
 

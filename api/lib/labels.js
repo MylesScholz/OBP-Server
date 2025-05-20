@@ -199,6 +199,25 @@ function formatOccurrences(occurrences, addWarning) {
 }
 
 /*
+ * partitionOccurrences()
+ * Inserts blank records between formatted occurrences with different collectors for spacing
+ */
+function partitionOccurrences(occurrences) {
+    const partitionedOccurrences = []
+
+    // Iterate through each occurrence and look ahead one to determine if the collectors are different
+    for (let i = 0; i < occurrences.length - 1; i++) {
+        partitionedOccurrences.push(occurrences[i])
+
+        if (occurrences[i].name !== occurrences[i + 1].name) {
+            partitionedOccurrences.push({ blank: true })
+        }
+    }
+
+    return partitionedOccurrences
+}
+
+/*
  * addTextBox()
  * Adds a text box to the given PDFPage with the given specifications
  * 1.    text: The text to include in the text box
@@ -303,16 +322,6 @@ async function addDataMatrix(page, text, basisX, basisY, dataMatrixLayout) {
         width: scaledDimensions.width,
         height: scaledDimensions.height
     })
-}
-
-/*
- * getFontData()
- * Reads a given font file from the local disk
- */
-async function getFontData(fileKey) {
-    const filePath = './api/data/' + fileKey
-
-    return fs.readFileSync(filePath)
 }
 
 /*
@@ -440,6 +449,16 @@ async function addLabel(page, occurrence, basisX, basisY, fonts) {
 }
 
 /*
+ * getFontData()
+ * Reads a given font file from the local disk
+ */
+async function getFontData(fileKey) {
+    const filePath = './api/data/' + fileKey
+
+    return fs.readFileSync(filePath)
+}
+
+/*
  * writePDFPage()
  * Creates a PDFPage in the given PDFDocument and populates it with labels from the given list of formatted occurrences
  */
@@ -454,6 +473,11 @@ async function writePDFPage(doc, occurrences, updateLabelsProgress) {
 
     // Add a label for each formatted occurrence in rows and columns
     for (let i = 0; i < occurrences.length; i++) {
+        // Skip blank partition records
+        if (occurrences[i].blank) {
+            continue
+        }
+
         // Calculate the current row and column
         const currentRow = nRows - Math.floor(i / nColumns) - 1
         const currentColumn = i % nColumns
@@ -488,6 +512,9 @@ export default async function processLabelsTask(task) {
     })
     const numFilteredOut = numUnfilteredOccurrences - formattedOccurrences.length
 
+    // Add blank partitions to occurrences for spacing
+    const partitionedOccurrences = partitionOccurrences(formattedOccurrences)
+
     // Send warnings, if any
     if (warnings.length > 0) {
         await updateTaskWarning(taskId, { messages: [
@@ -497,10 +524,10 @@ export default async function processLabelsTask(task) {
     }
 
     // Paginate the data
-    const partitionSize = nRows * nColumns
-    const nPartitions = Math.floor(formattedOccurrences.length / partitionSize) + 1
-    let partitionStart = 0
-    let partitionEnd = Math.min(partitionSize, formattedOccurrences.length)
+    const pageSize = nRows * nColumns
+    const nPages = Math.floor(partitionedOccurrences.length / pageSize) + 1
+    let pageStart = 0
+    let pageEnd = Math.min(pageSize, partitionedOccurrences.length)
     let currentPage = 1
 
     // Create the output PDF
@@ -508,15 +535,15 @@ export default async function processLabelsTask(task) {
     const doc = await PDFDocument.create()
     
     // Add pages of labels
-    for (let i = 0; i < nPartitions; i++) {
-        await writePDFPage(doc, formattedOccurrences.slice(partitionStart, partitionEnd), async (labelsFinished) => {
-            const percentage = `${(100 * (i * partitionSize + labelsFinished) / formattedOccurrences.length).toFixed(2)}%`
+    for (let i = 0; i < nPages; i++) {
+        await writePDFPage(doc, partitionedOccurrences.slice(pageStart, pageEnd), async (labelsFinished) => {
+            const percentage = `${(100 * (i * pageSize + labelsFinished) / partitionedOccurrences.length).toFixed(2)}%`
             await updateTaskInProgress(taskId, { currentStep: 'Generating labels from provided dataset', percentage })
         })
 
         // Update the partition markers
-        partitionStart = partitionEnd
-        partitionEnd = Math.min(partitionEnd + partitionSize, formattedOccurrences.length)
+        pageStart = pageEnd
+        pageEnd = Math.min(pageEnd + pageSize, partitionedOccurrences.length)
         currentPage++
     }
 

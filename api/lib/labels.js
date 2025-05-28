@@ -68,6 +68,32 @@ const monthNumerals = [
     'XI',
     'XII'
 ]
+// County Abbreviations
+const countyAbbreviations = {
+    'Okanagan-Similkameen': 'RDOS',
+    'Comox-Strathcona': 'RDCS',
+    'Greater Vancouver': 'MVRD',
+    'Fraser-Fort George': 'RDFFG',
+    'Cowichan Valley': 'RDCV',
+    'Capital': 'CRD',
+    'Fraser Valley': 'FVRD',
+    'Sunshine Coast': 'RDSC',
+    'Squamish-Lillooet': 'SLRD',
+    'Kootenay Boundary': 'RDKB',
+    'Central Okanagan': 'RDCO',
+    'East Kootenay': 'RDEK',
+    'North Okanagan': 'RDNO',
+    'Thompson-Nicola': 'RDTN',
+    'Columbia-Shuswap': 'RDCS',
+    'Cariboo': 'CRD',
+    'Mount Waddington': 'RDMW',
+    'Central Coast': 'RDCC',
+    'North Coast': 'RDNC',
+    'Bulkley-Nechako': 'RDBN',
+    'Peace River': 'RDPR',
+    'Kitimat-Stikine': 'RDKS',
+    'Northern Rockies': 'NRRM'
+}
 
 // Number of rows of labels
 const nRows = 25
@@ -115,12 +141,13 @@ function formatOccurrence(occurrence) {
     // Location field
     const country = occurrence[COUNTRY]
     const stateProvince = occurrence[STATE]
-    const county = occurrence[COUNTY] ? `:${occurrence[COUNTY]}${occurrence[COUNTRY] !== 'CA' ? 'Co' : ''}` : ''
+    let formattedCounty = countyAbbreviations[occurrence[COUNTY]] ?? occurrence[COUNTY]
+    formattedCounty = formattedCounty ? `:${formattedCounty}${country === 'USA' ? 'Co' : ''}` : ''
     const place = occurrence[LOCALITY]
     const latitude = parseFloat(occurrence[LATITUDE]).toFixed(3).toString()
     const longitude = parseFloat(occurrence[LONGITUDE]).toFixed(3).toString()
     const elevation = occurrence[ELEVATION] ? ` ${occurrence[ELEVATION]}m` : ''
-    const locationText = `${country}:${stateProvince}${county} ${place} ${latitude} ${longitude}${elevation}`
+    const locationText = `${country}:${stateProvince}${formattedCounty} ${place} ${latitude} ${longitude}${elevation}`
     formattedOccurrence.location = locationText
 
     // Date field
@@ -164,8 +191,7 @@ function formatOccurrence(occurrence) {
 function formatOccurrences(occurrences, addWarning) {
     // Optional fields that should throw warnings
     const warningFields = [
-        COUNTY,
-        ELEVATION
+        COUNTY
     ]
 
     // Filter out occurrences that have any falsy requiredFields or that have been printed already
@@ -515,13 +541,11 @@ export default async function processLabelsTask(task) {
     // Add blank partitions to occurrences for spacing
     const partitionedOccurrences = partitionOccurrences(formattedOccurrences)
 
-    // Send warnings, if any
-    if (warnings.length > 0) {
-        await updateTaskWarning(taskId, { messages: [
-            `Filtered out ${numFilteredOut} occurrences that were already printed or had faulty data.`,
-            `Potentially incompatible data for occurrences: [ ${warnings.join(', ')} ]`
-        ] })
-    }
+    // Display warnings, if any
+    await updateTaskWarning(taskId, { messages: [
+        `Filtered out ${numFilteredOut} occurrences that were already printed or had faulty data.`,
+        `Potentially incompatible data for occurrences: [ ${warnings.join(', ')} ]`
+    ] })
 
     // Paginate the data
     const pageSize = nRows * nColumns

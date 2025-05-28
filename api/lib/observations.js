@@ -1331,8 +1331,12 @@ function isRowEmpty(row) {
  * Creates a unique key string for a given formatted observation row
  */
 function generateRowKey(row) {
-    // Uniquely identify a row with first name, last name, sample ID, specimen ID, day, month, and year, and iNaturalist URL
-    const keyFields = [FIRST_NAME, LAST_NAME, SAMPLE_ID, SPECIMEN_ID, DAY, MONTH, YEAR, INATURALIST_URL]
+    // Uniquely identify a row with sample ID, specimen ID, day, month, year, and iNaturalist URL. If there is no URL, use first name and last name too.
+    const keyFields = [SAMPLE_ID, SPECIMEN_ID, DAY, MONTH, YEAR, INATURALIST_URL]
+    if (!row[INATURALIST_URL]) {
+        keyFields.push(FIRST_NAME)
+        keyFields.push(LAST_NAME)
+    }
 
     // Get a list of the corresponding values for the key fields
     const keyValues = keyFields.map((field) => String(row[field] || ''))

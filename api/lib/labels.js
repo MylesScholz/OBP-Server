@@ -549,7 +549,7 @@ export default async function processLabelsTask(task) {
 
     // Paginate the data
     const pageSize = nRows * nColumns
-    const nPages = Math.floor(partitionedOccurrences.length / pageSize) + 1
+    const nPages = Math.ceil(partitionedOccurrences.length / pageSize)
     let pageStart = 0
     let pageEnd = Math.min(pageSize, partitionedOccurrences.length)
     let currentPage = 1

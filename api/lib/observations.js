@@ -4,7 +4,7 @@ import path from 'path'
 import { fromFile } from 'geotiff'
 import { parse as parseAsync } from 'csv-parse'
 import { parse as parseSync } from 'csv-parse/sync'
-import { stringify } from 'csv-stringify'
+import { stringify as stringifyAsync } from 'csv-stringify'
 import { stringify as stringifySync } from 'csv-stringify/sync'
 import 'dotenv/config'
 
@@ -255,7 +255,7 @@ async function pullSourceObservations(sourceId, minDate, maxDate, updatePullSour
     let results = response?.results ?? []
 
     const totalResults = parseInt(response?.total_results ?? '0')
-    let totalPages = Math.floor(totalResults / 200) + 1
+    let totalPages = Math.ceil(totalResults / 200)
 
     updatePullSourceProgress(100 / totalPages)
 
@@ -309,7 +309,7 @@ function readPlacesFile() {
 async function fetchPlaces(places) {
     // places can be a very long list of IDs, so batch requests to avoid iNaturalist API refusal
     const partitionSize = 50
-    const nPartitions = Math.floor(places.length / partitionSize) + 1
+    const nPartitions = Math.ceil(places.length / partitionSize)
     let partitionStart = 0
     let partitionEnd = Math.min(partitionSize, places.length)
 
@@ -416,7 +416,7 @@ function delay(mSec) {
 async function fetchTaxa(taxa) {
     // taxa can be a very long list of IDs, so batch requests to avoid iNaturalist API refusal
     const partitionSize = 30
-    const nPartitions = Math.floor(taxa.length / partitionSize) + 1
+    const nPartitions = Math.ceil(taxa.length / partitionSize)
     let partitionStart = 0
     let partitionEnd = Math.min(partitionSize, taxa.length)
 
@@ -1110,7 +1110,7 @@ function formatChunkRow(row) {
 async function fetchObservationsById(observationIds) {
     // observationIds can be a very long list of IDs, so batch requests to avoid iNaturalist API refusal
     const partitionSize = 200
-    const nPartitions = Math.floor(observationIds.length / partitionSize) + 1
+    const nPartitions = Math.ceil(observationIds.length / partitionSize)
     let partitionStart = 0
     let partitionEnd = Math.min(partitionSize, observationIds.length)
 
@@ -1319,7 +1319,7 @@ async function formatChunk(chunk, updateChunkProgress) {
  */
 function isRowEmpty(row) {
     for (const field of Object.keys(row)) {
-        if (!!row[field] && row[field] !== '') {
+        if (!!row[field] && !!row[field]) {
             return false
         }
     }
@@ -1573,7 +1573,7 @@ async function mergeTempFilesBatch(inputFiles, outputFile) {
 
     // Open a write stream and stringifier for the output file
     const outputFileStream = fs.createWriteStream(outputFile, { encoding: 'utf-8' })
-    const stringifier = stringify({ header: true, columns: Object.keys(occurrenceTemplate) })
+    const stringifier = stringifyAsync({ header: true, columns: Object.keys(occurrenceTemplate) })
     stringifier.pipe(outputFileStream)
 
     let i = 0
@@ -1750,7 +1750,7 @@ async function indexData(filePath, year) {
 
     const tempFilePath = `./api/data/temp/${Crypto.randomUUID()}.csv`
     const outputFileStream = fs.createWriteStream(tempFilePath, { encoding: 'utf-8' })
-    const stringifier = stringify({ header: true, columns: Object.keys(occurrenceTemplate) })
+    const stringifier = stringifyAsync({ header: true, columns: Object.keys(occurrenceTemplate) })
     stringifier.pipe(outputFileStream)
 
     // Add each non-empty row from the input file to the temporary output file; fill in the observation number, occurrence ID, and resource ID if empty
@@ -1777,6 +1777,7 @@ async function indexData(filePath, year) {
 
         await writeAsync(stringifier, row)
     }
+
     // Destroy the input and output streams
     stringifier.end()
     parser.destroy()

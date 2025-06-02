@@ -2,6 +2,8 @@
 import { connectToDb } from './api/lib/mongo.js'
 import { connectToRabbitMQ, getTasksChannel, tasksQueueName } from './api/lib/rabbitmq.js'
 import { getTaskById } from './api/models/task.js'
+import { clearBlankRows } from './api/lib/utilities.js'
+import { updateTaskInProgress } from './api/models/task.js'
 import processObservationsTask from './api/lib/observations.js'
 import processLabelsTask from './api/lib/labels.js'
 import processAddressesTask from './api/lib/addresses.js'
@@ -22,6 +24,13 @@ async function main() {
             tasksChannel.ack(msg)
 
             console.log(`${new Date().toLocaleTimeString('en-US')} Processing task ${taskId}...`)
+
+            await updateTaskInProgress(taskId, { currentStep: 'Clearing blank records from uploaded file' })
+            console.log('\tClearing blank records from uploaded file...')
+
+            const datasetFilePath = `./api/data/uploads/${task.dataset.split('/').pop()}`
+            console.log(datasetFilePath)
+            await clearBlankRows(datasetFilePath)
 
             try {
                 if (task.type === 'observations') {

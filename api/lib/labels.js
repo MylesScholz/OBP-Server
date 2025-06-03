@@ -70,7 +70,7 @@ const monthNumerals = [
 ]
 // County Abbreviations
 const countyAbbreviations = {
-    'Okanagan-Similkameen': 'RDOS',
+    'Okanagan-Similkameen': 'RDOS',     // British Columbia Regional Districts
     'Comox-Strathcona': 'CxSRD',
     'Greater Vancouver': 'MVRD',
     'Fraser-Fort George': 'RDFS',
@@ -97,7 +97,9 @@ const countyAbbreviations = {
     'Stikine Region': 'Stikine',
     'Alberni-Clayoquot': 'ACRD',
     'Central Kootenay': 'RDCK',
-    'Nanaimo': 'RDN'
+    'Nanaimo': 'RDN',
+    'Lincoln , US, WA': 'Lincoln',      // Fix a Google API error
+    'Franklin , US, WA': 'Franklin',
 }
 
 // Number of rows of labels

@@ -71,28 +71,33 @@ const monthNumerals = [
 // County Abbreviations
 const countyAbbreviations = {
     'Okanagan-Similkameen': 'RDOS',
-    'Comox-Strathcona': 'RDCS',
+    'Comox-Strathcona': 'CxSRD',
     'Greater Vancouver': 'MVRD',
-    'Fraser-Fort George': 'RDFFG',
-    'Cowichan Valley': 'RDCV',
+    'Fraser-Fort George': 'RDFS',
+    'Cowichan Valley': 'CwVRD',
     'Capital': 'CRD',
     'Fraser Valley': 'FVRD',
-    'Sunshine Coast': 'RDSC',
+    'Sunshine Coast': 'SCRD',
     'Squamish-Lillooet': 'SLRD',
     'Kootenay Boundary': 'RDKB',
     'Central Okanagan': 'RDCO',
     'East Kootenay': 'RDEK',
     'North Okanagan': 'RDNO',
-    'Thompson-Nicola': 'RDTN',
-    'Columbia-Shuswap': 'RDCS',
-    'Cariboo': 'CRD',
+    'Thompson-Nicola': 'TNRD',
+    'Columbia-Shuswap': 'CSRD',
+    'Cariboo': 'Cariboo',
     'Mount Waddington': 'RDMW',
-    'Central Coast': 'RDCC',
+    'Central Coast': 'CCRD',
     'North Coast': 'RDNC',
     'Bulkley-Nechako': 'RDBN',
-    'Peace River': 'RDPR',
+    'Peace River': 'Peace River',
     'Kitimat-Stikine': 'RDKS',
-    'Northern Rockies': 'NRRM'
+    'Northern Rockies': 'NRRM',
+    'Strathcona': 'SRD',
+    'Stikine Region': 'Stikine',
+    'Alberni-Clayoquot': 'ACRD',
+    'Central Kootenay': 'RDCK',
+    'Nanaimo': 'RDN'
 }
 
 // Number of rows of labels

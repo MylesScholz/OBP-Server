@@ -571,7 +571,7 @@ function getPlaces(placeIds, places) {
     }
 
     // Remove 'County' or 'Co' from the county field (case insensitive) before returning all values
-    county = county.replace(countyRegex, '')
+    county = county.replace(countyRegex, '').trim()
     return { country, stateProvince, county }
 }
 

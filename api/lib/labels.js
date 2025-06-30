@@ -151,11 +151,15 @@ function formatOccurrence(occurrence) {
     let formattedCounty = countyAbbreviations[occurrence[COUNTY]] ?? occurrence[COUNTY]
     formattedCounty = formattedCounty ? `:${formattedCounty}${country === 'USA' ? 'Co' : ''}` : ''
     const place = occurrence[LOCALITY]
+    const locationText = `${country}:${stateProvince}${formattedCounty} ${place}`
+    formattedOccurrence.location = locationText
+
+    // Coordinates field
     const latitude = parseFloat(occurrence[LATITUDE]).toFixed(3).toString()
     const longitude = parseFloat(occurrence[LONGITUDE]).toFixed(3).toString()
     const elevation = occurrence[ELEVATION] ? ` ${occurrence[ELEVATION]}m` : ''
-    const locationText = `${country}:${stateProvince}${formattedCounty} ${place} ${latitude} ${longitude}${elevation}`
-    formattedOccurrence.location = locationText
+    const coordinatesText = `${latitude} ${longitude}${elevation}`
+    formattedOccurrence.coordinates = coordinatesText
 
     // Date field
     const day1 = occurrence[DAY]
@@ -376,9 +380,9 @@ async function addLabel(page, occurrence, basisX, basisY, fonts) {
     const locationText = occurrence.location ?? ''
     const locationLayout = {
         x: 0.005 * PostScriptPointsPerInch,
-        y: 0.145 * PostScriptPointsPerInch,
+        y: 0.18525 * PostScriptPointsPerInch,
         width: 0.46 * PostScriptPointsPerInch,
-        height: 0.161 * PostScriptPointsPerInch,
+        height: 0.12075 * PostScriptPointsPerInch,
         font: fonts.oxygenMonoFont,
         fontSize: 3,
         lineHeight: 3,
@@ -390,6 +394,26 @@ async function addLabel(page, occurrence, basisX, basisY, fonts) {
     }
     // Add the location field to the page
     addTextBox(page, locationText, basisX, basisY, locationLayout)
+
+    // Define the layout for the coordinates label field
+    const coordinatesText = occurrence.coordinates ?? ''
+    const coordinatesLayout = {
+        x: 0.005 * PostScriptPointsPerInch,
+        y: 0.145 * PostScriptPointsPerInch,
+        width: 0.46 * PostScriptPointsPerInch,
+        height: 0.04025 * PostScriptPointsPerInch,
+        font: fonts.oxygenMonoFont,
+        fontSize: 3,
+        lineHeight: 3,
+        rotation: 0,
+        offset: {
+            x: 0,
+            y: -2.3,
+        },
+        fit: true
+    }
+    // Add the coordinates field to the page
+    addTextBox(page, coordinatesText, basisX, basisY, coordinatesLayout)
 
     // Define the layout for the date label field
     const dateText = occurrence.date ?? ''

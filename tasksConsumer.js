@@ -29,7 +29,6 @@ async function main() {
             console.log('\tClearing blank records from uploaded file...')
 
             const datasetFilePath = `./api/data/uploads/${task.dataset.split('/').pop()}`
-            console.log(datasetFilePath)
             await clearBlankRows(datasetFilePath)
 
             try {

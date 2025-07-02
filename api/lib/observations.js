@@ -1289,14 +1289,13 @@ async function formatChunk(chunk, updateChunkProgress) {
 
         // Check for an increase in the number of bees collected; create new rows to match
         const beesCollected = parseInt(getOFV(observation['ofvs'], 'Number of bees collected'))
-        if (beesCollected > rows.length) {
-            // Find the maximum SPECIMEN_ID in rows as a basis for the numbering of the new rows
-            const maxSpecimenId = rows
-                .map((row) => parseInt(row[SPECIMEN_ID]))
-                .reduce((prev, curr) => curr > prev ? curr : prev)
-            
+        // Find the maximum SPECIMEN_ID in rows as a basis for the numbering of the new rows
+        const maxSpecimenId = rows
+            .map((row) => parseInt(row[SPECIMEN_ID]))
+            .reduce((prev, curr) => curr > prev ? curr : prev)
+        if (beesCollected > maxSpecimenId) {
             // Create new rows to make up the difference between the existing rows and the new number of bees collected
-            for (let j = 1; j < beesCollected - rows.length + 1; j++) {
+            for (let j = 1; j < beesCollected - maxSpecimenId + 1; j++) {
                 // Duplicate the first row and set its SPECIMEN_ID
                 const duplicateRow = Object.assign({}, rows[0])
                 duplicateRow[SPECIMEN_ID] = (maxSpecimenId + j).toString()

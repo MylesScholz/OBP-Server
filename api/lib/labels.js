@@ -148,7 +148,7 @@ function formatOccurrence(occurrence) {
     // Location field
     const country = occurrence[COUNTRY]
     const stateProvince = occurrence[STATE]
-    let formattedCounty = countyAbbreviations[occurrence[COUNTY]] ?? occurrence[COUNTY]
+    let formattedCounty = countyAbbreviations[occurrence[COUNTY].trim()] ?? occurrence[COUNTY].trim()
     formattedCounty = formattedCounty ? `:${formattedCounty}${country === 'USA' ? 'Co' : ''}` : ''
     const place = occurrence[LOCALITY]
     const locationText = `${country}:${stateProvince}${formattedCounty} ${place}`

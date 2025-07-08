@@ -961,8 +961,8 @@ async function formatObservation(observation, places, elevations, taxa) {
  * formatObservations()
  * Formats raw iNaturalist observations and duplicates them by the number of bees collected
  */
-async function formatObservations(observations, updateFormattingProgress) {
-    let formattedObservations = []
+async function formatObservations(observations, specimensPerObservation, updateFormattingProgress) {
+    let occurrences = []
 
     // Fetch the elevation data for rows with coordinates
     let coordinates = new Set()
@@ -985,23 +985,31 @@ async function formatObservations(observations, updateFormattingProgress) {
 
     let i = 0
     for (const observation of observations) {
-        const formattedObservation = await formatObservation(observation, places, elevations, taxa)
+        const formattedOccurrence = await formatObservation(observation, places, elevations, taxa)
         await updateFormattingProgress(`${(100 * (i++) / observations.length).toFixed(2)}%`)
 
         // SPECIMEN_ID is initially set to the number of bees collected
+        const beesCollected = parseInt(formattedOccurrence[SPECIMEN_ID])
+
+        // Update specimensPerObservation
+        const uri = formattedOccurrence[INATURALIST_URL]
+        specimensPerObservation[uri] = {
+            beesCollected: beesCollected,
+            maxSpecimenId: Math.max(beesCollected, specimensPerObservation[uri]?.maxSpecimenId || 0)
+        }
+
         // Now, duplicate observations a number of times equal to this value and overwrite SPECIMEN_ID to index the duplications
-        const beesCollected = parseInt(formattedObservation[SPECIMEN_ID])
         if (!isNaN(beesCollected)) {
             for (let i = 1; i < beesCollected + 1; i++) {
-                const duplicateObservation = Object.assign({}, formattedObservation)
-                duplicateObservation[SPECIMEN_ID] = i.toString()
+                const duplicateOccurrence = Object.assign({}, formattedOccurrence)
+                duplicateOccurrence[SPECIMEN_ID] = i.toString()
 
-                formattedObservations.push(duplicateObservation)
+                occurrences.push(duplicateOccurrence)
             }
         }
     }
 
-    return formattedObservations
+    return occurrences
 }
 
 /*
@@ -1206,7 +1214,7 @@ async function updateChunkRow(row, observation, elevations, taxa) {
  * formatChunk()
  * Formats and updates a chunk of pre-existing observation data
  */
-async function formatChunk(chunk, updateChunkProgress) {
+async function formatChunk(chunk, specimensPerObservation, updateChunkProgress) {
     await updateChunkProgress('0.00')
 
     // Apply standard formatting
@@ -1289,16 +1297,21 @@ async function formatChunk(chunk, updateChunkProgress) {
 
         // Check for an increase in the number of bees collected; create new rows to match
         const beesCollected = parseInt(getOFV(observation['ofvs'], 'Number of bees collected'))
-        // Find the maximum SPECIMEN_ID in rows as a basis for the numbering of the new rows
-        const maxSpecimenId = rows
+        const maxSpecimenIdInChunk = rows
             .map((row) => parseInt(row[SPECIMEN_ID]))
             .reduce((prev, curr) => curr > prev ? curr : prev)
-        if (beesCollected > maxSpecimenId) {
+        const absMaxSpecimenId = Math.max(maxSpecimenIdInChunk, specimensPerObservation[observationUri]?.maxSpecimenId || 0)
+        specimensPerObservation[observationUri] = {
+            beesCollected: beesCollected,
+            maxSpecimenId: absMaxSpecimenId
+        }
+        
+        if (beesCollected > absMaxSpecimenId) {
             // Create new rows to make up the difference between the existing rows and the new number of bees collected
-            for (let j = 1; j < beesCollected - maxSpecimenId + 1; j++) {
+            for (let j = 1; j < beesCollected - absMaxSpecimenId + 1; j++) {
                 // Duplicate the first row and set its SPECIMEN_ID
                 const duplicateRow = Object.assign({}, rows[0])
-                duplicateRow[SPECIMEN_ID] = (maxSpecimenId + j).toString()
+                duplicateRow[SPECIMEN_ID] = (absMaxSpecimenId + j).toString()
                 // Clear OBSERVATION_NO and DATE_LABEL_PRINT fields so they can be assigned properly later
                 duplicateRow[FIELD_NO] = ''
                 duplicateRow[DATE_LABEL_PRINT] = ''
@@ -1788,15 +1801,63 @@ async function indexData(filePath, year) {
     fs.renameSync(tempFilePath, filePath)
 }
 
+async function updateSpecimensPerObservationFromFile(filePath, specimensPerObservation) {
+    // Check that the input file path exists
+    if (!fs.existsSync(filePath)) {
+        throw new Error(`File does not exist: ${filePath}`)
+    }
+
+    // Create an input CSV parser
+    const { parser } = createParser(filePath)
+
+    for await (const row of parser) {
+        const uri = row[INATURALIST_URL]
+        const uriId = uri?.split('/')?.pop()
+        const specimenId = parseInt(row[SPECIMEN_ID]) || 0
+
+        // Add the occurrence's URI to the observations map if it is new and has a numeric ID
+        if (uriId && !isNaN(uriId) && !specimensPerObservation[uri]) {
+            specimensPerObservation[uri] = {
+                beesCollected: 0,
+                maxSpecimenId: specimenId
+            }
+        }
+
+        // Update the maxSpecimenId field of the observationsMap from the occurrence
+        if (specimenId > specimensPerObservation[uri]?.maxSpecimenId) {
+            specimensPerObservation[uri].maxSpecimenId = specimenId
+        }
+    }
+
+    // Destroy the input stream and wait a second for the file permissions to release
+    parser.destroy()
+    await delay(1000)
+
+    return specimensPerObservation
+}
+
 export default async function processObservationsTask(task) {
     if (!task) { return }
 
     const taskId = task._id
 
-    // A collection of formatted records pulled from iNaturalist
-    let pulledFormattedRecords = []
-    // A collection of all new records that may be merged into the output occurrence dataset
-    let newRecords = []
+    // Input and output file names
+    const uploadFilePath = './api/data' + task.dataset.replace('/api', '')    // task.dataset has a '/api' suffix, which should be removed
+    const occurrencesFileName = `occurrences_${task.tag}.csv`
+    const occurrencesFilePath = './api/data/occurrences/' + occurrencesFileName
+    const pullsFileName = `pulls_${task.tag}.csv`
+    const pullsFilePath = './api/data/pulls/' + pullsFileName
+    const flagsFileName = `flags_${task.tag}.csv`
+    const flagsFilePath = './api/data/flags/' + flagsFileName
+
+    // Get the max SPECIMEN_IDs grouped by INATURALIST_URL in the input dataset
+    const specimensPerObservation = {}
+    await updateSpecimensPerObservationFromFile(uploadFilePath, specimensPerObservation)
+
+    // A collection of formatted occurrences pulled from iNaturalist
+    let pulledOccurrences = []
+    // A collection of all new occurrence records that may be merged into the output occurrence dataset
+    let newOccurrences = []
     if (task.sources) {
         await updateTaskInProgress(taskId, { currentStep: 'Pulling observations from iNaturalist' })
         console.log('\tPulling observations from iNaturalist...')
@@ -1818,36 +1879,29 @@ export default async function processObservationsTask(task) {
         await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations' })
         console.log('\tFormatting new observations...')
 
-        pulledFormattedRecords = await formatObservations(observations, async (percentage) => {
+        pulledOccurrences = await formatObservations(observations, specimensPerObservation, async (percentage) => {
             await updateTaskInProgress(taskId, { currentStep: 'Formatting new observations', percentage })
         })
-        newRecords = [...pulledFormattedRecords]
+        newOccurrences = [...pulledOccurrences]
     }
 
     await updateTaskInProgress(taskId, { currentStep: 'Formatting provided dataset' })
     console.log('\tFormatting provided dataset...')
 
-    // Input and output file names
-    const uploadFilePath = './api/data' + task.dataset.replace('/api', '')    // task.dataset has a '/api' suffix, which should be removed
-    const occurrencesFileName = `occurrences_${task.tag}.csv`
-    const occurrencesFilePath = './api/data/occurrences/' + occurrencesFileName
-    const pullsFileName = `pulls_${task.tag}.csv`
-    const pullsFilePath = './api/data/pulls/' + pullsFileName
-    const flagsFileName = `flags_${task.tag}.csv`
-    const flagsFilePath = './api/data/flags/' + flagsFileName
-
+    // A collection of all unique row keys that have been seen while processing the data
     const seenKeys = new Set()
+    // A collection of all temporary files created by the current task
     const tempFiles = []
     try {
         // Separate the provided dataset into chunks and store them in temporary files; also, format and update the data
         let i = 1
         for await (const chunk of readOccurrencesFileChunks(uploadFilePath, CHUNK_SIZE)) {
             console.log(`\t\tChunk ${i}`)
-            const { formattedChunk, newRows } = await formatChunk(chunk, async (percentage) => {
+            const { formattedChunk, newRows } = await formatChunk(chunk, specimensPerObservation, async (percentage) => {
                 await updateTaskInProgress(taskId, { currentStep: 'Formatting provided dataset', percentage: `Chunk ${i}: ${percentage}%` })
             })
             // Add any rows created from iNaturalist updates to the pool of new records
-            newRecords = newRecords.concat(newRows)
+            newOccurrences = newOccurrences.concat(newRows)
 
             const sortedChunk = sortAndDedupeChunk(formattedChunk, seenKeys)
             if (sortedChunk) {
@@ -1861,8 +1915,8 @@ export default async function processObservationsTask(task) {
         console.log('\tMerging new observations with provided occurrences dataset...')
 
         // Create a chunk for the new data and dedupe it
-        if (newRecords.length > 0) {
-            const sortedChunk = sortAndDedupeChunk(newRecords, seenKeys)
+        if (newOccurrences.length > 0) {
+            const sortedChunk = sortAndDedupeChunk(newOccurrences, seenKeys)
 
             // Divide data into rows fit for printing and rows with errors
             const { passedData, failedData } = filterRows(sortedChunk)

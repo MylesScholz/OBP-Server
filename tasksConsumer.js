@@ -1,59 +1,102 @@
+import amqp from 'amqplib'
 
-import { connectToDb } from './api/lib/mongo.js'
-import { connectToRabbitMQ, getTasksChannel, tasksQueueName } from './api/lib/rabbitmq.js'
-import { getTaskById } from './api/models/task.js'
-import { clearBlankRows } from './api/lib/utilities.js'
-import { updateTaskInProgress } from './api/models/task.js'
+import { messageBroker } from './api/config/environment.js'
+import { TaskService } from './api/services/index.js'
+
 import processObservationsTask from './api/lib/observations.js'
 import processLabelsTask from './api/lib/labels.js'
 import processAddressesTask from './api/lib/addresses.js'
 import processEmailsTask from './api/lib/emails.js'
 
-async function main() {
-    try {
-        const tasksChannel = getTasksChannel()
+import DatabaseManager from './api/database/DatabaseManager.js'
 
-        console.log(`Consuming queue '${tasksQueueName}'...`)
-        tasksChannel.consume(tasksQueueName, async (msg) => {
-            if (!msg) { return }
+class TaskConsumer {
+    constructor() {
+        this.connection = null
+        this.channel = null
+    }
 
-            const taskId = msg.content.toString()
-            const task = await getTaskById(taskId)
+    async connect() {
+        try {
+            this.connection = await amqp.connect(messageBroker.uri)
+            this.channel = await this.connection.createChannel()
 
-            // ACK immediately to prevent timeout
-            tasksChannel.ack(msg)
+            await this.channel.assertQueue(messageBroker.queueName, { durable: true })
 
-            console.log(`${new Date().toLocaleTimeString('en-US')} Processing task ${taskId}...`)
+            // Fair dispatch - don't give new message until previous is processed
+            this.channel.prefetch(1)
 
-            await updateTaskInProgress(taskId, { currentStep: 'Clearing blank records from uploaded file' })
-            console.log('\tClearing blank records from uploaded file...')
+            console.log('Connected to RabbitMQ')
+        } catch (error) {
+            console.error('RabbitMQ connection failed:', error)
+            throw error
+        }
+    }
 
-            const datasetFilePath = `./api/data/uploads/${task.dataset.split('/').pop()}`
-            await clearBlankRows(datasetFilePath)
+    async startConsuming() {
+        console.log(`Consuming queue '${messageBroker.queueName}'...`)
+
+        await this.channel.consume(messageBroker.queueName, async (msg) => {
+            if (!msg) return
 
             try {
-                if (task.type === 'observations') {
-                    await processObservationsTask(task)
-                } else if (task.type === 'labels') {
-                    await processLabelsTask(task)
-                } else if (task.type === 'addresses') {
-                    await processAddressesTask(task)
-                } else if (task.type === 'emails') {
-                    await processEmailsTask(task)
-                }
-            } catch (err) {
-                console.error(err)
-            }
+                const taskId = msg.content.toString()
 
-            console.log(`${new Date().toLocaleTimeString('en-US')} Completed task ${taskId}`)
+                // ACK immediately to prevent timeout
+                this.channel.ack(msg)
+
+                // Handle the task
+                await this.handleTask(taskId)                
+            } catch (error) {
+                console.error('Error processing message:', error)
+
+                // Reject and don't requeue (or requeue for retry)
+                this.channel.nack(msg, false, false)
+            }
         })
-    } catch (err) {
-        // console.error(err)
-        throw err
+    }
+
+    async handleTask(taskId) {
+        console.log(`${new Date().toLocaleTimeString('en-US')} Processing task ${taskId}...`)
+
+        try {
+            const task = await TaskService.getTaskById(taskId)
+
+            if (task.type === 'observations') {
+                await processObservationsTask(task)
+            } else if (task.type === 'labels') {
+                await processLabelsTask(task)
+            } else if (task.type === 'addresses') {
+                await processAddressesTask(task)
+            } else if (task.type === 'emails') {
+                await processEmailsTask(task)
+            }
+        } catch (error) {
+            console.error(`Error while processing task ${taskId}:`, error)
+            TaskService.updateFailureById(taskId)
+        }
+
+        console.log(`${new Date().toLocaleTimeString('en-US')} Completed task ${taskId}`)
     }
 }
 
-connectToDb().then(async () => {
-    await connectToRabbitMQ()
-    main()
-})
+async function start() {
+    const taskConsumer = new TaskConsumer()
+
+    try {
+        // Connect to MongoDB
+        await DatabaseManager.initialize()
+        // Connect to RabbitMQ
+        await taskConsumer.connect()
+
+        // Start consuming tasks
+        await taskConsumer.startConsuming()
+
+        console.log('Consumer is running...')
+    } catch (error) {
+        console.error('Failed to start consumer:', error)
+        process.exit(1)
+    }
+}
+
+start()

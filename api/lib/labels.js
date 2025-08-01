@@ -1,106 +1,14 @@
 import fs from 'fs'
-import { parse as parseSync } from 'csv-parse/sync'
 import { PageSizes, PDFDocument, degrees } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
 import { datamatrixrectangularextension } from 'bwip-js/node'
-import 'dotenv/config'
 
-import { clearTasksWithoutFiles, updateTaskInProgress, updateTaskResult, updateTaskWarning } from '../models/task.js'
-import { limitFilesInDirectory } from './utilities.js'
+import TaskService from '../services/TaskService.js'
+import OccurrenceService from '../services/OccurrenceService.js'
+import FileManager from '../utils/FileManager.js'
+import { abbreviations, fieldNames, fileLimits, requiredFields } from '../utils/constants.js'
 
 /* Constants */
-
-// Maximum number of output files stored on the server
-const MAX_LABELS = 25
-
-// Data field names
-const ERROR_FLAGS = 'errorFlags'
-const DATE_LABEL_PRINT = 'dateLabelPrint'
-const FIELD_NO = 'fieldNumber'
-const FIRST_NAME_INITIAL = 'firstNameInitial'
-const LAST_NAME = 'lastName'
-const SAMPLE_ID = 'sampleId'
-const SPECIMEN_ID = 'specimenId'
-const DAY = 'day'
-const MONTH = 'month'
-const YEAR = 'year'
-const DAY_2 = 'day2'
-const MONTH_2 = 'month2'
-const COUNTRY = 'country'
-const STATE = 'stateProvince'
-const COUNTY = 'county'
-const LOCALITY = 'locality'
-const LATITUDE = 'decimalLatitude'
-const LONGITUDE = 'decimalLongitude'
-const ELEVATION = 'verbatimElevation'
-const SAMPLING_PROTOCOL = 'samplingProtocol'
-
-// List of mandatory fields for a label to be printed
-const requiredFields = [
-    FIELD_NO,
-    FIRST_NAME_INITIAL,
-    LAST_NAME,
-    SAMPLE_ID,
-    SPECIMEN_ID,
-    DAY,
-    MONTH,
-    YEAR,
-    COUNTRY,
-    STATE,
-    LOCALITY,
-    LATITUDE,
-    LONGITUDE,
-    SAMPLING_PROTOCOL
-]
-
-// Roman numerals 1 to 12
-const monthNumerals = [
-    'I',
-    'II',
-    'III',
-    'IV',
-    'V',
-    'VI',
-    'VII',
-    'VIII',
-    'IX',
-    'X',
-    'XI',
-    'XII'
-]
-// County Abbreviations
-const countyAbbreviations = {
-    'Okanagan-Similkameen': 'RDOS',     // British Columbia Regional Districts
-    'Comox-Strathcona': 'CxSRD',
-    'Greater Vancouver': 'MVRD',
-    'Fraser-Fort George': 'RDFS',
-    'Cowichan Valley': 'CwVRD',
-    'Capital': 'CRD',
-    'Fraser Valley': 'FVRD',
-    'Sunshine Coast': 'SCRD',
-    'Squamish-Lillooet': 'SLRD',
-    'Kootenay Boundary': 'RDKB',
-    'Central Okanagan': 'RDCO',
-    'East Kootenay': 'RDEK',
-    'North Okanagan': 'RDNO',
-    'Thompson-Nicola': 'TNRD',
-    'Columbia-Shuswap': 'CSRD',
-    'Cariboo': 'Cariboo',
-    'Mount Waddington': 'RDMW',
-    'Central Coast': 'CCRD',
-    'North Coast': 'RDNC',
-    'Bulkley-Nechako': 'RDBN',
-    'Peace River': 'Peace River',
-    'Kitimat-Stikine': 'RDKS',
-    'Northern Rockies': 'NRRM',
-    'Strathcona': 'SRD',
-    'Stikine Region': 'Stikine',
-    'Alberni-Clayoquot': 'ACRD',
-    'Central Kootenay': 'RDCK',
-    'Nanaimo': 'RDN',
-    'Lincoln , US, WA': 'Lincoln',      // Fix a Google API error
-    'Franklin , US, WA': 'Franklin',
-}
 
 // Number of rows of labels
 const nRows = 25
@@ -128,130 +36,119 @@ const horizontalSpacing = (letterPaperWidth - (2 * horizontalMargin) - (nColumns
 const verticalSpacing = (letterPaperHeight - (2 * verticalMargin) - (nRows * labelHeight)) / (nRows - 1)
 
 /*
- * readOccurrencesFile()
- * Parses an input occurrences CSV file into a list of objects
- */
-function readOccurrencesFile(filePath) {
-    const occurrencesBuffer = fs.readFileSync(filePath)
-    const occurrences = parseSync(occurrencesBuffer, { columns: true })
-
-    return occurrences
-}
-
-/*
- * formatOccurrence()
+ * createLabelFromOccurrence()
  * Creates an object containing formatted label fields from a given occurrence object
  */
-function formatOccurrence(occurrence) {
-    const formattedOccurrence = {}
+function createLabelFromOccurrence(occurrence) {
+    // Roman numerals 1 to 12 (for date formatting)
+    const monthNumerals = [ 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII' ]
+
+    const label = {}
 
     // Location field
-    const country = occurrence[COUNTRY]
-    const stateProvince = occurrence[STATE]
-    let formattedCounty = countyAbbreviations[occurrence[COUNTY].trim()] ?? occurrence[COUNTY].trim()
+    const country = occurrence[fieldNames.country]
+    const stateProvince = occurrence[fieldNames.stateProvince]
+    let formattedCounty = abbreviations.counties[occurrence[fieldNames.county].trim()] ?? occurrence[fieldNames.county].trim()
     formattedCounty = formattedCounty ? `:${formattedCounty}${country === 'USA' ? 'Co' : ''}` : ''
-    const place = occurrence[LOCALITY]
-    const locationText = `${country}:${stateProvince}${formattedCounty} ${place}`
-    formattedOccurrence.location = locationText
+    const locality = occurrence[fieldNames.locality]
+    const locationText = `${country}:${stateProvince}${formattedCounty} ${locality}`
+    label.location = locationText
 
     // Coordinates field
-    const latitude = parseFloat(occurrence[LATITUDE]).toFixed(3).toString()
-    const longitude = parseFloat(occurrence[LONGITUDE]).toFixed(3).toString()
-    const elevation = occurrence[ELEVATION] ? ` ${occurrence[ELEVATION]}m` : ''
+    const latitude = parseFloat(occurrence[fieldNames.latitude]).toFixed(3).toString()
+    const longitude = parseFloat(occurrence[fieldNames.longitude]).toFixed(3).toString()
+    const elevation = occurrence[fieldNames.elevation] ? ` ${occurrence[fieldNames.elevation]}m` : ''
     const coordinatesText = `${latitude} ${longitude}${elevation}`
-    formattedOccurrence.coordinates = coordinatesText
+    label.coordinates = coordinatesText
 
     // Date field
-    const day1 = occurrence[DAY]
-    const month1 = monthNumerals[occurrence[MONTH] - 1]
-    const year = occurrence[YEAR]
+    const day1 = occurrence[fieldNames.day]
+    const month1 = monthNumerals[occurrence[fieldNames.month] - 1]
+    const year = occurrence[fieldNames.year]
     // Optional second date (for trap observations)
-    const day2 = occurrence[DAY_2]
-    const month2 = monthNumerals[occurrence[MONTH_2] - 1]
+    const day2 = occurrence[fieldNames.day2]
+    const month2 = monthNumerals[occurrence[fieldNames.month2] - 1]
     const duration = `-${day2}.${month2}`
     // Sample and specimen IDs
-    const sampleID = occurrence[SAMPLE_ID].replace('-', '')
-    const specimenID = occurrence[SPECIMEN_ID]
+    const sampleID = occurrence[fieldNames.sampleId].replace('-', '')
+    const specimenID = occurrence[fieldNames.specimenId]
     const dateText = `${day1}.${month1}${(day2 && month2) ? duration : ''}${year}-${sampleID}.${specimenID}`
-    formattedOccurrence.date = dateText
+    label.date = dateText
 
     // Collector field
-    const firstNameInitial = occurrence[FIRST_NAME_INITIAL]
-    const lastName = occurrence[LAST_NAME]
+    const firstNameInitial = occurrence[fieldNames.firstNameInitial]
+    const lastName = occurrence[fieldNames.lastName]
     const nameText = `${firstNameInitial}${lastName}`
-    formattedOccurrence.name = nameText
+    label.name = nameText
 
     // Collection method field
-    let methodText = occurrence[SAMPLING_PROTOCOL].toLowerCase() ?? ''
+    let methodText = occurrence[fieldNames.samplingProtocol].toLowerCase() ?? ''
     if (methodText.includes('net')) { methodText = 'net' }
     if (methodText.includes('trap')) { methodText = 'trap' }
     if (methodText.includes('nest')) { methodText = 'nest' }
-    formattedOccurrence.method = methodText
+    label.method = methodText
 
     // Field number field
-    const numberText = occurrence[FIELD_NO]
-    formattedOccurrence.number = numberText
+    const numberText = occurrence[fieldNames.fieldNumber]
+    label.number = numberText
 
-    return formattedOccurrence
+    return label
 }
 
 /*
- * formatOccurrencess()
- * Filters, formats, and adds warnings for a given list of occurrences
+ * createLabelsFromOccurrences()
+ * Formats the given occurrences into label fields and updates warnings
  */
-function formatOccurrences(occurrences, addWarning) {
+function createLabelsFromOccurrences(occurrences, addWarning) {
+    if (!occurrences) return
+
     // Optional fields that should throw warnings
     const warningFields = [
-        COUNTY
+        fieldNames.county
     ]
 
-    // Filter out occurrences that have any falsy requiredFields or that have been printed already
-    let unprintedOccurrences = occurrences.filter((occurrence) => !occurrence[DATE_LABEL_PRINT] && requiredFields.every((field) => !!occurrence[field]))
-    // Filter out occurrences where any of the required fields show up in ERROR_FLAGS
-    unprintedOccurrences = unprintedOccurrences.filter((occurrence) => !requiredFields.some((field) => occurrence[ERROR_FLAGS]?.split(';')?.includes(field) ?? false))
-
-    // Format and add warnings to the remaining occurrences
-    for (let i = 0; i < unprintedOccurrences.length; i++) {
-        const occurrence = unprintedOccurrences[i]
-        const formattedOccurrence = formatOccurrence(occurrence)
+    const labels = []
+    for (const occurrence of occurrences) {
+        const label = createLabelFromOccurrence(occurrence)
+        labels.push(label)
 
         // Add warnings for falsy warningFields and fields that are too long (highly specific, may need tuning)
         const warningReasons = warningFields.filter((field) => !occurrence[field])
-        if (occurrence[COUNTRY].length > 3 ||
-            occurrence[STATE].length > 2 ||
-            occurrence[COUNTY].length + occurrence[LOCALITY].length > 25 ||
-            formattedOccurrence.name.length > 19 ||
-            formattedOccurrence.method.length > 5
+        if (occurrence[fieldNames.country].length > 3 ||
+            occurrence[fieldNames.stateProvince].length > 2 ||
+            occurrence[fieldNames.county].length + occurrence[fieldNames.locality].length > 25 ||
+            label.name.length > 19 ||
+            label.method.length > 5
         ) {
             warningReasons.push('field length')
         }
         if (warningReasons.length > 0) {
-            addWarning(occurrence[FIELD_NO], warningReasons.join(', '))
+            addWarning(occurrence[fieldNames.fieldNumber], warningReasons.join(', '))
         }
-
-        unprintedOccurrences[i] = formattedOccurrence
     }
 
-    return unprintedOccurrences
+    return labels
 }
 
 /*
- * partitionOccurrences()
- * Inserts blank records between formatted occurrences with different collectors for spacing
+ * partitionLabels()
+ * Inserts blank records between labels with different collectors for spacing
  */
-function partitionOccurrences(occurrences) {
-    const partitionedOccurrences = []
+function partitionLabels(labels) {
+    if (!labels) return
 
-    // Iterate through each occurrence and look ahead one to determine if the collectors are different
-    for (let i = 0; i < occurrences.length - 1; i++) {
-        partitionedOccurrences.push(occurrences[i])
+    const partitionedLabels = []
 
-        if (occurrences[i].name !== occurrences[i + 1].name) {
-            partitionedOccurrences.push({ blank: true })
+    // Iterate through each label and look ahead one to determine if the collectors are different
+    for (let i = 0; i < labels.length - 1; i++) {
+        partitionedLabels.push(labels[i])
+
+        if (labels[i].name !== labels[i + 1].name) {
+            partitionedLabels.push({ blank: true })
         }
     }
 
-    return partitionedOccurrences
+    return partitionedLabels
 }
 
 /*
@@ -363,9 +260,9 @@ async function addDataMatrix(page, text, basisX, basisY, dataMatrixLayout) {
 
 /*
  * addLabel()
- * Adds a label for the given formatted occurrence to the PDFPage at the given position
+ * Adds a label for the given label data to the PDFPage at the given position
  */
-async function addLabel(page, occurrence, basisX, basisY, fonts) {
+async function addLabel(page, label, basisX, basisY, fonts) {
     // An optional bounding rectangle for making adjustments to the layout
     // page.drawRectangle({
     //     x: basisX,
@@ -377,7 +274,7 @@ async function addLabel(page, occurrence, basisX, basisY, fonts) {
     // })
 
     // Define the layout for the location label field
-    const locationText = occurrence.location ?? ''
+    const locationText = label.location ?? ''
     const locationLayout = {
         x: 0.005 * PostScriptPointsPerInch,
         y: 0.18525 * PostScriptPointsPerInch,
@@ -396,7 +293,7 @@ async function addLabel(page, occurrence, basisX, basisY, fonts) {
     addTextBox(page, locationText, basisX, basisY, locationLayout)
 
     // Define the layout for the coordinates label field
-    const coordinatesText = occurrence.coordinates ?? ''
+    const coordinatesText = label.coordinates ?? ''
     const coordinatesLayout = {
         x: 0.005 * PostScriptPointsPerInch,
         y: 0.145 * PostScriptPointsPerInch,
@@ -416,7 +313,7 @@ async function addLabel(page, occurrence, basisX, basisY, fonts) {
     addTextBox(page, coordinatesText, basisX, basisY, coordinatesLayout)
 
     // Define the layout for the date label field
-    const dateText = occurrence.date ?? ''
+    const dateText = label.date ?? ''
     const dateLayout = {
         x: 0.005 * PostScriptPointsPerInch,
         y: 0.075 * PostScriptPointsPerInch,
@@ -436,7 +333,7 @@ async function addLabel(page, occurrence, basisX, basisY, fonts) {
     addTextBox(page, dateText, basisX, basisY, dateLayout)
 
     // Define the layout for the collector name label field
-    const nameText = occurrence.name ?? ''
+    const nameText = label.name ?? ''
     const nameLayout = {
         x: 0.005 * PostScriptPointsPerInch,
         y: 0.005 * PostScriptPointsPerInch,
@@ -456,7 +353,7 @@ async function addLabel(page, occurrence, basisX, basisY, fonts) {
     addTextBox(page, nameText, basisX, basisY, nameLayout)
 
     // Define the layout for the collection method label field
-    const methodText = occurrence.method ?? ''
+    const methodText = label.method ?? ''
     const methodLayout = {
         x: 0.36 * PostScriptPointsPerInch,
         y: 0.005 * PostScriptPointsPerInch,
@@ -476,7 +373,7 @@ async function addLabel(page, occurrence, basisX, basisY, fonts) {
     addTextBox(page, methodText, basisX, basisY, methodLayout)
 
     // Define the layout for the field number label field
-    const numberText = occurrence.number ?? ''
+    const numberText = label.number ?? ''
     const numberLayout = {
         x: 0.661 * PostScriptPointsPerInch,
         y: 0.005 * PostScriptPointsPerInch,
@@ -517,9 +414,11 @@ async function getFontData(fileKey) {
 
 /*
  * writePDFPage()
- * Creates a PDFPage in the given PDFDocument and populates it with labels from the given list of formatted occurrences
+ * Creates a PDFPage in the given PDFDocument and populates it with labels
  */
-async function writePDFPage(doc, occurrences, updateLabelsProgress) {
+async function writePDFPage(doc, labels, updateProgress) {
+    await updateProgress(0)
+
     // Create the PDFPage
     const page = doc.addPage(PageSizes.Letter)
 
@@ -529,9 +428,9 @@ async function writePDFPage(doc, occurrences, updateLabelsProgress) {
     const oxygenMonoFont = await doc.embedFont(oxygenMonoData)
 
     // Add a label for each formatted occurrence in rows and columns
-    for (let i = 0; i < occurrences.length; i++) {
+    for (let i = 0; i < labels.length; i++) {
         // Skip blank partition records
-        if (occurrences[i].blank) {
+        if (labels[i].blank) {
             continue
         }
 
@@ -544,11 +443,39 @@ async function writePDFPage(doc, occurrences, updateLabelsProgress) {
         const basisY = verticalMargin + (currentRow * (labelHeight + verticalSpacing))
 
         // Add the label
-        await addLabel(page, occurrences[i], basisX, basisY, { oxygenMonoFont })
+        await addLabel(page, labels[i], basisX, basisY, { oxygenMonoFont })
 
         // Provide a progress update
-        updateLabelsProgress(i)
+        updateProgress(100 * i / labels.length)
     }
+}
+
+async function writePDF(filePath, labels, updateProgress) {
+    // Paginate the data
+    const pageSize = nRows * nColumns
+    const totalPages = Math.ceil(labels.length / pageSize)
+    let pageStart = 0
+    let pageEnd = Math.min(pageSize, labels.length)
+    let currentPage = 1
+
+    // Create the output PDF
+    const doc = await PDFDocument.create()
+    
+    // Add pages of labels
+    for (let i = 0; i < totalPages; i++) {
+        await writePDFPage(doc, labels.slice(pageStart, pageEnd), async (percentage) => {
+            await updateProgress((100 * i + percentage) / totalPages)
+        })
+
+        // Update the partition markers
+        pageStart = pageEnd
+        pageEnd = Math.min(pageEnd + pageSize, labels.length)
+        currentPage++
+    }
+
+    // Write the document to the given file path
+    const docBuffer = await doc.save()
+    fs.writeFileSync(filePath, docBuffer)
 }
 
 export default async function processLabelsTask(task) {
@@ -556,62 +483,57 @@ export default async function processLabelsTask(task) {
 
     const taskId = task._id
 
-    await updateTaskInProgress(taskId, { currentStep: 'Generating labels from provided dataset' })
-    console.log('\tGenerating labels from provided dataset...')
+    // Input and output file names
+    const uploadFilePath = './api/data' + task.dataset.replace('/api', '')      // task.dataset has a '/api' suffix, which should be removed
+    const labelsFileName = `labels_${task.tag}.pdf`
+    const labelFilePath = `./api/data/labels/${labelsFileName}`
 
-    const occurrences = readOccurrencesFile('./api/data' + task.dataset.replace('/api', '')) // task.dataset has a '/api' suffix, which should be removed
+    await TaskService.logTaskStep(taskId, 'Formatting and uploading provided dataset')
+
+    // Delete old occurrences (from previous tasks)
+    await OccurrenceService.deleteOccurrences()
+
+    // Read data from the input occurrence file and insert it into the occurrences database table
+    const { duplicates: duplicateOccurrences } = await OccurrenceService.createOccurrencesFromFile(uploadFilePath)
+
+    // Find the set of printable occurrences
+    const printableOccurrences = await OccurrenceService.getPrintableOccurrences(requiredFields)
+
+    // Calculate the number of unprintable occurrences that were filtered out and add a warning message
+    const totalInputOccurrences = await OccurrenceService.count() + duplicateOccurrences.length
+    const numFilteredOut = totalInputOccurrences - printableOccurrences.length
+
+    const warnings = [`Filtered out ${numFilteredOut} occurrences that were already printed or had faulty data.`]
 
     // Filter and process the occurrences into formatted label fields and check the data for warnings
-    const warnings = []
-    const numUnfilteredOccurrences = occurrences.length
-    const formattedOccurrences = formatOccurrences(occurrences, (warningId, reason) => {
-        warnings.push(`${warningId}${reason ? ` (${reason})` : ''}`)
+    let warningIds = []
+    const labels = createLabelsFromOccurrences(printableOccurrences, (warningId, reason) => {
+        warningIds.push(`${warningId}${reason ? ` (${reason})` : ''}`)
     })
-    const numFilteredOut = numUnfilteredOccurrences - formattedOccurrences.length
-
-    // Add blank partitions to occurrences for spacing
-    const partitionedOccurrences = partitionOccurrences(formattedOccurrences)
+    warnings.push(`Potentially incompatible data for occurrences: [ ${warningIds.join(', ')} ]`)
 
     // Display warnings, if any
-    await updateTaskWarning(taskId, { messages: [
-        `Filtered out ${numFilteredOut} occurrences that were already printed or had faulty data.`,
-        `Potentially incompatible data for occurrences: [ ${warnings.join(', ')} ]`
-    ] })
+    await TaskService.updateWarningsById(taskId, warnings)
 
-    // Paginate the data
-    const pageSize = nRows * nColumns
-    const nPages = Math.ceil(partitionedOccurrences.length / pageSize)
-    let pageStart = 0
-    let pageEnd = Math.min(pageSize, partitionedOccurrences.length)
-    let currentPage = 1
+    // Add blank partitions to labels for spacing
+    const partitionedLabels = partitionLabels(labels)
 
-    // Create the output PDF
-    const labelsFileName = `labels_${task.tag}.pdf`
-    const doc = await PDFDocument.create()
-    
-    // Add pages of labels
-    for (let i = 0; i < nPages; i++) {
-        await writePDFPage(doc, partitionedOccurrences.slice(pageStart, pageEnd), async (labelsFinished) => {
-            const percentage = `${(100 * (i * pageSize + labelsFinished) / partitionedOccurrences.length).toFixed(2)}%`
-            await updateTaskInProgress(taskId, { currentStep: 'Generating labels from provided dataset', percentage })
-        })
+    await TaskService.logTaskStep(taskId, 'Generating labels from provided dataset')
 
-        // Update the partition markers
-        pageStart = pageEnd
-        pageEnd = Math.min(pageEnd + pageSize, partitionedOccurrences.length)
-        currentPage++
-    }
+    // Write the labels PDF
+    await writePDF(labelFilePath, partitionedLabels, async (percentage) => {
+        await TaskService.updateProgressPercentageById(taskId, percentage)
+    })
 
-    // Save the document to a file
-    const docBuffer = await doc.save()
-    fs.writeFileSync(`./api/data/labels/${labelsFileName}`, docBuffer)
-
-    await updateTaskResult(taskId, {
+    // Update the task result with the output files
+    await TaskService.updateResultById(taskId, {
         outputs: [
             { uri: `/api/labels/${labelsFileName}`, fileName: labelsFileName, type: 'labels' }
         ]
     })
 
-    limitFilesInDirectory('./api/data/labels', MAX_LABELS)
-    clearTasksWithoutFiles()
+    // Archive excess output files
+    FileManager.limitFilesInDirectory('./api/data/labels', fileLimits.maxLabels)
+    // Clean up tasks
+    await TaskService.deleteTasksWithoutFiles()
 }

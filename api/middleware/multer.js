@@ -1,5 +1,7 @@
-import Crypto from 'node:crypto'
 import multer from 'multer'
+
+import FileManager from '../utils/FileManager.js'
+import { fileLimits } from '../utils/constants.js'
 
 // Allowable file types; keys are MIME file types, values are file extensions
 const fileTypes = {
@@ -40,4 +42,14 @@ const uploadUsernames = multer({
     })
 })
 
-export { uploadCSV, uploadUsernames }
+/*
+ * limitUploadFiles()
+ * File management middleware that limits the number of upload files, archiving excess files
+ */
+function limitUploadFiles(req, res, next) {
+    // If there are too many files in the uploads directory, find and archive the oldest one (by timestamp of last modification)
+    FileManager.limitFilesInDirectory('./api/data/uploads', fileLimits.maxUploads)
+    next()
+}
+
+export { uploadCSV, uploadUsernames, limitUploadFiles }

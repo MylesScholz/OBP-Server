@@ -1,145 +1,97 @@
-import fs from 'fs'
-import { parse as parseAsync } from 'csv-parse'
-import { parse as parseSync } from 'csv-parse/sync'
-import { stringify as stringifySync } from 'csv-stringify/sync'
-
-import { clearTasksWithoutFiles, updateTaskInProgress, updateTaskResult } from '../models/task.js'
-import { limitFilesInDirectory } from './utilities.js'
-
-/* Constants */
-
-// Maximum number of output files stored on the server
-const MAX_EMAILS = 25
-// Maximum number of observations to read from a file at once
-const CHUNK_SIZE = 5000
-// Field names
-const ERROR_FLAGS = 'errorFlags'
-const USER_LOGIN = 'userLogin'
-const FULL_NAME = 'fullName'
-const FIRST_NAME = 'firstName'
-const FIRST_NAME_INITIAL = 'firstNameInitial'
-const LAST_NAME = 'lastName'
-const EMAIL = 'email'
-const ADDRESS = 'address'
-const CITY = 'city'
-const STATE = 'stateProvince'
-const COUNTRY = 'country'
-const ZIP_CODE = 'zip'
-const LOCALITY = 'locality'
-const ACCURACY = 'coordinateUncertaintyInMeters'
-const PLANT_PHYLUM = 'phylumPlant'
-const PLANT_ORDER = 'orderPlant'
-const PLANT_FAMILY = 'familyPlant'
-const PLANT_GENUS = 'genusPlant'
-const PLANT_SPECIES = 'speciesPlant'
-const PLANT_TAXON_RANK = 'taxonRankPlant'
-const emailsHeader = [
-    'locationEmails',
-    'accuracyEmails',
-    'taxonomyEmails'
-]
-const locationErrorFlags = [
-    LOCALITY
-]
-const accuracyErrorFlags = [
-    ACCURACY
-]
-const taxonomyErrorFlags = [
-    PLANT_PHYLUM,
-    PLANT_ORDER,
-    PLANT_FAMILY,
-    PLANT_GENUS,
-    PLANT_SPECIES,
-    PLANT_TAXON_RANK
-]
+import TaskService from '../services/TaskService.js'
+import FileManager from '../utils/FileManager.js'
+import OccurrenceService from '../services/OccurrenceService.js'
+import UsernamesService from '../services/UsernamesService.js'
+import { fieldNames, fileLimits } from '../utils/constants.js'
 
 /*
- * readUsernamesFile()
- * Parses /api/data/usernames.csv into a JS object
+ * buildUserErrorMap()
+ * Builds an object that maps each user login (from a getErrorFlagsByUserIds query) to its corresponding error flags (as an Array)
  */
-function readUsernamesFile() {
-    // If /api/data/usernames.csv doesn't exist locally, create a base version and save it
-    if (!fs.existsSync('./api/data/usernames.csv')) {
-        const header = [USER_LOGIN, FULL_NAME, FIRST_NAME, FIRST_NAME_INITIAL, LAST_NAME, EMAIL, ADDRESS, CITY, STATE, COUNTRY, ZIP_CODE]
-        const csv = stringifySync([], { header: true, columns: header })
-        fs.writeFileSync('./api/data/usernames.csv', csv)
-    }
-    
-    // Read and parse /api/data/usernames.csv
-    const usernamesData = fs.readFileSync('./api/data/usernames.csv')
-    return parseSync(usernamesData, { columns: true, skip_empty_lines: true, relax_quotes: true })
+function buildUserErrorMap(userErrors) {
+    const userErrorMap = {}
+
+    userErrors?.forEach((user) => {
+        const userLogin = user[fieldNames.iNaturalistAlias]
+        const errorFlags = user[fieldNames.errorFlags]?.split(';') ?? []
+
+        userErrorMap[userLogin] = errorFlags
+    })
+
+    return userErrorMap
 }
 
 /*
- * readOccurrencesFileChunks()
- * A generator function that reads a given occurrences CSV file into memory in chunks of a given size
+ * buildUserEmailMap()
+ * Builds an object that maps each user login (from usernames.csv) to its corresponding email
  */
-async function* readOccurrencesFileChunks(filePath, chunkSize) {
-    // Create the read stream and pipe it to a CSV parser
-    const fileStream = fs.createReadStream(filePath, { encoding: 'utf-8' })
-    const parser = parseAsync({ columns: true, skip_empty_lines: true, relax_quotes: true })
-    const csvStream = fileStream.pipe(parser)
+function buildUserEmailMap(users) {
+    const userEmailMap = {}
 
-    // Create a chunk to store rows
-    let chunk = []
+    users?.forEach((user) => {
+        const userLogin = user[usernames.fieldNames.userLogin]
+        const email = user[usernames.fieldNames.email]
 
-    // Read the file, yielding chunks as they are filled
-    for await (const row of csvStream) {
-        // Add the current row to the chunk
-        chunk.push(row)
-
-        // If the chunk is large enough, yield it and reset the chunk for the next call
-        if (chunk.length >= chunkSize) {
-            yield chunk
-            chunk = []
+        if (userLogin && email) {
+            userEmailMap[userLogin] = email
         }
-    }
+    })
 
-    // Yield any remaining rows (a partial chunk)
-    if (chunk.length > 0) {
-        yield chunk
-    }
+    return userEmailMap
 }
 
 /*
- * filterUsersByUserLogins()
- * Filters a given list of user data down to rows with USER_LOGIN values that occur in a given set
+ * buildEmailCategories()
+ * Builds three lists of emails categorized by error type (location, accuracy, and taxonomy)
  */
-function filterUsersByUserLogins(users, userErrorMap) {
-    const uniqueUserNames = new Set()
-    const filteredUsers = []
-    for (const user of users) {
-        if (user[USER_LOGIN] && userErrorMap.has(user[USER_LOGIN]) && !uniqueUserNames.has(user[FULL_NAME])) {
-            uniqueUserNames.add(user[FULL_NAME])
-            filteredUsers.push(user)
+function buildEmailCategories(userErrorMap, userEmailMap) {
+    // Lists of field names that imply membership in each category of email list
+    const locationErrorFlags = [
+        fieldNames.locality
+    ]
+    const accuracyErrorFlags = [
+        fieldNames.accuracy
+    ]
+    const taxonomyErrorFlags = [
+        fieldNames.plantPhylum,
+        fieldNames.plantOrder,
+        fieldNames.plantFamily,
+        fieldNames.plantGenus,
+        fieldNames.plantSpecies,
+        fieldNames.plantTaxonRank
+    ]
+
+    // Categorize user emails into different lists by error type
+    const locationEmails = [], accuracyEmails = [], taxonomyEmails = []
+    for (const [ userLogin, errorFlags ] of Object.entries(userErrorMap)) {
+        // Skip users with unknown emails
+        if (!userEmailMap[userLogin]) continue
+
+        // Push user's email to matching categories independently
+        if (locationErrorFlags.some((field) => errorFlags.includes(field))) {
+            locationEmails.push(userEmailMap[userLogin])
+        }
+        if (accuracyErrorFlags.some((field) => errorFlags.includes(field))) {
+            accuracyEmails.push(userEmailMap[userLogin])
+        }
+        if (taxonomyErrorFlags.some((field) => errorFlags.includes(field))) {
+            taxonomyEmails.push(userEmailMap[userLogin])
         }
     }
 
-    return filteredUsers
+    return { locationEmails, accuracyEmails, taxonomyEmails }
 }
 
 /*
  * writeEmailsFile()
  * Writes user emails divided into error categories to a CSV file at the given file path
  */
-function writeEmailsFile(filePath, users, userErrorMap) {
-    // Categorize user emails into different lists by error type
-    const locationEmails = []
-    const accuracyEmails = []
-    const taxonomyEmails = []
-    for (const user of users) {
-        const userErrors = userErrorMap.get(user[USER_LOGIN])
-
-        if (locationErrorFlags.some((field) => userErrors.has(field))) {
-            locationEmails.push(user[EMAIL])
-        }
-        if (accuracyErrorFlags.some((field) => userErrors.has(field))) {
-            accuracyEmails.push(user[EMAIL])
-        }
-        if (taxonomyErrorFlags.some((field) => userErrors.has(field))) {
-            taxonomyEmails.push(user[EMAIL])
-        }
-    }
+function writeEmailsFile(filePath, locationEmails, accuracyEmails, taxonomyEmails) {
+    const emailsHeader = [
+        'locationEmails',
+        'accuracyEmails',
+        'taxonomyEmails'
+    ]
 
     // Convert email lists into object rows
     const emailRows = []
@@ -152,8 +104,7 @@ function writeEmailsFile(filePath, users, userErrorMap) {
         emailRows.push(row)
     }
 
-    const csv = stringifySync(emailRows, { header: true, columns: emailsHeader })
-    fs.writeFileSync(filePath, csv)
+    return FileManager.writeCSV(filePath, emailRows, emailsHeader)
 }
 
 export default async function processEmailsTask(task) {
@@ -161,47 +112,49 @@ export default async function processEmailsTask(task) {
 
     const taskId = task._id
 
-    await updateTaskInProgress(taskId, { currentStep: 'Compiling user email addresses...' })
-    console.log('\tCompiling user email addresses...')
-
-    // Read users dataset
-    const users = readUsernamesFile()
-
-    // Read occurrences dataset in chunks, keeping a record of unique userLogins found and their associated error flags
-    const userErrorMap = new Map()
-    const occurrencesFilePath = './api/data' + task.dataset.replace('/api', '') // task.dataset has a '/api' suffix, which should be removed
-    for await (const chunk of readOccurrencesFileChunks(occurrencesFilePath, CHUNK_SIZE)) {
-        for (const occurrence of chunk) {
-            if (occurrence[USER_LOGIN] && occurrence[ERROR_FLAGS]) {
-                const userLogin = occurrence[USER_LOGIN]
-                const errorFlags = occurrence[ERROR_FLAGS].split(';')
-
-                // Initialize mapping if empty
-                if (!userErrorMap.has(userLogin)) {
-                    userErrorMap.set(userLogin, new Set())
-                }
-                
-                // Add each unique error flag to the mapping for this user
-                for (const errorFlag of errorFlags) {
-                    userErrorMap.get(userLogin).add(errorFlag)
-                }
-            }
-        }
-    }
-
-    // Filter users down to those with USER_LOGIN values in the provided occurrence dataset
-    const filteredUsers = filterUsersByUserLogins(users, userErrorMap)
-
+    // Input and output file names
+    const uploadFilePath = './api/data' + task.dataset.replace('/api', '')      // task.dataset has a '/api' suffix, which should be removed
     const emailsFileName = `emails_${task.tag}.csv`
     const emailsFilePath = './api/data/emails/' + emailsFileName
-    writeEmailsFile(emailsFilePath, filteredUsers, userErrorMap)
 
-    await updateTaskResult(taskId, {
+    await TaskService.logTaskStep(taskId, 'Formatting and uploading provided dataset')
+
+    // Delete old occurrences (from previous tasks)
+    await OccurrenceService.deleteOccurrences()
+
+    // Read data from the input occurrence file and insert it into the occurrences database table
+    await OccurrenceService.createOccurrencesFromFile(uploadFilePath)
+
+    await TaskService.logTaskStep(taskId, 'Compiling user email addresses')
+
+    // Read users dataset; extract the userLogins
+    const users = UsernamesService.readUsernames()
+    const userLogins = users.map((user) => user[usernames.fieldNames.userLogin])
+                            .filter((userLogin) => !!userLogin)
+    
+    const userErrors = await OccurrenceService.getErrorFlagsByUserLogins(userLogins)
+
+    // Construct a map of each user login to its corresponding error flags (as an Array)
+    const userErrorMap = buildUserErrorMap(userErrors)
+
+    // Construct a map of each user login to its corresponding email
+    const userEmailMap = buildUserEmailMap(users)
+
+    // Build three lists of emails categorized by error type (location, accuracy, and taxonomy)
+    const { locationEmails, accuracyEmails, taxonomyEmails } = buildEmailCategories(userErrorMap, userEmailMap)
+    
+    // Write output file
+    writeEmailsFile(emailsFilePath, locationEmails, accuracyEmails, taxonomyEmails)
+
+    // Update the task result with the output files
+    await TaskService.updateResultById(taskId, {
         outputs: [
             { uri: `/api/emails/${emailsFileName}`, fileName: emailsFileName, type: 'emails' }
         ]
-    })
+    }) 
 
-    limitFilesInDirectory('./api/data/emails', MAX_EMAILS)
-    clearTasksWithoutFiles()
+    // Archive excess output files
+    FileManager.limitFilesInDirectory('./api/data/emails', fileLimits.maxEmails)
+    // Clean up tasks
+    await TaskService.deleteTasksWithoutFiles()
 }

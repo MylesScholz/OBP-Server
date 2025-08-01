@@ -1,7 +1,7 @@
 import Router from 'express'
 import fs from 'fs'
 
-import { requireAuthentication } from './lib/auth.js'
+import { requireAuthentication } from '../middleware/auth.js'
 
 const archiveRouter = Router()
 
@@ -30,6 +30,8 @@ archiveRouter.get('/occurrences', requireAuthentication, createReadDirMiddleware
 archiveRouter.get('/pulls', requireAuthentication, createReadDirMiddleware('./api/data/pulls', '/api/pulls/'))
 
 archiveRouter.get('/flags', requireAuthentication, createReadDirMiddleware('./api/data/flags', '/api/flags/'))
+
+archiveRouter.get('/duplicates', requireAuthentication, createReadDirMiddleware('./api/data/duplicates', '/api/duplicates/'))
 
 archiveRouter.get('/labels', requireAuthentication, createReadDirMiddleware('./api/data/labels', '/api/labels/'))
 

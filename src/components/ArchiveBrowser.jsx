@@ -73,6 +73,7 @@ export default function ArchiveBrowser() {
                     <option value='occurrences'>Occurrences</option>
                     <option value='pulls'>Pulls</option>
                     <option value='flags'>Flags</option>
+                    <option value='duplicates'>Duplicates</option>
                     <option value='labels'>Labels</option>
                     <option value='addresses'>Addresses</option>
                     <option value='emails'>Emails</option>

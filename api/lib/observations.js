@@ -25,7 +25,15 @@ async function updateOccurrencesFromObservations(elevations, updateProgress) {
     // Query the joined occurrences-observations table page-by-page to avoid memory constraints
     let pageNumber = 1
     let occurrenceIndex = 0
-    let results = await OccurrenceViewService.getOccurrenceViewPage(pageNumber)
+    const options = {
+        projection: {
+            uuid: 1,
+            positional_accuracy: 1,
+            geojson: 1,
+            taxon: 1
+        }
+    }
+    let results = await OccurrenceViewService.getOccurrenceViewPage(pageNumber, options)
     while (pageNumber < results.pagination.totalPages + 1) {
         for (const occurrence of results.data) {
             // Update the occurrence data from the matching observation
@@ -35,7 +43,7 @@ async function updateOccurrencesFromObservations(elevations, updateProgress) {
         }
 
         // Query the next page
-        results = await OccurrenceViewService.getOccurrenceViewPage(++pageNumber)
+        results = await OccurrenceViewService.getOccurrenceViewPage(++pageNumber, options)
     }
 
     await updateProgress(100)
@@ -271,20 +279,25 @@ export default async function processObservationsTask(task) {
 
     await TaskService.logTaskStep(taskId, 'Writing output files')
 
-    // Write unflagged occurrences to the occurrences output file
-    const occurrencesFilter = { errorFlags: { $in: [ null, undefined, '' ] } }
+    // Write old and unflagged occurrences to the occurrences output file
+    const occurrencesFilter = {
+        $or: [
+            { new: { $exists: false } },
+            { [fieldNames.errorFlags]: { $in: [ null, undefined, '' ] } }
+        ]
+    }
     await OccurrenceService.writeOccurrencesFromDatabase(occurrencesFilePath, occurrencesFilter)
     
-    // Write new flagged occurrences to the flags output file
+    // Write unprinted, flagged occurrences to the flags output file
     const flagsFilter = {
-        errorFlags: { $nin: [ null, undefined, '' ] },
-        new: true
+        [fieldNames.errorFlags]: { $nin: [ null, undefined, '' ] },
+        [fieldNames.dateLabelPrint]: { $in: [ null, undefined, '' ] }
     }
     await OccurrenceService.writeOccurrencesFromDatabase(flagsFilePath, flagsFilter)
 
     // Write new unflagged occurrences to the pulls output file
     const pullsFilter = {
-        errorFlags: { $in: [ null, undefined, '' ] },
+        [fieldNames.errorFlags]: { $in: [ null, undefined, '' ] },
         new: true
     }
     await OccurrenceService.writeOccurrencesFromDatabase(pullsFilePath, pullsFilter)

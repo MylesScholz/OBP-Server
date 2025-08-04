@@ -162,7 +162,7 @@ class OccurrenceService {
         return results
     }
 
-    async createOccurrences(documents) {
+    async createOccurrences(documents, skipFormatting = false) {
         // Return object containing information about inserted and duplicate occurrences
         const results = {
             insertedCount: 0,
@@ -170,8 +170,8 @@ class OccurrenceService {
             duplicates: []
         }
 
-        // Apply formatting
-        const occurrences = documents?.map((doc) => this.formatOccurrence(doc))
+        // Apply formatting (unless skipped)
+        const occurrences = skipFormatting ? documents : documents?.map((doc) => this.formatOccurrence(doc))
 
         // Return if no documents were provided
         if (!occurrences || occurrences.length === 0) return results

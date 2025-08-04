@@ -48,6 +48,7 @@ export default class BaseRepository {
             pageSize = 1000,
             filter = {},
             sortConfig = [],
+            projection = {},
             includeTotal = true
         } = options
 
@@ -63,7 +64,7 @@ export default class BaseRepository {
         
         // Query data
         const data = await this.collection
-                                .find(filter)
+                                .find(filter, projection)
                                 .sort(sortStage)
                                 .skip(skip)
                                 .limit(pageSize)

@@ -70,10 +70,22 @@ class DatabaseManager {
      * Returns the index definitions for all collections
      */
     getIndexDefinitions() {
-        const compositeSortIndex = { 'composite_sort': 1 }
-
         return {
-            'occurrences': [ compositeSortIndex ]
+            'occurrences': [
+                { 'composite_sort': 1 },
+                { [fieldNames.iNaturalistUrl]: 1 },
+                {
+                    [fieldNames.errorFlags]: 1,
+                    [fieldNames.dateLabelPrint]: 1
+                },
+                {
+                    [fieldNames.errorFlags]: 1,
+                    'new': 1
+                }
+            ],
+            'observations': [
+                { 'uri': 1, 'matched': 1 }
+            ]
         }
     }
 
@@ -173,8 +185,15 @@ class DatabaseManager {
                 {
                     $lookup: {
                         from: 'observations',
-                        localField: fieldNames.iNaturalistUrl,
-                        foreignField: 'uri',
+                        let: { occurrenceUrl: `$${fieldNames.iNaturalistUrl}` },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: { $eq: [ '$uri', '$$occurrenceUrl' ] },
+                                    matched: true
+                                }
+                            }
+                        ],
                         as: 'observation'
                     }
                 },

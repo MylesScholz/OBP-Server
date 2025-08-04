@@ -1,3 +1,5 @@
+import path from 'path'
+
 export default class UsernamesController {
     static async getUsernamesFile(req, res, next) {
         // Send usernames.csv

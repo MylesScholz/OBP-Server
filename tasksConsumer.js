@@ -1,14 +1,9 @@
 import amqp from 'amqplib'
 
 import { messageBroker } from './api/config/environment.js'
-import { TaskService } from './api/services/index.js'
-
-import processObservationsTask from './api/lib/observations.js'
-import processLabelsTask from './api/lib/labels.js'
-import processAddressesTask from './api/lib/addresses.js'
-import processEmailsTask from './api/lib/emails.js'
-
 import DatabaseManager from './api/database/DatabaseManager.js'
+import { TaskService } from './api/services/index.js'
+import { AddressesSubtaskHandler, EmailsSubtaskHandler, LabelsSubtaskHandler, OccurrencesSubtaskHandler } from './api/handlers/index.js'
 
 class TaskConsumer {
     constructor() {
@@ -62,14 +57,19 @@ class TaskConsumer {
         try {
             const task = await TaskService.getTaskById(taskId)
 
+            const occurrencesHandler = new OccurrencesSubtaskHandler()
+            const labelsHandler = new LabelsSubtaskHandler()
+            const addressesHandler = new AddressesSubtaskHandler()
+            const emailsHandler = new EmailsSubtaskHandler()
+
             if (task.type === 'observations') {
-                await processObservationsTask(task)
+                await occurrencesHandler.handleTask(task)
             } else if (task.type === 'labels') {
-                await processLabelsTask(task)
+                await labelsHandler.handleTask(task)
             } else if (task.type === 'addresses') {
-                await processAddressesTask(task)
+                await addressesHandler.handleTask(task)
             } else if (task.type === 'emails') {
-                await processEmailsTask(task)
+                await emailsHandler.handleTask(task)
             }
         } catch (error) {
             console.error(`Error while processing task ${taskId}:`, error)

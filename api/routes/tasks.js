@@ -7,11 +7,11 @@ import { requireAuthentication } from '../middleware/auth.js'
 const tasksRouter = Router()
 
 /*
- * POST /api/tasks/observations
- * Creates a task to fetch data updates from iNaturalist.org and merge them into a provided dataset
+ * POST /api/tasks/occurrences
+ * Creates a task to format and update a given occurrences dataset
  * Accepts a file input
  */
-tasksRouter.post('/observations', uploadCSV.single('file'), limitUploadFiles, TaskController.createObservationsTask)
+tasksRouter.post('/occurrences', uploadCSV.single('file'), limitUploadFiles, TaskController.createOccurrencesTask)
 
 /*
  * POST /api/tasks/labels

@@ -3,15 +3,15 @@ import { InvalidArgumentError, ValidationError } from '../utils/errors.js'
 
 export default class TaskController {
     /*
-     * createObservationsTask()
-     * Creates a task to fetch data updates from iNaturalist.org and merge them into a provided dataset
+     * createOccurrencesTask()
+     * Creates a task to format and update a given occurrences dataset
      * Inputs:
-     * - req.file: a CSV base occurrence dataset (creates a blank file if not provided)
+     * - req.file: a CSV occurrence dataset (creates a blank file if not provided)
      * - req.body.sources: a comma-separated list of iNaturalist project IDs to pull updates from
      * - req.body.minDate (required if sources provided): the minimum date of observations to pull
      * - req.body.maxDate (required if sources provided): the maximum date of observations to pull
      */
-    static async createObservationsTask(req, res, next) {
+    static async createOccurrencesTask(req, res, next) {
         // Check that required fields exist
         if (!req.file || !req.body || (req.body.sources && (!req.body.minDate || !req.body.maxDate))) {
             res.status(400).send({
@@ -28,7 +28,7 @@ export default class TaskController {
             const sources = req.body.sources?.split(',')
 
             // Create task and send its ID to the RabbitMQ queue
-            const { insertedId, createdAt } = await TaskService.createTask('observations', datasetURI, sources, req.body.minDate, req.body.maxDate)
+            const { insertedId, createdAt } = await TaskService.createTask('occurrences', datasetURI, sources, req.body.minDate, req.body.maxDate)
 
             // Return 'Accepted' response and HATEOAS link
             res.status(202).send({

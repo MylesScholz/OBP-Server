@@ -4,14 +4,13 @@ import morgan from 'morgan'
 import cors from 'cors'
 import 'dotenv/config'
 
-import { requireAuthentication } from './api/middleware/auth.js'
-import apiRouter from './api/routes/index.js'
-import DatabaseManager from './api/database/DatabaseManager.js'
-import TaskService from './api/services/TaskService.js'
-import QueueManager from './api/messaging/QueueManager.js'
 import { database, port } from './api/config/environment.js'
-import AdminService from './api/services/AdminService.js'
 import { ValidationError } from './api/utils/errors.js'
+import { requireAuthentication } from './api/middleware/auth.js'
+import { AdminService, TaskService } from './api/services/index.js'
+import DatabaseManager from './api/database/DatabaseManager.js'
+import QueueManager from './api/messaging/QueueManager.js'
+import apiRouter from './api/routes/index.js'
 
 // Router for website
 const app = express()

@@ -62,7 +62,7 @@ class TaskConsumer {
             const addressesHandler = new AddressesSubtaskHandler()
             const emailsHandler = new EmailsSubtaskHandler()
 
-            if (task.type === 'observations') {
+            if (task.type === 'occurrences') {
                 await occurrencesHandler.handleTask(task)
             } else if (task.type === 'labels') {
                 await labelsHandler.handleTask(task)

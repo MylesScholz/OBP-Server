@@ -163,7 +163,7 @@ const TaskQueryBuilderContainer = styled.div`
 `
 
 export default function TaskQueryBuilder({ setQueryResponse, setResult, formDisabled, setFormDisabled }) {
-    const [ taskType, setTaskType ] = useState('observations')
+    const [ taskType, setTaskType ] = useState('occurrences')
     const [ file, setFile ] = useState()
     const [ pullSources, setPullSources ] = useState('yes')
 
@@ -185,7 +185,7 @@ export default function TaskQueryBuilder({ setQueryResponse, setResult, formDisa
 
         const formData = new FormData()
         formData.append('file', file)
-        if (taskType === 'observations' && pullSources === 'yes') {
+        if (taskType === 'occurrences' && pullSources === 'yes') {
             formData.append('sources', event.target.sources.value)
             formData.append('minDate', event.target.minDate.value)
             formData.append('maxDate', event.target.maxDate.value)
@@ -208,14 +208,14 @@ export default function TaskQueryBuilder({ setQueryResponse, setResult, formDisa
                     <div>
                         <label for='queryType'>Task Type:</label>
                         <select id='queryType' onChange={ (event) => setTaskType(event.target.value) }>
-                            <option value='observations'>Format Observations</option>
+                            <option value='occurrences'>Format Occurrences</option>
                             <option value='labels'>Create Labels</option>
                             <option value='addresses'>Compile Mailing Addresses</option>
                             <option value='emails'>Compile Email Addresses</option>
                         </select>
                     </div>
 
-                    { taskType === 'observations' &&
+                    { taskType === 'occurrences' &&
                         <>
                             <div>
                                 <label for='fileUpload'>Occurrences File:</label>

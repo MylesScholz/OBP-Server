@@ -14,7 +14,7 @@ class TaskService {
      * Creates a new task with the given properties
      */
     async createTask(type, dataset, sources, minDate, maxDate) {
-        const taskTypes = [ 'observations', 'labels', 'addresses', 'emails' ]
+        const taskTypes = [ 'occurrences', 'labels', 'addresses', 'emails' ]
         if (!taskTypes.includes(type)) {
             throw new InvalidArgumentError('Invalid task type')
         }
@@ -44,7 +44,7 @@ class TaskService {
             status: 'Pending',
             createdAt: createdAt.toISOString()
         }
-        // Optional task fields (only used for 'observations' tasks)
+        // Optional task fields (only used for 'occurrences' tasks)
         if (sources) task.sources = sources
         if (minDate && maxDate) {
             // Parse minDate and maxDate arguments

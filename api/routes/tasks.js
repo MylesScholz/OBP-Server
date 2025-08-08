@@ -2,37 +2,15 @@ import Router from 'express'
 
 import { TaskController } from '../controllers/index.js'
 import { limitUploadFiles, uploadCSV } from '../middleware/multer.js'
-import { requireAuthentication } from '../middleware/auth.js'
 
 const tasksRouter = Router()
 
 /*
- * POST /api/tasks/occurrences
- * Creates a task to format and update a given occurrences dataset
+ * POST /api/tasks/
+ * Creates a task with a given subtask pipeline
  * Accepts a file input
  */
-tasksRouter.post('/occurrences', uploadCSV.single('file'), limitUploadFiles, TaskController.createOccurrencesTask)
-
-/*
- * POST /api/tasks/labels
- * Creates a task to create a PDF document of bee labels from a provided occurrence dataset
- * Accepts a file input
- */
-tasksRouter.post('/labels', uploadCSV.single('file'), limitUploadFiles, TaskController.createLabelsTask)
-
-/*
- * POST /api/tasks/addresses
- * Creates a task to compile a list of user addresses for printable labels
- * Accepts a file input; authentication required
- */
-tasksRouter.post('/addresses', requireAuthentication, uploadCSV.single('file'), limitUploadFiles, TaskController.createAddressesTask)
-
-/*
- * POST /api/tasks/emails
- * Creates a task to compile a list of user email addresses for error notifications
- * Accepts a file input; authentication required
- */
-tasksRouter.post('/emails', requireAuthentication, uploadCSV.single('file'), limitUploadFiles, TaskController.createEmailsTask)
+tasksRouter.post('/', uploadCSV.single('file'), limitUploadFiles, TaskController.createTask)
 
 /*
  * GET /api/tasks

@@ -2,11 +2,11 @@ import Crypto from 'node:crypto'
 
 import { OccurrenceRepository } from '../repositories/index.js'
 import { fieldNames, template, nonEmptyFields, ofvs, abbreviations } from '../utils/constants.js'
+import { includesStreetSuffix, getDayOfYear, getOFV } from '../utils/utilities.js'
 import PlacesService from './PlacesService.js'
 import TaxaService from './TaxaService.js'
 import UsernamesService from './UsernamesService.js'
 import ElevationService from './ElevationService.js'
-import { includesStreetSuffix, getDayOfYear, getOFV } from '../utils/utilities.js'
 import FileManager from '../utils/FileManager.js'
 
 

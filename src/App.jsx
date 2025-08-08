@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import styled from '@emotion/styled'
 
 import TaskPanel from './components/TaskPanel.jsx'
@@ -37,14 +38,16 @@ const AppContainer = styled.div`
 `
 
 function App() {
+    const [ loggedIn, setLoggedIn ] = useState()
+
     return (
         <AppContainer>
             <div id='appTitle'>
                 <h1>Beeline</h1>
                 <h3>The Bee Atlas Automated Interaction-Occurrence Data Pipeline</h3>
             </div>
-            <TaskPanel />
-            <AdminPanel />
+            <TaskPanel loggedIn={loggedIn} />
+            <AdminPanel loggedIn={loggedIn} setLoggedIn={setLoggedIn} />
         </AppContainer>
     )
 }

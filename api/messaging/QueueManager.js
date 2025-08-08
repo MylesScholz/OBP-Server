@@ -14,6 +14,7 @@ class QueueManager {
             this.channel = await this.connection.createChannel()
 
             await this.channel.assertQueue(messageBroker.queueName, { durable: true })
+            await this.channel.purgeQueue(messageBroker.queueName)
 
             console.log('Connected to RabbitMQ')
         } catch (error) {

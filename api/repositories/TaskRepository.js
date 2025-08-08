@@ -8,6 +8,23 @@ export default class TaskRepository extends BaseRepository {
     /* CRUD Operations */
 
     // Update
+    async completeById(id) {
+        return await this.updateById(id, {
+            $set: {
+                status: 'Completed',
+                completedAt: new Date().toISOString()
+            }
+        })
+    }
+
+    async updateCurrentSubtaskById(id, subtask) {
+        return await this.updateById(id, {
+            $set: {
+                currentSubtask: subtask
+            }
+        })
+    }
+
     async updateProgressById(id, progress) {
         return await this.updateById(id, {
             $set: {
@@ -26,9 +43,7 @@ export default class TaskRepository extends BaseRepository {
     async updateResultById(id, result) {
         return await this.updateById(id, {
             $set: {
-                status: 'Completed',
                 result,
-                completedAt: new Date().toISOString()
             },
             $unset: {
                 progress: ''
@@ -36,7 +51,7 @@ export default class TaskRepository extends BaseRepository {
         })
     }
 
-    async updateFailureById(id) {
+    async failById(id) {
         return await this.updateById(id, {
             $set: {
                 status: 'Failed',

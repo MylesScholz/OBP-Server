@@ -1,8 +1,8 @@
 import fs from 'fs'
 
 import { TaskRepository } from '../repositories/index.js'
-import QueueManager from '../messaging/QueueManager.js'
 import { InvalidArgumentError, ValidationError } from '../utils/errors.js'
+import QueueManager from '../messaging/QueueManager.js'
 
 class TaskService {
     constructor() {
@@ -10,57 +10,105 @@ class TaskService {
     }
 
     /*
+     * parseSubtasks()
+     * Parses subtasks from a given JSON string, throwing errors if any fields are invalid
+     */
+    parseSubtasks(subtasksJSON) {
+        if (!subtasksJSON) { throw new InvalidArgumentError('subtasks must exist') }
+        
+        try {
+            const subtasks = JSON.parse(subtasksJSON)
+
+            const subtaskTypes = [ 'occurrences', 'observations', 'labels', 'addresses', 'emails' ]
+            for (let i = 0; i < subtasks.length; i++) {
+                const subtask = subtasks[i]
+                if (!subtaskTypes.includes(subtask.type)) { throw new ValidationError(`Invalid subtask type '${subtask.type}'`) }
+                
+                if (subtask.type === 'observations') {
+                    if (!subtask.sources || !subtask.minDate || !subtask.maxDate) {
+                        throw new ValidationError('sources, minDate, and maxDate required for observations subtasks')
+                    }
+
+                    // Split the sources string
+                    subtasks[i].sources = subtask.sources.split(',')
+
+                    // Parse minDate and maxDate arguments
+                    const parsedMinDate = new Date(subtask.minDate)
+                    const parsedMaxDate = new Date(subtask.maxDate)
+                    if (parsedMinDate > parsedMaxDate) {
+                        throw new ValidationError('minDate must be before maxDate')
+                    }
+
+                    // Format dates how the API (and iNaturalist) expect (YYYY-MM-DD)
+                    const formattedMinDate = `${parsedMinDate.getUTCFullYear()}-${(parsedMinDate.getUTCMonth() + 1).toString().padStart(2, '0')}-${parsedMinDate.getUTCDate().toString().padStart(2, '0')}`
+                    const formattedMaxDate = `${parsedMaxDate.getUTCFullYear()}-${(parsedMaxDate.getUTCMonth() + 1).toString().padStart(2, '0')}-${parsedMaxDate.getUTCDate().toString().padStart(2, '0')}`
+
+                    // Modify subtasks with the formatted dates
+                    subtasks[i].minDate = formattedMinDate
+                    subtasks[i].maxDate = formattedMaxDate
+                }
+            }
+
+            return subtasks
+        } catch (error) {
+            if (error.message?.search('JSON.parse') !== -1) {   // Catch JSON parsing errors
+                throw new ValidationError('Invalid JSON in subtasks')
+            } else {
+                throw error
+            }
+        }
+    }
+
+    /*
      * createTask()
      * Creates a new task with the given properties
      */
-    async createTask(type, dataset, sources, minDate, maxDate) {
-        const taskTypes = [ 'occurrences', 'labels', 'addresses', 'emails' ]
-        if (!taskTypes.includes(type)) {
-            throw new InvalidArgumentError('Invalid task type')
-        }
-        if (sources?.some((src) => !parseInt(src))) {
-            throw new InvalidArgumentError('sources must be a numeric Array')
-        }
-        if (sources && !(minDate && maxDate)) {
-            throw new ValidationError('minDate and maxDate are required if sources are provided')
-        }
+    async createTask(uploadFileName, subtasksJSON) {
+        // Parse a valid subtasks object from the given JSON argument (throws InvalidArgumentErrors and ValidationErrors)
+        const subtasks = this.parseSubtasks(subtasksJSON)
 
-        const sourceAbbreviations = {
-            '18521': 'OBA',
-            '99706': 'MM',
-            '166376': 'WaBA'
-        }
-        const sourceString = sources?.map((s) => sourceAbbreviations[s] ?? s)?.join('_')
+        // Create a formatted timestamp of the task's creation time (set the default tag to it)
         const createdAt = new Date()
         const createdAtDate = `${createdAt.getFullYear()}-${createdAt.getMonth() + 1}-${createdAt.getDate()}`
         const createdAtTime = `${createdAt.getHours()}.${createdAt.getMinutes()}.${createdAt.getSeconds()}`
-        const tag = `${sourceString ? sourceString + '_' : ''}${createdAtDate}T${createdAtTime}`
+        let tag = `${createdAtDate}T${createdAtTime}`
+
+        const uploadFilePath = `./api/data/uploads/${uploadFileName}`
+        const uploadUri = `/api/uploads/${uploadFileName}`
 
         const task = {
-            name: `${type}Task_${tag}`,
-            tag,
-            type,
-            dataset,
+            upload: {
+                fileName: uploadFileName,
+                filePath: uploadFilePath,
+                uri: uploadUri
+            },
+            subtasks,
             status: 'Pending',
             createdAt: createdAt.toISOString()
         }
-        // Optional task fields (only used for 'occurrences' tasks)
-        if (sources) task.sources = sources
-        if (minDate && maxDate) {
-            // Parse minDate and maxDate arguments
-            const parsedMinDate = new Date(minDate)
-            const parsedMaxDate = new Date(maxDate)
-            if (parsedMinDate > parsedMaxDate) {
-                throw new ValidationError('minDate must be before maxDate')
+        // Set the first subtask as the current one
+        if (subtasks.length > 0) {
+            task.progress = {
+                currentSubtask: subtasks[0]?.type
             }
-
-            // Format dates how the API (and iNaturalist) expect (YYYY-MM-DD)
-            const formattedMinDate = `${parsedMinDate.getUTCFullYear()}-${(parsedMinDate.getUTCMonth() + 1).toString().padStart(2, '0')}-${parsedMinDate.getUTCDate().toString().padStart(2, '0')}`
-            const formattedMaxDate = `${parsedMaxDate.getUTCFullYear()}-${(parsedMaxDate.getUTCMonth() + 1).toString().padStart(2, '0')}-${parsedMaxDate.getUTCDate().toString().padStart(2, '0')}`
-
-            task.minDate = formattedMinDate
-            task.maxDate = formattedMaxDate
         }
+
+        // If there is an observations subtask, include the sources in the task tag
+        const observationsSubtask = subtasks.find((subtask) => subtask.type === 'observations')
+        if (observationsSubtask) {
+            const sourceAbbreviations = {
+                '18521': 'OBA',
+                '99706': 'MM',
+                '166376': 'WaBA'
+            }
+            const sourceString = observationsSubtask.sources?.map((id) => sourceAbbreviations[id] ?? id)?.join('_')
+            
+            tag = `${sourceString ? sourceString + '_' : ''}${tag}`
+        }
+
+        // Set the task name and tag (depends on whether there are sources provided)
+        task.name = `task_${tag}`
+        task.tag = tag
 
         // Create the task
         const insertedId = await this.repository.create(task)
@@ -95,8 +143,31 @@ class TaskService {
      * Updates a given task's current step message and logs the same message to the console
      */
     async logTaskStep(id, message) {
-        await this.updateProgressById(id, { currentStep: message })
-        console.log(`\t${message}...`)
+        const task = await this.repository.findById(id)
+
+        await this.updateProgressById(id, { ...task?.progress, currentStep: message })
+        console.log(`\t\t${message}...`)
+    }
+
+    /*
+     * completeTaskById()
+     * Sets the status field of a task selected by ID to 'Completed'
+     */
+    async completeTaskById(id) {
+        return await this.repository.completeById(id)
+    }
+
+    /*
+     * updateCurrentSubtaskById()
+     * Sets the currentSubtask field of a task selected by ID to the given value
+     */
+    async updateCurrentSubtaskById(id, subtask) {
+        const task = await this.repository.findById(id)
+
+        return await this.repository.updateProgressById(id, {
+            ...task?.progress,
+            currentSubtask: subtask
+        })
     }
 
     /*
@@ -143,11 +214,11 @@ class TaskService {
     }
 
     /*
-     * updateFailureById()
+     * failTaskById()
      * Sets the status field of a task selected by ID to 'Failed'
      */
-    async updateFailureById(id) {
-        return await this.repository.updateFailureById(id)
+    async failTaskById(id) {
+        return await this.repository.failById(id)
     }
 
     /*
@@ -168,10 +239,10 @@ class TaskService {
         const taskIdsWithoutFiles = tasks
             .filter((t) =>
                 (t.status !== 'Completed' && !fs.existsSync(t.dataset)) ||
-                (t.result && t.result.outputs.some((o) => !fs.existsSync(`./api/data/${o.type}/${o.fileName}`)))
+                (t.result?.subtaskOutputs?.some((s) => s.outputs?.some((o) => !fs.existsSync(`./api/data/${o.type}/${o.fileName}`))))
             )
             .map((t) => t._id)
-        
+
         // Delete tasks with missing files
         return await this.repository.deleteMany({ _id: { $in: taskIdsWithoutFiles } })
     }

@@ -29,9 +29,9 @@ export default class BaseRepository {
 
     // Read
     async findById(id, options = {}) {
-        if (!ObjectId.isValid(id)) return
+        const queryId = ObjectId.isValid(id) ? new ObjectId(id) : id
 
-        return await this.collection.findOne({ _id: new ObjectId(id) }, options)
+        return await this.collection.findOne({ _id: queryId }, options)
     }
 
     async findOne(filter = {}, options = {}) {
@@ -101,8 +101,10 @@ export default class BaseRepository {
 
     // Update
     async updateById(id, update = {}) {
+        const queryId = ObjectId.isValid(id) ? new ObjectId(id) : id
+
         const result = await this.collection.updateOne(
-            { _id: id },
+            { _id: queryId },
             update
         )
 
@@ -117,9 +119,9 @@ export default class BaseRepository {
 
     // Delete
     async deleteById(id) {
-        if (!ObjectId.isValid(id)) return
+        const queryId = ObjectId.isValid(id) ? new ObjectId(id) : id
 
-        const result = await this.collection.deleteOne({ _id: new ObjectId(id) })
+        const result = await this.collection.deleteOne({ _id: queryId })
 
         return result.deletedCount
     }

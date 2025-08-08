@@ -1,10 +1,9 @@
 import BaseSubtaskHandler from './BaseSubtaskHandler.js'
-import { fieldNames, fileLimits, ofvs } from '../utils/constants.js'
-import { getOFV } from '../utils/utilities.js'
-import { ApiService, ElevationService, ObservationService, ObservationViewService, OccurrenceService, OccurrenceViewService, PlacesService, TaskService, TaxaService } from '../services/index.js'
+import { fieldNames, fileLimits } from '../utils/constants.js'
+import { ElevationService, ObservationService, OccurrenceService, PlacesService, TaskService, TaxaService } from '../services/index.js'
 import FileManager from '../utils/FileManager.js'
 
-export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
+export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
     constructor() {
         super()
     }
@@ -22,72 +21,31 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
     }
 
     /*
-     * #updateOccurrencesFromObservations()
-     * Updates existing occurrences using matching observations from the database
+     * #insertOccurrencesFromObservations()
+     * Inserts new occurrences using unmatched observations from the database
      */
-    async #updateOccurrencesFromObservations(elevations, updateProgress) {
+    async #insertOccurrencesFromObservations(elevations, updateProgress) {
         await updateProgress(0)
 
-        // Query the joined occurrences-observations table page-by-page to avoid memory constraints
-        let pageNumber = 1
-        let occurrenceIndex = 0
-        const options = {
-            projection: {
-                uuid: 1,
-                positional_accuracy: 1,
-                geojson: 1,
-                taxon: 1
-            }
-        }
-        let results = await OccurrenceViewService.getOccurrenceViewPage(pageNumber, options)
-        while (pageNumber < results.pagination.totalPages + 1) {
-            for (const occurrence of results.data) {
-                // Update the occurrence data from the matching observation
-                await OccurrenceService.updateOccurrenceFromObservation(occurrence, occurrence.observation, elevations)
-
-                await updateProgress(100 * (++occurrenceIndex) / results.pagination.totalDocuments)
-            }
-
-            // Query the next page
-            results = await OccurrenceViewService.getOccurrenceViewPage(++pageNumber, options)
-        }
-
-        await updateProgress(100)
-    }
-
-    /*
-     * #insertOccurrencesFromBeeIncreases()
-     * Adjusts the number of occurrences corresponding to each observation to match the number of bees collected (if increased)
-     */
-    async #insertOccurrencesFromBeeIncreases(updateProgress) {
-        await updateProgress(0)
-
-        // Query observations with matching occurrences, keeping only one occurrence and the count of matching occurrences
-        const observations = await ObservationViewService.getObservationsWithOccurrences()
+        const observations = await ObservationService.getUnmatchedObservations()
         const occurrences = []
 
-        let i = 0
+        let observationIndex = 0
         for (const observation of observations) {
-            const beesCollected = getOFV(observation.ofvs, ofvs.beesCollected)
+            const occurrence = OccurrenceService.createOccurrenceFromObservation(observation, elevations)
+            await updateProgress(100 * (++observationIndex) / observations.length)
 
-            if (beesCollected > observation.occurrenceCount) {
-                // Create new occurrences to make up the difference between the existing occurrences and the new number of bees collected
-                for (let j = 1; j < beesCollected - observation.occurrenceCount + 1; j++) {
-                    // Duplicate the first occurrence and set its SPECIMEN_ID
-                    const duplicateOccurrence = Object.assign({}, observation.firstOccurrence)
-
-                    duplicateOccurrence[fieldNames.specimenId] = (observation.occurrenceCount + j).toString()
-                    // Clear OBSERVATION_NO and DATE_LABEL_PRINT fields so they can be assigned properly later
-                    duplicateOccurrence[fieldNames.fieldNumber] = ''
-                    duplicateOccurrence[fieldNames.dateLabelPrint] = ''
-                    // Tag the occurrence as new
-                    duplicateOccurrence.new = true
+            // specimenId is initially set to the number of bees collected
+            // Duplicate observations a number of times equal to this value and overwrite specimenId to index the duplications
+            const beesCollected = parseInt(occurrence[fieldNames.specimenId])
+            if (!isNaN(beesCollected)) {
+                for (let i = 1; i < beesCollected + 1; i++) {
+                    const duplicateOccurrence = Object.assign({}, occurrence)
+                    duplicateOccurrence[fieldNames.specimenId] = i.toString()
 
                     occurrences.push(duplicateOccurrence)
                 }
             }
-
-            await updateProgress(100 * (++i) / observations.length)
         }
 
         return await OccurrenceService.createOccurrences(occurrences)
@@ -168,18 +126,30 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
         if (!taskId) { return }
 
         // Update the current subtask
-        await TaskService.updateCurrentSubtaskById(taskId, 'occurrences')
+        await TaskService.updateCurrentSubtaskById(taskId, 'observations')
 
-        // Fetch the task and subtask
+        // Fetch the task, subtask, and previous outputs
         const task = await TaskService.getTaskById(taskId)
-        const subtask = task.subtasks.find((subtask) => subtask.type === 'occurrences')
+        const subtask = task.subtasks.find((subtask) => subtask.type === 'observations')
+        const previousSubtaskOutputs = task.result?.subtaskOutputs ?? []
 
         // Input and output file names
-        const uploadFilePath = task.upload.filePath
+        // Set the default input file to the file upload
+        let inputFilePath = task.upload.filePath
+        if (previousSubtaskOutputs.length > 0) {
+            // Find the last subtask output with an occurrences output file
+            const lastSubtaskOutput = previousSubtaskOutputs.findLast((subtaskOutput) => !!subtaskOutput.outputs?.find((output) => output.type === 'occurrences'))
+            // Find the occurrences output file
+            const occurrencesSubtaskOutputFile = lastSubtaskOutput?.outputs?.find((output) => output.type === 'occurrences')
+            // If an occurrences file was found, use it as the input file for this subtask
+            inputFilePath = occurrencesSubtaskOutputFile ? `./api/data/occurrences/${occurrencesSubtaskOutputFile?.fileName}` : inputFilePath
+        }
         const occurrencesFileName = `occurrences_${task.tag}.csv`
         const occurrencesFilePath = './api/data/occurrences/' + occurrencesFileName
-        const duplicatesFileName = `duplicates_${task.tag}.csv`
-        const duplicatesFilePath = './api/data/duplicates/' + duplicatesFileName
+        const pullsFileName = `pulls_${task.tag}.csv`
+        const pullsFilePath = './api/data/pulls/' + pullsFileName
+        const flagsFileName = `flags_${task.tag}.csv`
+        const flagsFilePath = './api/data/flags/' + flagsFileName
 
         await TaskService.logTaskStep(taskId, 'Formatting and uploading provided dataset')
 
@@ -187,23 +157,17 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
         await OccurrenceService.deleteOccurrences()
 
         // Read data from the input occurrence file and insert it into the occurrences database table
-        const { duplicates: duplicateOccurrences } = await OccurrenceService.createOccurrencesFromFile(uploadFilePath)
+        await OccurrenceService.createOccurrencesFromFile(inputFilePath)
 
-        await TaskService.logTaskStep(taskId, 'Querying corresponding iNaturalist observations from provided dataset')
+        // Pull new iNaturalist observations and insert them
+        await TaskService.logTaskStep(taskId, 'Querying new observations from iNaturalist')
 
-        // Query all distinct URLs from the occurrences database table and extract the observation IDs
-        const distinctUrls = await OccurrenceService.getDistinctUrls()
-        const observationIds = distinctUrls.map((url) => url.split('/').pop())
-                                        .filter((id) => id && !isNaN(id))
-        // Fetch the observations corresponding to the uploaded occurrences and insert them into the observations database table
-        let matchingObservations = await ApiService.fetchObservationsByIds(observationIds, this.#createUpdateProgressFn(taskId))
-        // Set a custom field indicating that this observation has a matching occurrence
-        matchingObservations = matchingObservations.map((obs) => ({ ...obs, matched: true }))
-
-        // Insert observations into the database; delete old observations first
-        await ObservationService.deleteObservations()
-        await ObservationService.createObservations(matchingObservations)
-
+        await ObservationService.pullObservations(
+            subtask.sources,
+            subtask.minDate,
+            subtask.maxDate,
+            this.#createUpdateProgressFn(taskId)
+        )
         const observations = await ObservationService.getObservations()
 
         // Update places.json and taxa.json from observations table
@@ -215,25 +179,18 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
 
         await TaxaService.updateTaxaFromObservations(observations, this.#createUpdateProgressFn(taskId))
 
-        // Query all distinct coordinates from the occurrences database table
-        let coordinates = await OccurrenceService.getDistinctCoordinates()
-        // Query all distinct coordinates from the observations database table and append them (deduplicating with a Set)
-        coordinates = [...(new Set(coordinates.concat(await ObservationService.getDistinctCoordinates())))]
+        // Query all distinct coordinates from the observations database table
+        const coordinates = await ObservationService.getDistinctCoordinates()
 
         // Read all elevation data
         await TaskService.logTaskStep(taskId, `Reading ${coordinates.length} elevations`)
 
         const elevations = await ElevationService.getElevations(coordinates, this.#createUpdateProgressFn(taskId))
 
-        // Update existing occurrence data from its corresponding observations
-        await TaskService.logTaskStep(taskId, 'Updating occurrence data from iNaturalist observations')
+        // Add new occurrence data from pulled observations
+        await TaskService.logTaskStep(taskId, 'Adding new occurrence data from iNaturalist observations')
 
-        await this.#updateOccurrencesFromObservations(elevations, this.#createUpdateProgressFn(taskId))
-
-        // Add new occurrence data from bee increases
-        await TaskService.logTaskStep(taskId, 'Adding new occurrence data from bee increases')
-
-        await this.#insertOccurrencesFromBeeIncreases(this.#createUpdateProgressFn(taskId))
+        await this.#insertOccurrencesFromObservations(elevations, this.#createUpdateProgressFn(taskId))
 
         // Fill fieldNumber for unindexed occurrences without errors
         await TaskService.logTaskStep(taskId, 'Indexing occurrences')
@@ -251,22 +208,35 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
             ]
         }
         await OccurrenceService.writeOccurrencesFromDatabase(occurrencesFilePath, occurrencesFilter)
+        
+        // Write unprinted, flagged occurrences to the flags output file
+        const flagsFilter = {
+            [fieldNames.errorFlags]: { $nin: [ null, undefined, '' ] },
+            [fieldNames.dateLabelPrint]: { $in: [ null, undefined, '' ] }
+        }
+        await OccurrenceService.writeOccurrencesFromDatabase(flagsFilePath, flagsFilter)
 
-        // Write duplicate occurrences from the input file into the duplicates output file
-        OccurrenceService.writeOccurrencesFile(duplicatesFilePath, duplicateOccurrences)
+        // Write new unflagged occurrences to the pulls output file
+        const pullsFilter = {
+            [fieldNames.errorFlags]: { $in: [ null, undefined, '' ] },
+            new: true
+        }
+        await OccurrenceService.writeOccurrencesFromDatabase(pullsFilePath, pullsFilter)
 
         // Update the task result with the output files
-        // Overwrite previous outputs so that occurrences subtasks are always at the start of the subtask pipelne
         const outputs = [
             { uri: `/api/occurrences/${occurrencesFileName}`, fileName: occurrencesFileName, type: 'occurrences' },
-            { uri: `/api/duplicates/${duplicatesFileName}`, fileName: duplicatesFileName, type: 'duplicates' }
+            { uri: `/api/pulls/${pullsFileName}`, fileName: pullsFileName, type: 'pulls' },
+            { uri: `/api/flags/${flagsFileName}`, fileName: flagsFileName, type: 'flags' }
         ]
+        previousSubtaskOutputs.push({ type: subtask.type, outputs })
         await TaskService.updateResultById(taskId, {
-            subtaskOutputs: [ { type: subtask.type, outputs } ]
+            subtaskOutputs: previousSubtaskOutputs
         })
 
         // Archive excess output files
         FileManager.limitFilesInDirectory('./api/data/occurrences', fileLimits.maxOccurrences)
-        FileManager.limitFilesInDirectory('./api/data/duplicates', fileLimits.maxDuplicates)
+        FileManager.limitFilesInDirectory('./api/data/pulls', fileLimits.maxPulls)
+        FileManager.limitFilesInDirectory('./api/data/flags', fileLimits.maxFlags)
     }
 }

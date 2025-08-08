@@ -115,13 +115,28 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
 
     /* Main Handler Method */
 
-    async handleTask(task) {
-        if (!task) { return }
+    async handleTask(taskId) {
+        if (!taskId) { return }
 
-        const taskId = task._id
+        // Update the current subtask
+        await TaskService.updateCurrentSubtaskById(taskId, 'emails')
+
+        // Fetch the task, subtask, and previous outputs
+        const task = await TaskService.getTaskById(taskId)
+        const subtask = task.subtasks.find((subtask) => subtask.type === 'emails')
+        const previousSubtaskOutputs = task.result?.subtaskOutputs ?? []
 
         // Input and output file names
-        const uploadFilePath = './api/data' + task.dataset.replace('/api', '')      // task.dataset has a '/api' suffix, which should be removed
+        // Set the default input file to the file upload
+        let inputFilePath = task.upload.filePath
+        if (previousSubtaskOutputs.length > 0) {
+            // Find the last subtask output with a flags output file
+            const lastSubtaskOutput = previousSubtaskOutputs.findLast((subtaskOutput) => !!subtaskOutput.outputs?.find((output) => output.type === 'flags'))
+            // Find the flags output file
+            const flagsSubtaskOutputFile = lastSubtaskOutput?.outputs?.find((output) => output.type === 'flags')
+            // If a flags file was found, use it as the input file for this subtask
+            inputFilePath = flagsSubtaskOutputFile ? `./api/data/flags/${flagsSubtaskOutputFile?.fileName}` : inputFilePath
+        }
         const emailsFileName = `emails_${task.tag}.csv`
         const emailsFilePath = './api/data/emails/' + emailsFileName
 
@@ -131,7 +146,7 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
         await OccurrenceService.deleteOccurrences()
 
         // Read data from the input occurrence file and insert it into the occurrences database table
-        await OccurrenceService.createOccurrencesFromFile(uploadFilePath)
+        await OccurrenceService.createOccurrencesFromFile(inputFilePath)
 
         await TaskService.logTaskStep(taskId, 'Compiling user email addresses')
 
@@ -155,15 +170,15 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
         this.#writeEmailsFile(emailsFilePath, locationEmails, accuracyEmails, taxonomyEmails)
 
         // Update the task result with the output files
+        const outputs = [
+            { uri: `/api/emails/${emailsFileName}`, fileName: emailsFileName, type: 'emails' }
+        ]
+        previousSubtaskOutputs.push({ type: subtask.type, outputs })
         await TaskService.updateResultById(taskId, {
-            outputs: [
-                { uri: `/api/emails/${emailsFileName}`, fileName: emailsFileName, type: 'emails' }
-            ]
-        }) 
+            subtaskOutputs: previousSubtaskOutputs
+        })
 
         // Archive excess output files
         FileManager.limitFilesInDirectory('./api/data/emails', fileLimits.maxEmails)
-        // Clean up tasks
-        await TaskService.deleteTasksWithoutFiles()
     }
 }

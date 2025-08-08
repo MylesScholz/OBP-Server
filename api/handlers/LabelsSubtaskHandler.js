@@ -491,13 +491,28 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
 
     /* Main Handler Method */
 
-    async handleTask(task) {
-        if (!task) { return }
+    async handleTask(taskId) {
+        if (!taskId) { return }
 
-        const taskId = task._id
+        // Update the current subtask
+        await TaskService.updateCurrentSubtaskById(taskId, 'labels')
+
+        // Fetch the task, subtask, and previous outputs
+        const task = await TaskService.getTaskById(taskId)
+        const subtask = task.subtasks.find((subtask) => subtask.type === 'labels')
+        const previousSubtaskOutputs = task.result?.subtaskOutputs ?? []
 
         // Input and output file names
-        const uploadFilePath = './api/data' + task.dataset.replace('/api', '')      // task.dataset has a '/api' suffix, which should be removed
+        // Set the default input file to the file upload
+        let inputFilePath = task.upload.filePath
+        if (previousSubtaskOutputs.length > 0) {
+            // Find the last subtask output with an occurrences output file
+            const lastSubtaskOutput = previousSubtaskOutputs.findLast((subtaskOutput) => !!subtaskOutput.outputs?.find((output) => output.type === 'occurrences'))
+            // Find the occurrences output file
+            const occurrencesSubtaskOutputFile = lastSubtaskOutput?.outputs?.find((output) => output.type === 'occurrences')
+            // If an occurrences file was found, use it as the input file for this subtask
+            inputFilePath = occurrencesSubtaskOutputFile ? `./api/data/occurrences/${occurrencesSubtaskOutputFile?.fileName}` : inputFilePath
+        }
         const labelsFileName = `labels_${task.tag}.pdf`
         const labelFilePath = `./api/data/labels/${labelsFileName}`
 
@@ -507,7 +522,7 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         await OccurrenceService.deleteOccurrences()
 
         // Read data from the input occurrence file and insert it into the occurrences database table
-        const { duplicates: duplicateOccurrences } = await OccurrenceService.createOccurrencesFromFile(uploadFilePath)
+        const { duplicates: duplicateOccurrences } = await OccurrenceService.createOccurrencesFromFile(inputFilePath)
 
         // Find the set of printable occurrences
         const printableOccurrences = await OccurrenceService.getPrintableOccurrences(requiredFields)
@@ -539,15 +554,15 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         })
 
         // Update the task result with the output files
+        const outputs = [
+            { uri: `/api/labels/${labelsFileName}`, fileName: labelsFileName, type: 'labels' }
+        ]
+        previousSubtaskOutputs.push({ type: subtask.type, outputs })
         await TaskService.updateResultById(taskId, {
-            outputs: [
-                { uri: `/api/labels/${labelsFileName}`, fileName: labelsFileName, type: 'labels' }
-            ]
+            subtaskOutputs: previousSubtaskOutputs
         })
 
         // Archive excess output files
         FileManager.limitFilesInDirectory('./api/data/labels', fileLimits.maxLabels)
-        // Clean up tasks
-        await TaskService.deleteTasksWithoutFiles()
     }
 }

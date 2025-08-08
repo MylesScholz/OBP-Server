@@ -3,7 +3,7 @@ import amqp from 'amqplib'
 import { messageBroker } from './api/config/environment.js'
 import DatabaseManager from './api/database/DatabaseManager.js'
 import { TaskService } from './api/services/index.js'
-import { AddressesSubtaskHandler, EmailsSubtaskHandler, LabelsSubtaskHandler, OccurrencesSubtaskHandler } from './api/handlers/index.js'
+import { AddressesSubtaskHandler, EmailsSubtaskHandler, LabelsSubtaskHandler, ObservationsSubtaskHandler, OccurrencesSubtaskHandler } from './api/handlers/index.js'
 
 class TaskConsumer {
     constructor() {
@@ -58,22 +58,31 @@ class TaskConsumer {
             const task = await TaskService.getTaskById(taskId)
 
             const occurrencesHandler = new OccurrencesSubtaskHandler()
+            const observationsHandler = new ObservationsSubtaskHandler()
             const labelsHandler = new LabelsSubtaskHandler()
             const addressesHandler = new AddressesSubtaskHandler()
             const emailsHandler = new EmailsSubtaskHandler()
 
-            if (task.type === 'occurrences') {
-                await occurrencesHandler.handleTask(task)
-            } else if (task.type === 'labels') {
-                await labelsHandler.handleTask(task)
-            } else if (task.type === 'addresses') {
-                await addressesHandler.handleTask(task)
-            } else if (task.type === 'emails') {
-                await emailsHandler.handleTask(task)
+            for (const subtask of task.subtasks) {
+                console.log(`\t${new Date().toLocaleTimeString('en-US')} Processing ${subtask.type} subtask...`)
+
+                if (subtask.type === 'occurrences') {
+                    await occurrencesHandler.handleTask(task._id)
+                } else if (subtask.type === 'observations') {
+                    await observationsHandler.handleTask(task._id)
+                } else if (subtask.type === 'labels') {
+                    await labelsHandler.handleTask(task._id)
+                } else if (subtask.type === 'addresses') {
+                    await addressesHandler.handleTask(task._id)
+                } else if (subtask.type === 'emails') {
+                    await emailsHandler.handleTask(task._id)
+                }
             }
+
+            await TaskService.completeTaskById(task._id)
         } catch (error) {
             console.error(`Error while processing task ${taskId}:`, error)
-            TaskService.updateFailureById(taskId)
+            TaskService.failTaskById(taskId)
         }
 
         console.log(`${new Date().toLocaleTimeString('en-US')} Completed task ${taskId}`)

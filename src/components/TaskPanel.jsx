@@ -1,26 +1,31 @@
-import { useState } from 'react'
 import styled from '@emotion/styled'
 
-import TaskQueryBuilder from './TaskQueryBuilder'
-import TaskTracker from './TaskTracker'
+import SubtaskPipeline from './SubtaskPipeline'
 
 const TaskPanelContainer = styled.div`
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 10px;
 
     margin: 0px 10%;
+
+    border: 1px solid gray;
+    border-radius: 5px;
+
+    padding: 20px;
+
+    h1 {
+        margin: 0px;
+
+        font-size: 18pt;
+    }
 `
 
-export default function TaskPanel() {
-    const [ queryResponse, setQueryResponse ] = useState()
-    const [ result, setResult ] = useState()
-    const [ formDisabled, setFormDisabled ] = useState(false)
-
+export default function TaskPanel({ loggedIn }) {
     return (
         <TaskPanelContainer>
-            <TaskQueryBuilder setQueryResponse={setQueryResponse} setResult={setResult} formDisabled={formDisabled} setFormDisabled={setFormDisabled} />
-            <TaskTracker queryResponse={queryResponse} result={result} setResult={setResult} setFormDisabled={setFormDisabled} />
+            <h1>Task Panel</h1>
+            <SubtaskPipeline loggedIn={loggedIn} />
         </TaskPanelContainer>
     )
 }

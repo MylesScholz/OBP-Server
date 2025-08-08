@@ -3,17 +3,16 @@ import { InvalidArgumentError, ValidationError } from '../utils/errors.js'
 
 export default class TaskController {
     /*
-     * createOccurrencesTask()
-     * Creates a task to format and update a given occurrences dataset
+     * createTask()
+     * Creates a task with a given subtask pipeline
      * Inputs:
      * - req.file: a CSV occurrence dataset (creates a blank file if not provided)
-     * - req.body.sources: a comma-separated list of iNaturalist project IDs to pull updates from
-     * - req.body.minDate (required if sources provided): the minimum date of observations to pull
-     * - req.body.maxDate (required if sources provided): the maximum date of observations to pull
+     * - req.body.subtasks: a JSON stringified object in the following format:
+     * [ { type: 'occurrences' }, { type: 'observations', sources: [ ... ], minDate: '...', maxDate: '...' }, { type: 'labels' }, ... ]
      */
-    static async createOccurrencesTask(req, res, next) {
+    static async createTask(req, res, next) {
         // Check that required fields exist
-        if (!req.file || !req.body || (req.body.sources && (!req.body.minDate || !req.body.maxDate))) {
+        if (!req.file || !req.body || !req.body.subtasks) {
             res.status(400).send({
                 error: 'Missing required request field'
             })
@@ -21,131 +20,8 @@ export default class TaskController {
         }
 
         try {
-            // URI of the uploaded base dataset--not the file location
-            const datasetURI = `/api/uploads/${req.file.filename}`
-
-            // Split sources into an array
-            const sources = req.body.sources?.split(',')
-
             // Create task and send its ID to the RabbitMQ queue
-            const { insertedId, createdAt } = await TaskService.createTask('occurrences', datasetURI, sources, req.body.minDate, req.body.maxDate)
-
-            // Return 'Accepted' response and HATEOAS link
-            res.status(202).send({
-                uri: `/api/tasks/${insertedId}`,
-                createdAt
-            })
-        } catch (error) {
-            if (error instanceof InvalidArgumentError || error instanceof ValidationError) {
-                res.status(400).send({
-                    error: error.message
-                })
-            } else {
-                // Forward to 500-code middleware
-                next(error)
-            }
-        }
-    }
-
-    /*
-     * createLabelsTask()
-     * Creates a task to create a PDF document of bee labels from a provided occurrence dataset
-     * Requires:
-     * - req.file: a CSV occurrence dataset from which to make labels
-     */
-    static async createLabelsTask(req, res, next) {
-        // Check that required field exists
-        if (!req.file) {
-            res.status(400).send({
-                error: 'Missing required request field'
-            })
-            return
-        }
-
-        try {
-            // URI of the uploaded base dataset--not the file location
-            const datasetURI = `/api/uploads/${req.file.filename}`
-
-            // Create task and send its ID to the RabbitMQ queue
-            const { insertedId, createdAt } = await TaskService.createTask('labels', datasetURI)
-
-            // Return 'Accepted' response and HATEOAS link
-            res.status(202).send({
-                uri: `/api/tasks/${insertedId}`,
-                createdAt
-            })
-        } catch (error) {
-            if (error instanceof InvalidArgumentError || error instanceof ValidationError) {
-                res.status(400).send({
-                    error: error.message
-                })
-            } else {
-                // Forward to 500-code middleware
-                next(error)
-            }
-        }
-    }
-
-    /*
-     * createAddressesTask()
-     * Creates a task to compile a list of user addresses for printable labels
-     * Requires:
-     * - req.file: a printable CSV occurrence dataset with which to filter the user data
-     */
-    static async createAddressesTask(req, res, next) {
-        // Check that required field exists
-        if (!req.file) {
-            res.status(400).send({
-                error: 'Missing required request field'
-            })
-            return
-        }
-
-        try {
-            // URI of the uploaded base dataset--not the file location
-            const datasetURI = `/api/uploads/${req.file.filename}`
-
-            // Create task and send its ID to the RabbitMQ queue
-            const { insertedId, createdAt } = await TaskService.createTask('addresses', datasetURI)
-
-            // Return 'Accepted' response and HATEOAS link
-            res.status(202).send({
-                uri: `/api/tasks/${insertedId}`,
-                createdAt
-            })
-        } catch (error) {
-            if (error instanceof InvalidArgumentError || error instanceof ValidationError) {
-                res.status(400).send({
-                    error: error.message
-                })
-            } else {
-                // Forward to 500-code middleware
-                next(error)
-            }
-        }
-    }
-
-    /*
-     * createEmailsTask()
-     * Creates a task to compile a list of user email addresses for error notifications
-     * Requires:
-     * - req.file: a printable CSV occurrence dataset with which to filter the user data
-     */
-    static async createEmailsTask(req, res, next) {
-        // Check that required field exists
-        if (!req.file) {
-            res.status(400).send({
-                error: 'Missing required request field'
-            })
-            return
-        }
-
-        try {
-            // URI of the uploaded base dataset--not the file location
-            const datasetURI = `/api/uploads/${req.file.filename}`
-
-            // Create task and send its ID to the RabbitMQ queue
-            const { insertedId, createdAt } = await TaskService.createTask('emails', datasetURI)
+            const { insertedId, createdAt } = await TaskService.createTask(req.file.filename, req.body.subtasks)
 
             // Return 'Accepted' response and HATEOAS link
             res.status(202).send({

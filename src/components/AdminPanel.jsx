@@ -21,9 +21,7 @@ const AdminPanelContainer = styled.div`
     padding: 25px;
 `
 
-export default function AdminPanel() {
-    const [ loggedIn, setLoggedIn ] = useState()
-
+export default function AdminPanel({ loggedIn, setLoggedIn }) {
     const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
 
     useQuery({
@@ -34,7 +32,7 @@ export default function AdminPanel() {
                 if (res.status === 200) {
                     setLoggedIn(res.data.username)
                 } else {
-                    setLoggedIn(undefined)
+                    setLoggedIn(null)
                 }
             })
             return

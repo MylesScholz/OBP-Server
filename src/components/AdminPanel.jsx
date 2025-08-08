@@ -13,7 +13,7 @@ const AdminPanelContainer = styled.div`
     flex-wrap: wrap;
     gap: 10px;
     
-    margin: 0px 10%;
+    margin: 0px 5%;
 
     border: 1px solid gray;
     border-radius: 5px;

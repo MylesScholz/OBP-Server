@@ -38,8 +38,8 @@ export default class BaseRepository {
         return await this.collection.findOne(filter, options)
     }
 
-    async findMany(filter = {}, options = {}) {
-        return await this.collection.find(filter, options).toArray()
+    async findMany(filter = {}, options = {}, sort = {}) {
+        return await this.collection.find(filter, options).sort(sort).toArray()
     }
 
     async paginate(options = {}) {

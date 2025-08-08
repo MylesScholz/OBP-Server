@@ -38,7 +38,7 @@ export default function SubtaskStatus({ type, selectedTaskData, downloads }) {
                     {
                         downloads?.filter((d) => d.subtask === type).map((d) => {
                             if (d.responseStatus === 200) {
-                                return <a href={d.url} download={d.fileName}>Download {d.type} file</a>
+                                return <a href={d.url} download={d.fileName}>Download {d.type}{d.subtype ? ` (${d.subtype})` : ''} file</a>
                             } else if (d.responseStatus === 401) {
                                 return <p className='authRequiredDownloadMessage'>Authentication Required</p>
                             } else {

@@ -97,7 +97,8 @@ export default function SubtaskPipeline({ loggedIn }) {
         'observations': true,
         'labels': false,
         'addresses': false,
-        'emails': false
+        'emails': false,
+        'pivots': false,
     }
     const [ subtaskSwitches, setSubtaskSwitches ] = useState(defaultSwitches)
 
@@ -181,6 +182,7 @@ export default function SubtaskPipeline({ loggedIn }) {
                     const download = {
                         fileName: output.fileName,
                         type: output.type,
+                        subtype: output.subtype,
                         subtask: subtaskOutput.type,
                         responseStatus: response.status
                     }

@@ -19,7 +19,7 @@ class TaskService {
         try {
             const subtasks = JSON.parse(subtasksJSON)
 
-            const subtaskTypes = [ 'occurrences', 'observations', 'labels', 'addresses', 'emails' ]
+            const subtaskTypes = [ 'occurrences', 'observations', 'labels', 'addresses', 'emails', 'pivots' ]
             for (let i = 0; i < subtasks.length; i++) {
                 const subtask = subtasks[i]
                 if (!subtaskTypes.includes(subtask.type)) { throw new ValidationError(`Invalid subtask type '${subtask.type}'`) }
@@ -127,7 +127,7 @@ class TaskService {
      * Finds all tasks
      */
     async getTasks() {
-        return await this.repository.findMany()
+        return await this.repository.findMany({}, {}, { 'createdAt': -1 })
     }
 
     /*

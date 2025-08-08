@@ -7,7 +7,7 @@ const TaskPanelContainer = styled.div`
     flex-direction: column;
     gap: 10px;
 
-    margin: 0px 10%;
+    margin: 0px 5%;
 
     border: 1px solid gray;
     border-radius: 5px;

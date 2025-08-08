@@ -70,7 +70,8 @@ const constants = {
         maxDuplicates: 25,
         maxLabels: 25,
         maxAddresses: 25,
-        maxEmails: 25
+        maxEmails: 25,
+        maxPivots: 25
     },
     auth: {
         saltLength: 10

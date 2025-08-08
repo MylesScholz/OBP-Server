@@ -2,19 +2,19 @@
 docker_commands.txt
 
 # API Data
+api/data/addresses
+api/data/duplicates
 api/data/elevation
+api/data/emails
+api/data/flags
 api/data/labels
 api/data/occurrences
+api/data/pivots
 api/data/pulls
-api/data/flags
-api/data/addresses
-api/data/emails
-api/data/duplicates
-api/data/temp
 api/data/uploads
-api/data/usernames.csv
 api/data/places.json
 api/data/taxa.json
+api/data/usernames.csv
 
 # Logs
 logs

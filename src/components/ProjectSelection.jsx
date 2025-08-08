@@ -65,7 +65,7 @@ const ProjectSelectionContainer = styled.div`
 export default function ProjectSelection() {
     const defaultProjects = [
         { name: 'Oregon Bee Atlas', id: '18521' },
-        { name: 'Master Melittologist (outside of Oregon)', id: '99706' },
+        { name: 'Master Melittologist', id: '99706' },
         { name: 'Washington Bee Atlas', id: '166376' }
     ]
     const [ projects, setProjects ] = useState(defaultProjects)

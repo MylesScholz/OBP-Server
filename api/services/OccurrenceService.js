@@ -400,6 +400,144 @@ class OccurrenceService {
         ])
     }
 
+    async getStateCollectorBeeCounts(filter = {}) {
+        return await this.repository.aggregate([
+            {
+                $match: {
+                    ...filter,
+                    [fieldNames.stateProvince]: { $nin: [ null, undefined, '' ] },
+                    [fieldNames.recordedBy]: { $nin: [ null, undefined, '' ] }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        stateProvince: `$${fieldNames.stateProvince}`,
+                        recordedBy: `$${fieldNames.recordedBy}`
+                    },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $group: {
+                    _id: '$_id.stateProvince',
+                    totalCount: { $sum: '$count' },
+                    collectors: {
+                        $push: {
+                            recordedBy: '$_id.recordedBy',
+                            count: '$count'
+                        }
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    collectors: {
+                        $sortArray: {
+                            input: '$collectors',
+                            sortBy: { 'count': -1 }
+                        }
+                    }
+                }
+            },
+            {
+                $sort: { '_id': 1 }
+            }
+        ])
+    }
+
+    async getStateCollectorCountyCounts(filter = {}) {
+        return await this.repository.aggregate([
+            {
+                $match: {
+                    ...filter,
+                    [fieldNames.stateProvince]: { $nin: [ null, undefined, '' ] },
+                    [fieldNames.recordedBy]: { $nin: [ null, undefined, '' ] },
+                    [fieldNames.county]: { $nin: [ null, undefined, '' ] }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        stateProvince: `$${fieldNames.stateProvince}`,
+                        recordedBy: `$${fieldNames.recordedBy}`
+                    },
+                    uniqueCounties: { $addToSet: `$${fieldNames.county}` }
+                }
+            },
+            {
+                $group: {
+                    _id: '$_id.stateProvince',
+                    collectors: {
+                        $push: {
+                            recordedBy: '$_id.recordedBy',
+                            count: { $size: '$uniqueCounties' }
+                        }
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    collectors: {
+                        $sortArray: {
+                            input: '$collectors',
+                            sortBy: { 'count': -1 }
+                        }
+                    }
+                }
+            },
+            {
+                $sort: { '_id': 1 }
+            }
+        ])
+    }
+
+    async getStateGenusBeeCounts(filter = {}) {
+        return await this.repository.aggregate([
+            {
+                $match: {
+                    ...filter,
+                    [fieldNames.stateProvince]: { $nin: [ null, undefined, '' ] },
+                    [fieldNames.plantGenus]: { $nin: [ null, undefined, '' ] }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        stateProvince: `$${fieldNames.stateProvince}`,
+                        plantGenus: `$${fieldNames.plantGenus}`
+                    },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $group: {
+                    _id: '$_id.stateProvince',
+                    totalCount: { $sum: '$count' },
+                    genera: {
+                        $push: {
+                            plantGenus: '$_id.plantGenus',
+                            count: '$count'
+                        }
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    genera: {
+                        $sortArray: {
+                            input: '$genera',
+                            sortBy: { 'count': -1 }
+                        }
+                    }
+                }
+            },
+            {
+                $sort: { '_id': 1 }
+            }
+        ])
+    }
+
     async getDistinctCoordinates() {
         return await this.repository.distinctCoordinates()
     }

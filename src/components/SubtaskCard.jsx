@@ -15,6 +15,7 @@ const SubtaskCardContainer = styled.div`
     padding: 10px;
 
     max-width: 50%;
+    min-height: 425px;
 
     h2 {
         margin: 0px;

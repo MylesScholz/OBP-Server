@@ -6,6 +6,8 @@ class UsernamesService {
         this.filePath = './api/data/usernames.csv'
         this.header = Object.values(usernames.fieldNames)
         this.usernames = []
+
+        this.readUsernames()
     }
 
     /*

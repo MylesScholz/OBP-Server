@@ -228,7 +228,7 @@ class OccurrenceService {
 
     /*
      * createOccurrenceFromObservation()
-     * Creates a formatted occurrence from an iNaturalist observation (and place, taxonomy, and elevation data)
+     * Creates a formatted occurrence from an iNaturalist observation (and place, taxonomy, elevation, and user data)
      */
     createOccurrenceFromObservation(observation, elevations) {
         // Return if no observation is provided

@@ -1,5 +1,7 @@
 import path from 'path'
 
+import { UsernamesService } from '../services/index.js'
+
 export default class UsernamesController {
     static async getUsernamesFile(req, res, next) {
         // Send usernames.csv
@@ -14,6 +16,9 @@ export default class UsernamesController {
             })
             return
         }
+
+        // Update the usernames in memory
+        UsernamesService.readUsernames()
 
         res.status(200).send()
     }

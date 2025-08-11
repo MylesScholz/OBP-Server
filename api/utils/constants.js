@@ -267,8 +267,8 @@ const constants = {
             address: 'address',
             city: 'city',
             stateProvince: 'stateProvince',
-            country: 'country',
-            zipPostal: 'zipPostal'
+            zipPostal: 'zipPostal',
+            country: 'country'
         }
     },
     abbreviations: {

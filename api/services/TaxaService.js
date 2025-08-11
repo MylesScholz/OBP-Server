@@ -5,6 +5,8 @@ class TaxaService {
     constructor(apiService) {
         this.filePath = './api/data/taxa.json'
         this.taxa = {}
+
+        this.readTaxa()
     }
 
     /*
@@ -82,10 +84,8 @@ class TaxaService {
      * Updates local taxonomy data from the given observations
      */
     async updateTaxaFromObservations(observations, updateProgress) {
-        // Read taxa data if not defined
-        if (Object.keys(this.taxa).length === 0) {
-            this.readTaxa()
-        }
+        // Read taxa data
+        this.readTaxa()
     
         // Compile a list of unknown taxa from the given observations
         const unknownTaxa = []

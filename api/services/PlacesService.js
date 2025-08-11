@@ -5,6 +5,8 @@ class PlacesService {
     constructor() {
         this.filePath = './api/data/places.json'
         this.places = {}
+
+        this.readPlaces()
     }
 
     /*
@@ -72,10 +74,8 @@ class PlacesService {
      * Updates local place data from the given observations
      */
     async updatePlacesFromObservations(observations, updateProgress) {
-        // Read place data if not defined
-        if (Object.keys(this.places).length === 0) {
-            this.readPlaces()
-        }
+        // Read place data
+        this.readPlaces()
     
         // Compile a list of unknown places from the given observations
         const unknownPlaces = []

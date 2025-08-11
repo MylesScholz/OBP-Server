@@ -1,6 +1,6 @@
 import BaseSubtaskHandler from './BaseSubtaskHandler.js'
 import { fieldNames, fileLimits } from '../utils/constants.js'
-import { ElevationService, ObservationService, OccurrenceService, PlacesService, TaskService, TaxaService } from '../services/index.js'
+import { ElevationService, ObservationService, OccurrenceService, PlacesService, TaskService, TaxaService, UsernamesService } from '../services/index.js'
 import FileManager from '../utils/FileManager.js'
 
 export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
@@ -178,6 +178,9 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
         await TaskService.logTaskStep(taskId, 'Updating taxonomy data')
 
         await TaxaService.updateTaxaFromObservations(observations, this.#createUpdateProgressFn(taskId))
+
+        // Update usernames data in memory
+        UsernamesService.readUsernames()
 
         // Query all distinct coordinates from the observations database table
         const coordinates = await ObservationService.getDistinctCoordinates()

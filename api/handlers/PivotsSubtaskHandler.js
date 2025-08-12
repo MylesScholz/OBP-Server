@@ -96,11 +96,11 @@ export default class PivotsSubtaskHandler extends BaseSubtaskHandler {
             // If an occurrences file was found, use it as the input file for this subtask
             inputFilePath = occurrencesSubtaskOutputFile ? `./api/data/occurrences/${occurrencesSubtaskOutputFile?.fileName}` : inputFilePath
         }
-        const stateCollectorBeeCountsFileName = `pivots_StateCollectorBeeCounts_${task.tag}.csv`
+        const stateCollectorBeeCountsFileName = `pivots_stateCollectorBeeCounts_${task.tag}.csv`
         const stateCollectorBeeCountsFilePath = './api/data/pivots/' + stateCollectorBeeCountsFileName
-        const stateCollectorCountyCountsFileName = `pivots_StateCollectorCountyCounts_${task.tag}.csv`
+        const stateCollectorCountyCountsFileName = `pivots_stateCollectorCountyCounts_${task.tag}.csv`
         const stateCollectorCountyCountsFilePath = './api/data/pivots/' + stateCollectorCountyCountsFileName
-        const stateGenusBeeCountsFileName = `pivots_StateGenusBeeCounts_${task.tag}.csv`
+        const stateGenusBeeCountsFileName = `pivots_stateGenusBeeCounts_${task.tag}.csv`
         const stateGenusBeeCountsFilePath = './api/data/pivots/' + stateGenusBeeCountsFileName
 
         await TaskService.logTaskStep(taskId, 'Formatting and uploading provided dataset')

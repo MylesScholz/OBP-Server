@@ -115,13 +115,14 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         ]
 
         const labels = []
+        const warningLabels = []
         for (const occurrence of occurrences) {
             const label = this.#createLabelFromOccurrence(occurrence)
             labels.push(label)
 
             // Add warnings for falsy warningFields and fields that are too long (highly specific, may need tuning)
             const warningReasons = warningFields.filter((field) => !occurrence[field])
-            if (label.location.length > 36 ||
+            if (label.location.length > 38 ||
                 label.name.length > 22 ||
                 label.method.length > 5
             ) {
@@ -129,10 +130,11 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
             }
             if (warningReasons.length > 0) {
                 addWarning(occurrence[fieldNames.fieldNumber], warningReasons.join(', '))
+                warningLabels.push(label)
             }
         }
 
-        return labels
+        return { labels, warningLabels }
     }
 
     /*
@@ -460,6 +462,8 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
      * Creates a PDFDocument, populates it with labels, and writes it to the given file path
      */
     async #writePDF(filePath, labels, updateProgress) {
+        await updateProgress(0)
+
         // Paginate the data
         const pageSize = this.#nRows * this.#nColumns
         const totalPages = Math.ceil(labels.length / pageSize)
@@ -485,6 +489,8 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         // Write the document to the given file path
         const docBuffer = await doc.save()
         fs.writeFileSync(filePath, docBuffer)
+
+        await updateProgress(100)
     }
 
     /* Main Handler Method */
@@ -512,7 +518,9 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
             inputFilePath = occurrencesSubtaskOutputFile ? `./api/data/occurrences/${occurrencesSubtaskOutputFile?.fileName}` : inputFilePath
         }
         const labelsFileName = `labels_${task.tag}.pdf`
-        const labelFilePath = `./api/data/labels/${labelsFileName}`
+        const labelFilePath = './api/data/labels/' + labelsFileName
+        const warningLabelsFileName = `labels_warnings_${task.tag}.pdf`
+        const warningLabelsFilePath = './api/data/labels/' + warningLabelsFileName
 
         await TaskService.logTaskStep(taskId, 'Formatting and uploading provided dataset')
 
@@ -533,28 +541,46 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
 
         // Filter and process the occurrences into formatted label fields and check the data for warnings
         let warningIds = []
-        const labels = this.#createLabelsFromOccurrences(printableOccurrences, (warningId, reason) => {
+        const { labels, warningLabels } = this.#createLabelsFromOccurrences(printableOccurrences, (warningId, reason) => {
             warningIds.push(`${warningId}${reason ? ` (${reason})` : ''}`)
         })
-        warnings.push(`Potentially incompatible data for occurrences: [ ${warningIds.join(', ')} ]`)
+        if (warningIds.length > 0) {
+            warnings.push(`Potentially incompatible data for occurrences: [ ${warningIds.join(', ')} ]`)
+        }
 
-        // Display warnings, if any
+        // Display warnings
         await TaskService.updateWarningsById(taskId, warnings)
 
         // Add blank partitions to labels for spacing
         const partitionedLabels = this.#partitionLabels(labels)
 
-        await TaskService.logTaskStep(taskId, 'Generating labels from provided dataset')
+        await TaskService.logTaskStep(taskId, 'Generating PDF of labels')
 
         // Write the labels PDF
         await this.#writePDF(labelFilePath, partitionedLabels, async (percentage) => {
             await TaskService.updateProgressPercentageById(taskId, percentage)
         })
 
+        // Generate a warning labels PDF if there are any labels with warnings
+        if (warningLabels.length > 0) {
+            // Add blank partitions to warning labels for spacing
+            const partitionedWarningLabels = this.#partitionLabels(warningLabels)
+
+            await TaskService.logTaskStep(taskId, 'Generating PDF of labels with warnings')
+
+            // Write the warning labels PDF
+            await this.#writePDF(warningLabelsFilePath, partitionedWarningLabels, async (percentage) => {
+                await TaskService.updateProgressPercentageById(taskId, percentage)
+            })
+        }
+
         // Update the task result with the output files
         const outputs = [
             { uri: `/api/labels/${labelsFileName}`, fileName: labelsFileName, type: 'labels' }
         ]
+        if (warningLabels.length > 0) {
+            outputs.push({ uri: `/api/labels/${warningLabelsFileName}`, fileName: warningLabelsFileName, type: 'labels', subtype: 'warnings' })
+        }
         previousSubtaskOutputs.push({ type: subtask.type, outputs })
         await TaskService.updateResultById(taskId, {
             subtaskOutputs: previousSubtaskOutputs

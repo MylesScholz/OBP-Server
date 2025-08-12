@@ -213,9 +213,7 @@ class OccurrenceService {
         }
 
         for await (const chunk of FileManager.readCSVChunks(filePath, chunkSize)) {
-            const formattedChunk = chunk.map((row) => this.formatOccurrence(row))
-
-            const chunkResults = await this.createOccurrences(formattedChunk)
+            const chunkResults = await this.createOccurrences(chunk)
             
             // Add the results for this chunk to the running total
             results.insertedCount += chunkResults.insertedCount

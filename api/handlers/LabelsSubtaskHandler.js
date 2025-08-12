@@ -70,7 +70,7 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
 
         // Date field
         const day1 = occurrence[fieldNames.day]
-        const month1 = monthNumerals[occurrence[fieldNames.month] - 1]
+        const month1 = monthNumerals[occurrence[fieldNames.month] - 1] ?? ''
         const year = occurrence[fieldNames.year]
         // Optional second date (for trap observations)
         const day2 = occurrence[fieldNames.day2]
@@ -121,10 +121,8 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
 
             // Add warnings for falsy warningFields and fields that are too long (highly specific, may need tuning)
             const warningReasons = warningFields.filter((field) => !occurrence[field])
-            if (occurrence[fieldNames.country].length > 3 ||
-                occurrence[fieldNames.stateProvince].length > 2 ||
-                occurrence[fieldNames.county].length + occurrence[fieldNames.locality].length > 25 ||
-                label.name.length > 19 ||
+            if (label.location.length > 36 ||
+                label.name.length > 22 ||
                 label.method.length > 5
             ) {
                 warningReasons.push('field length')
@@ -147,10 +145,10 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         const partitionedLabels = []
 
         // Iterate through each label and look ahead one to determine if the collectors are different
-        for (let i = 0; i < labels.length - 1; i++) {
+        for (let i = 0; i < labels.length; i++) {
             partitionedLabels.push(labels[i])
 
-            if (labels[i].name !== labels[i + 1].name) {
+            if (labels[i + 1] && labels[i].name !== labels[i + 1].name) {
                 partitionedLabels.push({ blank: true })
             }
         }

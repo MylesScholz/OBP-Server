@@ -28,10 +28,10 @@ const SubtaskCardContainer = styled.div`
     }
 `
 
-export default function SubtaskCard({ type, formVisible, setFile, handleRemove, selectedTaskData, downloads }) {
+export default function SubtaskCard({ type, ordinal, formVisible, setFile, handleRemove, selectedTaskData, downloads }) {
     return (
         <SubtaskCardContainer>
-            <h2>{type.charAt(0).toUpperCase() + type.slice(1)} Subtask</h2>
+            <h2>{ordinal}. {type.charAt(0).toUpperCase() + type.slice(1)} Subtask</h2>
 
             { formVisible &&
                 <SubtaskCardForm type={type} setFile={setFile} handleRemove={handleRemove} />

@@ -106,6 +106,14 @@ class SubtaskSwitches {
         }
     }
 
+    getSubtaskOrdinal(type) {
+        let i = 1
+        for (const subtask of this.subtasks) {
+            if (subtask === type) return i
+            if (this[subtask]) i++
+        }
+    }
+
     getEnabledSubtasks() {
         return this.subtasks.filter((subtask) => !!this[subtask])
     }
@@ -326,6 +334,7 @@ export default function SubtaskPipeline({ loggedIn }) {
                         <SubtaskCard
                             key={type}
                             type={type}
+                            ordinal={subtaskSwitches.getSubtaskOrdinal(type)}
                             formVisible={!selectedTaskId}
                             setFile={subtaskSwitches.getFirstSubtask() === type ? setFile : undefined }
                             handleRemove={handleRemove}

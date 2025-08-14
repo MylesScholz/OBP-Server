@@ -137,8 +137,20 @@ export default function SubtaskPipeline({ loggedIn }) {
     const [ file, setFile ] = useState()
     const [ subtaskSwitches, setSubtaskSwitches ] = useState(new SubtaskSwitches())
 
+    // Subtask pipeline presets for creating new tasks
+    const newTaskPresets = {
+        'blank': {},
+        'occurrences-observations': { occurrences: true, observations: true },
+        'occurrences-observations-pivots': { occurrences: true, observations: true, pivots: true },
+        'occurrences-observations-emails': { occurrences: true, observations: true, emails: true },
+        'labels-addresses': { labels: true, addresses: true },
+        'full': { occurrences: true, observations: true, labels: true, addresses: true, emails: true, pivots: true }
+    }
+
     // The URL or IP address of the backend server
     const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
+
+    /* Queries */
 
     /*
      * Tasks Query
@@ -224,6 +236,8 @@ export default function SubtaskPipeline({ loggedIn }) {
         enabled: !!result
     })
 
+    /* Handler Functions */
+
     /*
      * handleAdd()
      * Adds a subtask to the pipeline
@@ -297,23 +311,15 @@ export default function SubtaskPipeline({ loggedIn }) {
         <SubtaskPipelineContainer>
             <div id='taskSelectionContainer'>
                 <select onChange={ (event) => {
-                    if (event.target.value === 'blank') {
+                    if (newTaskPresets[event.target.value]) {
                         setSelectedTaskId(null)
-                        setSubtaskSwitches(new SubtaskSwitches())
-                    } else if (event.target.value === 'occurrences-observations-pivots') {
-                        setSelectedTaskId(null)
-                        setSubtaskSwitches(new SubtaskSwitches({ occurrences: true, observations: true, pivots: true }))
-                    } else if (event.target.value === 'labels-addresses') {
-                        setSelectedTaskId(null)
-                        setSubtaskSwitches(new SubtaskSwitches({ labels: true, addresses: true }))
+                        setSubtaskSwitches(new SubtaskSwitches(newTaskPresets[event.target.value]))
                     } else {
                         setSelectedTaskId(event.target.value)
                     }
                 } }>
-                    <optgroup label='New task presents'>
-                        <option value='blank' selected={selectedTaskId === 'blank'}>New blank task</option>
-                        <option value='occurrences-observations-pivots' selected={selectedTaskId === 'occurrences-observations-pivots'}>New occurrences-observations-pivots</option>
-                        <option value='labels-addresses' selected={selectedTaskId === 'labels-addresses'}>New labels-addresses</option>
+                    <optgroup label='New task presets'>
+                        { Object.keys(newTaskPresets).map((preset) => <option key={preset} value={preset}>New {preset} task</option>) }
                     </optgroup>
                     <optgroup label='Previous tasks'>
                         { tasks?.map((task) => <option value={task._id} key={task._id} selected={task._id === selectedTaskId}>{task.name}</option>)}

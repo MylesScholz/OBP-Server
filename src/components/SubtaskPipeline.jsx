@@ -23,8 +23,8 @@ const SubtaskPipelineContainer = styled.div`
 
             font-size: 12pt;
 
-            option {
-                font-size: 12pt;
+            optgroup {
+                font-style: normal;
             }
         }
 
@@ -87,32 +87,50 @@ const SubtaskForm = styled.form`
     }
 `
 
+class SubtaskSwitches {
+    constructor(subtaskSwitches) {
+        this.occurrences = !!subtaskSwitches?.occurrences
+        this.observations = !!subtaskSwitches?.observations
+        this.labels = !!subtaskSwitches?.labels
+        this.addresses = !!subtaskSwitches?.addresses
+        this.emails = !!subtaskSwitches?.emails
+        this.pivots = !!subtaskSwitches?.pivots
+        this.subtasks = [ 'occurrences', 'observations', 'labels', 'addresses', 'emails', 'pivots' ]
+    }
+
+    getFirstSubtask() {
+        for (const subtask of this.subtasks) {
+            if (this[subtask]) {
+                return subtask
+            }
+        }
+    }
+
+    getEnabledSubtasks() {
+        return this.subtasks.filter((subtask) => !!this[subtask])
+    }
+
+    getDisabledSubtasks() {
+        return this.subtasks.filter((subtask) => !this[subtask])
+    }
+
+    areAllEnabled() {
+        return this.subtasks.every((subtask) => !!this[subtask])
+    }
+
+    areAllDisabled() {
+        return this.subtasks.every((subtask) => !this[subtask])
+    }    
+}
+
 export default function SubtaskPipeline({ loggedIn }) {
     const [ postTaskResponse, setPostTaskResponse ] = useState()
     const [ selectedTaskId, setSelectedTaskId ] = useState()
     const [ file, setFile ] = useState()
-
-    const defaultSwitches = {
-        'occurrences': false,
-        'observations': false,
-        'labels': false,
-        'addresses': false,
-        'emails': false,
-        'pivots': false,
-    }
-    const [ subtaskSwitches, setSubtaskSwitches ] = useState(defaultSwitches)
+    const [ subtaskSwitches, setSubtaskSwitches ] = useState(new SubtaskSwitches())
 
     // The URL or IP address of the backend server
     const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
-
-    // On remount, find the first enabled subtask card
-    let firstEnabledSubtask = ''
-    for (const [ type, enabled ] of Object.entries(subtaskSwitches)) {
-        if (enabled) {
-            firstEnabledSubtask = type
-            break
-        }
-    }
 
     /*
      * Tasks Query
@@ -143,8 +161,7 @@ export default function SubtaskPipeline({ loggedIn }) {
             const selectedTaskResponse = await response.json()
 
             // Update subtaskSwitches to match selected task's subtasks
-            let newSwitches = {}
-            Object.keys(subtaskSwitches).forEach((subtask) => newSwitches[subtask] = false)
+            let newSwitches = new SubtaskSwitches()
             for (const subtask of (selectedTaskResponse?.task?.subtasks || [])) {
                 newSwitches[subtask.type] = true
             }
@@ -204,7 +221,7 @@ export default function SubtaskPipeline({ loggedIn }) {
      * Adds a subtask to the pipeline
      */
     function handleAdd(event) {
-        const newSwitches = { ...subtaskSwitches }
+        const newSwitches = new SubtaskSwitches(subtaskSwitches)
         newSwitches[event.target.value] = true
 
         setSubtaskSwitches(newSwitches)
@@ -217,7 +234,7 @@ export default function SubtaskPipeline({ loggedIn }) {
      * Removes a task from the pipeline
      */
     function handleRemove(subtask) {
-        const newSwitches = { ...subtaskSwitches }
+        const newSwitches = new SubtaskSwitches(subtaskSwitches)
         newSwitches[subtask] = false
 
         setSubtaskSwitches(newSwitches)
@@ -231,7 +248,7 @@ export default function SubtaskPipeline({ loggedIn }) {
         event.preventDefault()
 
         // If there are no subtasks, return without posting
-        if (!firstEnabledSubtask) return
+        if (subtaskSwitches.areAllDisabled()) return
 
         setPostTaskResponse(null)
 
@@ -242,8 +259,8 @@ export default function SubtaskPipeline({ loggedIn }) {
 
         // Build the subtask pipeline
         const subtaskPipeline = []
-        for (const [ type, enabled ] of Object.entries(subtaskSwitches)) {
-            if (enabled) {
+        for (const type of subtaskSwitches.subtasks) {
+            if (subtaskSwitches[type]) {
                 const subtask = { type }
                 if (type === 'observations') {
                     subtask.sources = event.target.sources.value
@@ -272,13 +289,27 @@ export default function SubtaskPipeline({ loggedIn }) {
         <SubtaskPipelineContainer>
             <div id='taskSelectionContainer'>
                 <select onChange={ (event) => {
-                    setSelectedTaskId(event.target.value)
-                    if (event.target.value === '') {
-                        setSubtaskSwitches(defaultSwitches)
+                    if (event.target.value === 'blank') {
+                        setSelectedTaskId(null)
+                        setSubtaskSwitches(new SubtaskSwitches())
+                    } else if (event.target.value === 'occurrences-observations-pivots') {
+                        setSelectedTaskId(null)
+                        setSubtaskSwitches(new SubtaskSwitches({ occurrences: true, observations: true, pivots: true }))
+                    } else if (event.target.value === 'labels-addresses') {
+                        setSelectedTaskId(null)
+                        setSubtaskSwitches(new SubtaskSwitches({ labels: true, addresses: true }))
+                    } else {
+                        setSelectedTaskId(event.target.value)
                     }
                 } }>
-                    <option value='' selected={!selectedTaskId}>Create a new task...</option>
-                    { tasks?.map((task) => <option value={task._id} key={task._id} selected={task._id === selectedTaskId}>{task.name}</option>)}
+                    <optgroup label='New task presents'>
+                        <option value='blank' selected={selectedTaskId === 'blank'}>New blank task</option>
+                        <option value='occurrences-observations-pivots' selected={selectedTaskId === 'occurrences-observations-pivots'}>New occurrences-observations-pivots</option>
+                        <option value='labels-addresses' selected={selectedTaskId === 'labels-addresses'}>New labels-addresses</option>
+                    </optgroup>
+                    <optgroup label='Previous tasks'>
+                        { tasks?.map((task) => <option value={task._id} key={task._id} selected={task._id === selectedTaskId}>{task.name}</option>)}
+                    </optgroup>
                 </select>
 
                 { selectedTaskQueryError &&
@@ -290,13 +321,13 @@ export default function SubtaskPipeline({ loggedIn }) {
             </div>
 
             <SubtaskForm onSubmit={ handleSubmit }>
-                { Object.keys(subtaskSwitches).map((type) =>
+                { subtaskSwitches.subtasks.map((type) =>
                     ( subtaskSwitches[type] &&
                         <SubtaskCard
                             key={type}
                             type={type}
                             formVisible={!selectedTaskId}
-                            setFile={firstEnabledSubtask === type ? setFile : undefined }
+                            setFile={subtaskSwitches.getFirstSubtask() === type ? setFile : undefined }
                             handleRemove={handleRemove}
                             selectedTaskData={selectedTaskData}
                             downloads={downloads}
@@ -305,12 +336,12 @@ export default function SubtaskPipeline({ loggedIn }) {
                 }
                 { !selectedTaskId &&
                     <div id='subtaskFormButtonContainer'>
-                        { !Object.keys(subtaskSwitches).every((subtask) => subtaskSwitches[subtask]) &&
+                        { !subtaskSwitches.areAllEnabled() &&
                             <select id='addSubtask' onChange={ handleAdd }>
                                 <option value='' selected={true}>+</option>
                                 {
-                                    Object.keys(subtaskSwitches)
-                                        .filter((subtask) => !subtaskSwitches[subtask])
+                                    subtaskSwitches
+                                        .getDisabledSubtasks()
                                         .map((subtask) => <option key={subtask} value={subtask}>{subtask}</option>)
                                 }
                             </select>

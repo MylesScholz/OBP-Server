@@ -93,8 +93,8 @@ export default function SubtaskPipeline({ loggedIn }) {
     const [ file, setFile ] = useState()
 
     const defaultSwitches = {
-        'occurrences': true,
-        'observations': true,
+        'occurrences': false,
+        'observations': false,
         'labels': false,
         'addresses': false,
         'emails': false,

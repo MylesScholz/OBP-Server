@@ -244,7 +244,6 @@ const constants = {
             FIRST_NAME_INITIAL,
             LAST_NAME,
             SAMPLE_ID,
-            SPECIMEN_ID,
             DAY,
             MONTH,
             YEAR,

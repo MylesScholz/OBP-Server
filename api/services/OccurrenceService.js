@@ -90,8 +90,8 @@ class OccurrenceService {
         }
 
         // Fill recordedBy if empty
-        const firstName = formattedOccurrence[fieldNames.firstName]
-        const lastName = formattedOccurrence[fieldNames.lastName]
+        const firstName = formattedOccurrence[fieldNames.firstName] ?? ''
+        const lastName = formattedOccurrence[fieldNames.lastName] ?? ''
         formattedOccurrence[fieldNames.recordedBy] ||= `${firstName}${(firstName && lastName) ? ' ' : ''}${lastName}`
 
         // Set verbatimDate to default formatting
@@ -345,6 +345,10 @@ class OccurrenceService {
         return occurrence
     }
 
+    async getOccurrences(filter = {}, options = {}) {
+        return await this.repository.findMany(filter, options, { 'composite_sort': 1 })
+    }
+
     async getOccurrencesPage(options = {}) {
         const sortConfig = [ { field: 'composite_sort', direction: 1, type: 'string' } ]
         return await this.repository.paginate({ ...options, sortConfig })
@@ -361,19 +365,37 @@ class OccurrenceService {
     }
 
     async getPrintableOccurrences(requiredFields, userLogins) {
-        // First, query occurrences with all required fields and an empty dateLabelPrint field
+        // First, query occurrences with an empty dateLabelPrint field
         const filter = {
             [fieldNames.dateLabelPrint]: { $in: [ null, undefined, '' ] }
         }
         // If userLogins are given, filter by them
         if (userLogins) filter[fieldNames.iNaturalistAlias] = { $in: userLogins }
 
+        // Filter by occurrences with all required fields
         requiredFields?.forEach((field) => filter[field] = { $nin: [ null, undefined, '' ] })
-        const unprinted = await this.repository.findMany(filter)
+        const unprintedAndComplete = await this.repository.findMany(filter)
 
         // Filter out occurrences where any of the required fields show up in errorFlags
-        return unprinted.filter(
+        return unprintedAndComplete.filter(
             (occurrence) => !requiredFields.some(
+                (field) => occurrence[fieldNames.errorFlags]?.split(';')?.includes(field) ?? false
+            )
+        )
+    }
+
+    async getUnprintableOccurrences(requiredFields) {
+        const filter = {
+            $or: [
+                { [fieldNames.errorFlags]: { $nin: [ null, undefined, '' ] } },
+                { [fieldNames.dateLabelPrint]: { $nin: [ null, undefined, '' ] } }
+            ]
+        }
+
+        const printedOrIncomplete = await this.repository.findMany(filter)
+
+        return printedOrIncomplete.filter(
+            (occurrence) => requiredFields.some(
                 (field) => occurrence[fieldNames.errorFlags]?.split(';')?.includes(field) ?? false
             )
         )

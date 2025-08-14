@@ -4,7 +4,7 @@ import { PageSizes, PDFDocument, degrees } from 'pdf-lib'
 import { datamatrixrectangularextension } from 'bwip-js/node'
 
 import BaseSubtaskHandler from './BaseSubtaskHandler.js'
-import { abbreviations, fieldNames, fileLimits, requiredFields } from '../utils/constants.js'
+import { abbreviations, fieldNames, fileLimits, requiredFields, template } from '../utils/constants.js'
 import { TaskService, OccurrenceService } from '../services/index.js'
 import FileManager from '../utils/FileManager.js'
 
@@ -78,8 +78,8 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         const duration = `-${day2}.${month2}`
         // Sample and specimen IDs
         const sampleID = occurrence[fieldNames.sampleId].replace('-', '')
-        const specimenID = occurrence[fieldNames.specimenId]
-        const dateText = `${day1}.${month1}${(day2 && month2) ? duration : ''}${year}-${sampleID}.${specimenID}`
+        const specimenId = occurrence[fieldNames.specimenId] ? `.${occurrence[fieldNames.specimenId]}` : ''
+        const dateText = `${day1}.${month1}${(day2 && month2) ? duration : ''}${year}-${sampleID}${specimenId}`
         label.date = dateText
 
         // Collector field
@@ -96,7 +96,7 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         label.method = methodText
 
         // Field number field
-        const numberText = occurrence[fieldNames.fieldNumber]
+        const numberText = occurrence[fieldNames.fieldNumber] ?? ''
         label.number = numberText
 
         return label
@@ -180,6 +180,7 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         // Handle automatic text fitting
         let fontSize = textBoxLayout.fontSize
         let lineHeight = textBoxLayout.lineHeight
+        let xOffset = textBoxLayout.offset.x
         let yOffset = textBoxLayout.offset.y
         if (textBoxLayout.fit) {
             // The width (in PostScript points) of the text at fontSize with no line wrapping
@@ -212,13 +213,17 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
                 approximateHeight = approximateNumberOfLines * singleLineHeight
 
                 // Adjust the text offset to prevent text overflow
-                yOffset = (textBoxLayout.height - approximateHeight) * -0.5 - singleLineHeight * 0.8
+                if (textBoxLayout.rotation === 0) {
+                    yOffset = (textBoxLayout.height - approximateHeight) * -0.5 - singleLineHeight * 0.8
+                } else if (textBoxLayout.rotation === 90) {
+                    xOffset = (textBoxLayout.height - approximateHeight) * -0.5
+                }
             }
         }
 
         // Add the text box to the page
         page.drawText(text, {
-            x: basisX + textBoxLayout.x + textBoxLayout.offset.x,
+            x: basisX + textBoxLayout.x + xOffset,
             y: basisY + textBoxLayout.y + textBoxLayout.height + yOffset,
             font: textBoxLayout.font,
             size: fontSize,
@@ -245,10 +250,13 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         //     borderWidth: 0.1,
         //     opacity: 0
         // })
+
+        // Extract only numeric characters from given text
+        const number = parseInt(text?.replace(/\D/g, ''))
         
         // Create the data matrix PNG from the text
         const png = await datamatrixrectangularextension({
-            text: text,
+            text: isNaN(number) ? text : number.toString(),     // Use original text if no number could be extracted
             version: '8x18',
             rotate: 'L'
         })
@@ -393,7 +401,8 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
             offset: {
                 x: -0.75,
                 y: -5,
-            }
+            },
+            fit: true
         }
         // Add the field number field to the page
         this.#addTextBox(page, numberText, basisX, basisY, numberLayout)
@@ -521,6 +530,8 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         const labelFilePath = './api/data/labels/' + labelsFileName
         const warningLabelsFileName = `labels_warnings_${task.tag}.pdf`
         const warningLabelsFilePath = './api/data/labels/' + warningLabelsFileName
+        const flagsFileName = `flags_${task.tag}.csv`
+        const flagsFilePath = './api/data/flags/' + flagsFileName
 
         await TaskService.logTaskStep(taskId, 'Formatting and uploading provided dataset')
 
@@ -534,10 +545,12 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         const printableOccurrences = await OccurrenceService.getPrintableOccurrences(requiredFields)
 
         // Calculate the number of unprintable occurrences that were filtered out and add a warning message
-        const totalInputOccurrences = await OccurrenceService.count() + duplicateOccurrences.length
-        const numFilteredOut = totalInputOccurrences - printableOccurrences.length
+        const numFilteredOut = await OccurrenceService.count() - printableOccurrences.length
 
-        const warnings = [`Filtered out ${numFilteredOut} occurrences that were already printed or had faulty data.`]
+        const warnings = [
+            `Filtered out ${duplicateOccurrences.length} duplicate occurrences.`,
+            `Filtered out ${numFilteredOut} occurrences that were already printed or had faulty data.`
+        ]
 
         // Filter and process the occurrences into formatted label fields and check the data for warnings
         let warningIds = []
@@ -574,6 +587,10 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
             })
         }
 
+        // Write the flags file
+        const flags = await OccurrenceService.getUnprintableOccurrences(requiredFields)
+        FileManager.writeCSV(flagsFilePath, flags, Object.keys(template))
+
         // Update the task result with the output files
         const outputs = [
             { uri: `/api/labels/${labelsFileName}`, fileName: labelsFileName, type: 'labels' }
@@ -581,6 +598,7 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         if (warningLabels.length > 0) {
             outputs.push({ uri: `/api/labels/${warningLabelsFileName}`, fileName: warningLabelsFileName, type: 'labels', subtype: 'warnings' })
         }
+        outputs.push({ uri: `/api/flags/${flagsFileName}`, fileName: flagsFileName, type: 'flags' })
         previousSubtaskOutputs.push({ type: subtask.type, outputs })
         await TaskService.updateResultById(taskId, {
             subtaskOutputs: previousSubtaskOutputs
@@ -588,5 +606,6 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
 
         // Archive excess output files
         FileManager.limitFilesInDirectory('./api/data/labels', fileLimits.maxLabels)
+        FileManager.limitFilesInDirectory('./api/data/occurrences', fileLimits.maxOccurrences)
     }
 }

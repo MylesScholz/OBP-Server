@@ -99,35 +99,35 @@ class SubtaskSwitches {
     }
 
     getFirstSubtask() {
-        for (const subtask of this.subtasks) {
-            if (this[subtask]) {
-                return subtask
+        for (const type of this.subtasks) {
+            if (this[type]) {
+                return type
             }
         }
     }
 
-    getSubtaskOrdinal(type) {
+    getSubtaskOrdinal(subtaskType) {
         let i = 1
-        for (const subtask of this.subtasks) {
-            if (subtask === type) return i
-            if (this[subtask]) i++
+        for (const type of this.subtasks) {
+            if (type === subtaskType) return i
+            if (this[type]) i++
         }
     }
 
     getEnabledSubtasks() {
-        return this.subtasks.filter((subtask) => !!this[subtask])
+        return this.subtasks.filter((type) => !!this[type])
     }
 
     getDisabledSubtasks() {
-        return this.subtasks.filter((subtask) => !this[subtask])
+        return this.subtasks.filter((type) => !this[type])
     }
 
     areAllEnabled() {
-        return this.subtasks.every((subtask) => !!this[subtask])
+        return this.subtasks.every((type) => !!this[type])
     }
 
     areAllDisabled() {
-        return this.subtasks.every((subtask) => !this[subtask])
+        return this.subtasks.every((type) => !this[type])
     }    
 }
 

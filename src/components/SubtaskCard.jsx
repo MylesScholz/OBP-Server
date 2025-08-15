@@ -4,6 +4,7 @@ import SubtaskStatus from './SubtaskStatus'
 import SubtaskCardForm from './SubtaskCardForm'
 
 const SubtaskCardContainer = styled.div`
+    position: relative;
     display: flex;
     flex-direction: column;
     flex-grow: 1;
@@ -28,13 +29,18 @@ const SubtaskCardContainer = styled.div`
     }
 `
 
-export default function SubtaskCard({ type, ordinal, formVisible, setFile, handleRemove, selectedTaskData, downloads }) {
+function capitalize(text) {
+    if (!text) return ''
+    return text.charAt(0).toUpperCase() + text.slice(1)
+}
+
+export default function SubtaskCard({ type, ordinal, inputOptions, formVisible, setFile, handleRemove, selectedTaskData, downloads }) {
     return (
         <SubtaskCardContainer>
-            <h2>{ordinal}. {type.charAt(0).toUpperCase() + type.slice(1)} Subtask</h2>
+            <h2>{ordinal}. {capitalize(type)} Subtask</h2>
 
             { formVisible &&
-                <SubtaskCardForm type={type} setFile={setFile} handleRemove={handleRemove} />
+                <SubtaskCardForm type={type} setFile={setFile} inputOptions={inputOptions} handleRemove={handleRemove} />
             }
             { !formVisible &&
                 <SubtaskStatus

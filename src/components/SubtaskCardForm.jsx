@@ -33,17 +33,27 @@ const SubtaskCardFormContainer = styled.div`
             gap: 10px;
 
             white-space: nowrap;
+
+            label {
+                display: flex;
+                align-items: center;
+            }
         }
     }
 
-    button {
+    #removeSubtask {
         height: 35px;
 
         font-size: 12pt;
     }
 `
 
-export default function SubtaskCardForm({ type, setFile, handleRemove }) {
+function capitalize(text) {
+    if (!text) return ''
+    return text.charAt(0).toUpperCase() + text.slice(1)
+}
+
+export default function SubtaskCardForm({ type, setFile, inputOptions, handleRemove }) {
     const firstDay = new Date(new Date().getFullYear(), 0, 1)
     const firstDayFormatted = `${firstDay.getFullYear()}-${(firstDay.getMonth() + 1).toString().padStart(2, '0')}-${firstDay.getDate().toString().padStart(2, '0')}`
     const currentDate = new Date()
@@ -77,6 +87,25 @@ export default function SubtaskCardForm({ type, setFile, handleRemove }) {
                         />
                     </div>
                 }
+                { !setFile &&
+                    <div>
+                        <label for={`${type}Input`}>Input File:</label>
+                        <select name={`${type}Input`} id={`${type}Input`}>
+                            <option key='upload' value='upload' selected={inputOptions?.length === 0}>Upload</option>
+                            {
+                                inputOptions?.map((option) =>
+                                    <option
+                                        key={option.key}
+                                        value={option.key}
+                                        selected={!!option.default}
+                                    >
+                                        {capitalize(option.subtask)} subtask ({option.subtaskIndex + 1}): {option.output} file
+                                    </option>
+                                )
+                            }
+                        </select>
+                    </div>
+                }
                 { type === 'observations' &&
                     <>
                         <ProjectSelection />
@@ -94,7 +123,7 @@ export default function SubtaskCardForm({ type, setFile, handleRemove }) {
                 }
             </fieldset>
 
-            <button type='button' onClick={ (event) => handleRemove(type) }>Remove</button>
+            <button type='button' id='removeSubtask' onClick={ (event) => handleRemove(type) }>Remove</button>
         </SubtaskCardFormContainer>
     )   
 }

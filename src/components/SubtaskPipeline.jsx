@@ -40,7 +40,7 @@ const SubtaskPipelineContainer = styled.div`
 
 const SubtaskForm = styled.form`
     display: flex;
-    flex-direction: row;
+    flex-wrap: wrap;
     justify-content: start;
     align-items: stretch;
     flex-grow: 1;
@@ -96,6 +96,32 @@ class SubtaskSwitches {
         this.emails = !!subtaskSwitches?.emails
         this.pivots = !!subtaskSwitches?.pivots
         this.subtasks = [ 'occurrences', 'observations', 'labels', 'addresses', 'emails', 'pivots' ]
+        this.subtaskIO = {
+            'occurrences': {
+                inputs: [ 'occurrences' ],
+                outputs: [ 'occurrences', 'duplicates' ]
+            },
+            'observations': {
+                inputs: [ 'occurrences' ],
+                outputs: [ 'occurrences', 'pulls', 'flags' ]
+            },
+            'labels': {
+                inputs: [ 'occurrences', 'pulls' ],     // The first input file type will be treated as the default
+                outputs: [ 'labels', 'flags' ]
+            },
+            'addresses': {
+                inputs: [ 'occurrences', 'pulls' ],
+                outputs: [ 'addresses' ]
+            },
+            'emails': {
+                inputs: [ 'flags' ],
+                outputs: [ 'emails' ]
+            },
+            'pivots': {
+                inputs: [ 'occurrences', 'pulls' ],
+                outputs: [ 'pivots' ]
+            }
+        }
     }
 
     getFirstSubtask() {
@@ -112,6 +138,31 @@ class SubtaskSwitches {
             if (type === subtaskType) return i
             if (this[type]) i++
         }
+    }
+
+    getInputOptions(subtaskType) {
+        const acceptedInputs = this.subtaskIO[subtaskType]?.inputs ?? []
+        const availableOptions = []
+
+        for (const type of this.getEnabledSubtasks()) {
+            if (type === subtaskType) break
+
+            const acceptedOutputs = this.subtaskIO[type].outputs.filter((output) => acceptedInputs.includes(output))
+
+            for (const output of acceptedOutputs) {
+                const subtaskIndex = (this.getSubtaskOrdinal(type) - 1)
+                const key = `${subtaskIndex}_${output}`
+                availableOptions.push({ subtask: type, subtaskIndex, output, key })
+            }
+        }
+
+        // Find the default input for the given subtask (the last output file matching the first accepted input file type of this subtask)
+        const defaultIndex = availableOptions.findLastIndex((option) => option.output === this.subtaskIO[subtaskType].inputs[0])
+        if (defaultIndex !== -1) {
+            availableOptions[defaultIndex].default = true
+        }
+        
+        return availableOptions
     }
 
     getEnabledSubtasks() {
@@ -280,19 +331,27 @@ export default function SubtaskPipeline({ loggedIn }) {
         formData.append('file', file)
 
         // Build the subtask pipeline
-        const subtaskPipeline = []
-        for (const type of subtaskSwitches.subtasks) {
-            if (subtaskSwitches[type]) {
-                const subtask = { type }
-                if (type === 'observations') {
-                    subtask.sources = event.target.sources.value
-                    subtask.minDate = event.target.minDate.value
-                    subtask.maxDate = event.target.maxDate.value
-                }
+        const enabledSubtasks = subtaskSwitches.getEnabledSubtasks()
+        const subtaskPipeline = enabledSubtasks.map((type, i) => {
+            const subtask = { type }
 
-                subtaskPipeline.push(subtask)
+            // The first subtask always accepts the upload file
+            // The rest are determined by the `${type}Input` element
+            if (i === 0) {
+                subtask.input = 'upload'
+            } else {
+                subtask.input = event.target[`${type}Input`]?.value ?? 'upload'
             }
-        }
+
+            // Add observations subtask settings
+            if (type === 'observations') {
+                subtask.sources = event.target.sources.value
+                subtask.minDate = event.target.minDate.value
+                subtask.maxDate = event.target.maxDate.value
+            }
+
+            return subtask
+        })
         formData.append('subtasks', JSON.stringify(subtaskPipeline))
 
         // Post the task
@@ -341,6 +400,7 @@ export default function SubtaskPipeline({ loggedIn }) {
                             key={type}
                             type={type}
                             ordinal={subtaskSwitches.getSubtaskOrdinal(type)}
+                            inputOptions={subtaskSwitches.getInputOptions(type)}
                             formVisible={!selectedTaskId}
                             setFile={subtaskSwitches.getFirstSubtask() === type ? setFile : undefined }
                             handleRemove={handleRemove}

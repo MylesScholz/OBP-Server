@@ -86,15 +86,22 @@ export default class PivotsSubtaskHandler extends BaseSubtaskHandler {
         const previousSubtaskOutputs = task.result?.subtaskOutputs ?? []
 
         // Input and output file names
+
         // Set the default input file to the file upload
         let inputFilePath = task.upload.filePath
-        if (previousSubtaskOutputs.length > 0) {
-            // Find the last subtask output with an occurrences output file
-            const lastSubtaskOutput = previousSubtaskOutputs.findLast((subtaskOutput) => !!subtaskOutput.outputs?.find((output) => output.type === 'occurrences'))
-            // Find the occurrences output file
-            const occurrencesSubtaskOutputFile = lastSubtaskOutput?.outputs?.find((output) => output.type === 'occurrences')
-            // If an occurrences file was found, use it as the input file for this subtask
-            inputFilePath = occurrencesSubtaskOutputFile ? `./api/data/occurrences/${occurrencesSubtaskOutputFile?.fileName}` : inputFilePath
+        // If not using the upload file, try to find the specified input file in the previous subtask outputs
+        if (subtask.input !== 'upload') {
+            const subtaskInputSplit = subtask.input?.split('_') ?? []
+            const subtaskInputIndex = parseInt(subtaskInputSplit[0])
+            const subtaskInputFileType = subtaskInputSplit[1]
+            
+            // Get the output file list from the given subtask index
+            const outputs = previousSubtaskOutputs[subtaskInputIndex]?.outputs
+            // Get the output file matching the given input file type
+            const outputFile = outputs?.find((output) => output.type === subtaskInputFileType)
+
+            // Build the input file path if the given file was found in the previous subtask outputs
+            inputFilePath = outputFile ? `./api/data/${outputFile.type}/${outputFile.fileName}` : inputFilePath
         }
         const stateCollectorBeeCountsFileName = `pivots_stateCollectorBeeCounts_${task.tag}.csv`
         const stateCollectorBeeCountsFilePath = './api/data/pivots/' + stateCollectorBeeCountsFileName

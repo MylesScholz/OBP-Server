@@ -124,11 +124,11 @@ export default class PivotsSubtaskHandler extends BaseSubtaskHandler {
         const unprintedFilter = { [fieldNames.dateLabelPrint]: { $in: [ null, undefined, '' ] } }
 
         // For each state, find the count of unprinted occurrences for each collector
-        const stateCollectorBeeCounts = await OccurrenceService.getStateCollectorBeeCounts()
+        const stateCollectorBeeCounts = await OccurrenceService.getStateCollectorBeeCounts(unprintedFilter)
         // For each state, find the count of unique counties in the unprinted occurrences of each collector
-        const stateCollectorCountyCounts = await OccurrenceService.getStateCollectorCountyCounts()
+        const stateCollectorCountyCounts = await OccurrenceService.getStateCollectorCountyCounts(unprintedFilter)
         // For each state, find the count of unprinted occurrence for each plant genus
-        const stateGenusBeeCounts = await OccurrenceService.getStateGenusBeeCounts()
+        const stateGenusBeeCounts = await OccurrenceService.getStateGenusBeeCounts(unprintedFilter)
 
         // Write output files
         this.#writeStateCollectorBeeCountsFile(stateCollectorBeeCountsFilePath, stateCollectorBeeCounts)

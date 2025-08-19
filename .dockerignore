@@ -1,3 +1,6 @@
 .git*
 node_modules
 api/data/elevation
+docker-compose.yml
+*.Dockerfile
+README.md

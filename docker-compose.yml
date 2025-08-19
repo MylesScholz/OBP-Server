@@ -14,7 +14,8 @@ services:
             - PORT=80
         env_file: ./.env
         volumes:
-            - app-data:/app
+            - ./api/data:/app/api/data
+    
     tasks-consumer:
         depends_on:
             - mongo
@@ -27,8 +28,8 @@ services:
         container_name: tasks-consumer
         env_file: ./.env
         volumes:
-            - app-data:/app
-            - ./api/data/elevation:/app/api/data/elevation
+            - ./api/data:/app/api/data
+    
     mongo:
         image: 'mongo:latest'
         restart: always
@@ -40,6 +41,7 @@ services:
             - mongo-data:/data/db
             - mongo-config:/data/configdb
             - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+
     rabbitmq:
         image: 'rabbitmq:management'
         container_name: 'rabbitmq'
@@ -47,7 +49,7 @@ services:
             - '5672:5672'
             - '15672:15672'
         env_file: ./.env
+
 volumes:
-    app-data:
     mongo-data:
     mongo-config:

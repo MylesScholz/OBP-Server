@@ -22,7 +22,7 @@ export default class ObservationRepository extends BaseRepository {
                         $concat: [
                             { $toString: { $round: [{ $arrayElemAt: [ '$geojson.coordinates', 1 ] }, 4] } },
                             ',',
-                            { $toString: { $round: [{ $arrayElemAt: [ '$geojson.coordinates', 1 ] }, 4] } }
+                            { $toString: { $round: [{ $arrayElemAt: [ '$geojson.coordinates', 0 ] }, 4] } }
                         ]
                     }
                 }

@@ -59,9 +59,18 @@ export default class OccurrenceRepository extends BaseRepository {
     }
 
     // Read
-    async distinctCoordinates() {
+    async distinctCoordinates(filter = {}) {
         // Group by unique latitude-longitude combinations and convert to floats
         const response = await this.aggregate([
+            {
+                $match: {
+                    ...filter,
+                    $and: [
+                        { [fieldNames.latitude]: { $nin: [ null, undefined, '' ] } },
+                        { [fieldNames.longitude]: { $nin: [ null, undefined, '' ] } }
+                    ]
+                }
+            },
             {
                 $group: {
                     _id: {
@@ -73,8 +82,22 @@ export default class OccurrenceRepository extends BaseRepository {
             {
                 $project: {
                     _id: 0,
-                    latitude: { $toDouble: `$_id.latitude` },
-                    longitude: { $toDouble: `$_id.longitude` }
+                    latitude: {
+                        $convert: {
+                            input: '$_id.latitude',
+                            to: 'double',
+                            onError: null,
+                            onNull: null
+                        }
+                    },
+                    longitude: {
+                        $convert: {
+                            input: '$_id.longitude',
+                            to: 'double',
+                            onError: null,
+                            onNull: null
+                        }
+                    }
                 }
             }
         ])
@@ -90,8 +113,8 @@ export default class OccurrenceRepository extends BaseRepository {
         const response = await this.aggregate([
             {
                 $match: {
-                    errorFlags: { $in: [ null, '' ] },
-                    fieldNumber: { $exists: true, $ne: null, $ne: '' }
+                    [fieldNames.errorFlags]: { $in: [ null, undefined, '' ] },
+                    [fieldNames.fieldNumber]: { $nin: [ null, undefined, '' ] }
                 }
             },
             {

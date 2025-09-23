@@ -18,6 +18,15 @@ const router = createBrowserRouter([
 const globalStyles = css`
     html {
         font-family: 'Helvetica', sans-serif;
+
+        --occurrences-file-color: #ceb721;
+        --duplicates-file-color: #d75fdd;
+        --pulls-file-color: #00e068;
+        --flags-file-color: #c33333;
+        --labels-file-color: #2916fc;
+        --addresses-file-color: #930082;
+        --emails-file-color: #07b2b2;
+        --pivots-file-color: #9794f7;
     }
 
     body {

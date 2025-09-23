@@ -399,6 +399,7 @@ export default function SubtaskPipeline({ loggedIn }) {
                         <SubtaskCard
                             key={type}
                             type={type}
+                            io={subtaskSwitches.subtaskIO[type]}
                             ordinal={subtaskSwitches.getSubtaskOrdinal(type)}
                             inputOptions={subtaskSwitches.getInputOptions(type)}
                             formVisible={!selectedTaskId}

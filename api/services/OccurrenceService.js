@@ -138,7 +138,11 @@ class OccurrenceService {
 
     /* Main Methods */
 
-    async createOccurrence(document) {
+    /*
+     * createOccurrence
+     * Inserts a single occurrence into the database with optional formatting
+     */
+    async createOccurrence(document, skipFormatting = false) {
         // Return object containing information about inserted and duplicate occurrences
         const results = {
             insertedCount: 0,
@@ -162,6 +166,10 @@ class OccurrenceService {
         return results
     }
 
+    /*
+     * createOccurrences()
+     * Inserts multiple occurrences into the database with optional formatting
+     */
     async createOccurrences(documents, skipFormatting = false) {
         // Return object containing information about inserted and duplicate occurrences
         const results = {
@@ -203,6 +211,10 @@ class OccurrenceService {
         return results
     }
 
+    /*
+     * createOccurrencesFromFile()
+     * Reads a given occurrences file chunk-by-chunk and inserts formatted occurrences for each entry
+     */
     async createOccurrencesFromFile(filePath) {
         const chunkSize = 5000
         // Return object containing information about inserted and duplicate occurrences
@@ -226,7 +238,7 @@ class OccurrenceService {
 
     /*
      * createOccurrenceFromObservation()
-     * Creates a formatted occurrence from an iNaturalist observation (and place, taxonomy, elevation, and user data)
+     * Creates a formatted occurrence from an iNaturalist observation (and place, taxonomy, elevation, and user data); does not insert the occurrence
      */
     createOccurrenceFromObservation(observation, elevations) {
         // Return if no observation is provided
@@ -254,7 +266,6 @@ class OccurrenceService {
         // Find the observation field values (OFVs) for sampleId and number of bees collected (which will become specimenId)
         const rawSampleId = getOFV(observation.ofvs, ofvs.sampleId)
         const rawSpecimenId = getOFV(observation.ofvs, ofvs.beesCollected)
-        
         const sampleId = !isNaN(parseInt(rawSampleId)) ? parseInt(rawSampleId).toString() : ''
         const specimenId = !isNaN(parseInt(rawSpecimenId)) ? parseInt(rawSpecimenId).toString() : ''
 
@@ -274,7 +285,7 @@ class OccurrenceService {
         // Format the location
         // Remove 'County' or 'Co' or 'Co.' from the county field (case insensitive)
         const countyRegex = new RegExp(/(?<![^,.\s])Co(?:unty)?\.?(?![^,.\s])+/ig)
-        const formattedLocation = observation.place_guess?.split(/,\s*/)?.at(0)?.replace(countyRegex, '')?.trim() ?? ''
+        const formattedLocality = observation.place_guess?.split(/,\s*/)?.at(0)?.replace(countyRegex, '')?.trim() ?? ''
 
         // Format the coordinates
         const formattedLatitude = observation.geojson?.coordinates?.at(1)?.toFixed(4)?.toString() ?? ''
@@ -307,13 +318,11 @@ class OccurrenceService {
         occurrence[fieldNames.month] = formattedMonth
         occurrence[fieldNames.year] = formattedYear
         occurrence[fieldNames.verbatimDate] =  formattedDay && formattedMonth && formattedYear ? `${formattedMonth}/${formattedDay}/${formattedYear}` : ''
-
         
         occurrence[fieldNames.country] = abbreviations.countries[country] ?? country
         occurrence[fieldNames.stateProvince] = abbreviations.stateProvinces[stateProvince] ?? stateProvince
         occurrence[fieldNames.county] = county
-
-        occurrence[fieldNames.locality] = formattedLocation
+        occurrence[fieldNames.locality] = formattedLocality
 
         const coordinate = `${formattedLatitude},${formattedLongitude}`
         occurrence[fieldNames.elevation] = elevations[coordinate] || ''
@@ -558,12 +567,12 @@ class OccurrenceService {
         ])
     }
 
-    async getDistinctCoordinates() {
-        return await this.repository.distinctCoordinates()
+    async getDistinctCoordinates(filter = {}) {
+        return await this.repository.distinctCoordinates(filter)
     }
 
-    async getDistinctUrls() {
-        return await this.repository.distinct(fieldNames.iNaturalistUrl)
+    async getDistinctUrls(filter = {}) {
+        return await this.repository.distinct(fieldNames.iNaturalistUrl, filter)
     }
 
     async getMaxFieldNumber() {
@@ -654,8 +663,8 @@ class OccurrenceService {
         FileManager.writeCSV(filePath, occurrences, Object.keys(template))
     }
 
-    async deleteOccurrences() {
-        return await this.repository.deleteMany()
+    async deleteOccurrences(filter = {}) {
+        return await this.repository.deleteMany(filter)
     }
 }
 

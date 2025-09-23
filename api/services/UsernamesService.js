@@ -40,6 +40,25 @@ class UsernamesService {
 
         return { firstName, firstNameInitial, lastName }
     }
+
+    /*
+     * getUserNameByFullName
+     * Searches for a first name, initial, and last name by full name in the usernames data
+     */
+    getUserNameByFullName(fullName) {
+        // Read usernames data if not defined
+        if (this.usernames.length === 0) {
+            this.readUsernames()
+        }
+
+        const user = this.usernames.find((u) => u.fullName === fullName)
+
+        const firstName = user?.firstName ?? ''
+        const firstNameInitial = user?.firstNameInitial ?? ''
+        const lastName = user?.lastName ?? ''
+
+        return { firstName, firstNameInitial, lastName }
+    }
 }
 
 export default new UsernamesService()

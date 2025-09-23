@@ -67,7 +67,7 @@ class FileManager {
                 return this.writeCSV(filePath, [], header)
             }
 
-            while (pageNumber < results.pagination.totalPages + 1) {
+            while (pageNumber <= results.pagination.totalPages) {
                 for (const document of results.data) {
                     await writeAsync(stringifier, document)
                 }

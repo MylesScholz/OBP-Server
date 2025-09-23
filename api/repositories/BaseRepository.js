@@ -95,8 +95,8 @@ export default class BaseRepository {
         return await this.collection.countDocuments(filter)
     }
 
-    async distinct(field, query = {}) {
-        return await this.collection.distinct(field, query)
+    async distinct(field, filter = {}) {
+        return await this.collection.distinct(field, filter)
     }
 
     // Update

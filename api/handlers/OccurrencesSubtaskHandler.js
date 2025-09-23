@@ -202,7 +202,9 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
 
         // Insert observations into the database; delete old observations first
         await ObservationService.deleteObservations()
-        await ObservationService.createObservations(matchingObservations)
+        if (matchingObservations.length > 0) {
+            await ObservationService.createObservations(matchingObservations)
+        }
 
         const observations = await ObservationService.getObservations()
 

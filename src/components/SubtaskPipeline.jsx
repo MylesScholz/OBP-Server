@@ -91,11 +91,12 @@ class SubtaskSwitches {
     constructor(subtaskSwitches) {
         this.occurrences = !!subtaskSwitches?.occurrences
         this.observations = !!subtaskSwitches?.observations
+        this.ecdysis = !!subtaskSwitches?.ecdysis
         this.labels = !!subtaskSwitches?.labels
         this.addresses = !!subtaskSwitches?.addresses
         this.emails = !!subtaskSwitches?.emails
         this.pivots = !!subtaskSwitches?.pivots
-        this.subtasks = [ 'occurrences', 'observations', 'labels', 'addresses', 'emails', 'pivots' ]
+        this.subtasks = [ 'occurrences', 'observations', 'ecdysis', 'labels', 'addresses', 'emails', 'pivots' ]
         this.subtaskIO = {
             'occurrences': {
                 inputs: [ 'occurrences' ],
@@ -104,6 +105,10 @@ class SubtaskSwitches {
             'observations': {
                 inputs: [ 'occurrences' ],
                 outputs: [ 'occurrences', 'pulls', 'flags' ]
+            },
+            'ecdysis': {
+                inputs: [],
+                outputs: [ 'occurrences', 'duplicates', 'flags' ]
             },
             'labels': {
                 inputs: [ 'occurrences', 'pulls' ],     // The first input file type will be treated as the default

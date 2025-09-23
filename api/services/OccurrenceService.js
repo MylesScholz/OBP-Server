@@ -136,6 +136,83 @@ class OccurrenceService {
         return formattedOccurrence
     }
 
+    /*
+     * formatPartialOccurrence()
+     * Completes the formatting of a single partial occurrence using the matching iNaturalist observation, taxonomy, and elevation data; does not insert occurrence
+     */
+    async formatPartialOccurrence(partialOccurrence, observation, elevations) {
+        if (!partialOccurrence || !observation) {
+            Object.keys(partialOccurrence).forEach((field) => partialOccurrence[field] = partialOccurrence[field] || '')
+            return partialOccurrence
+        }
+
+        /* Constants */
+
+        // Find the observation field values (OFVs) for sampleId and number of bees collected (which will become specimenId)
+        const rawSampleId = getOFV(observation.ofvs, ofvs.sampleId)
+        const rawSpecimenId = getOFV(observation.ofvs, ofvs.beesCollected)
+        const sampleId = !isNaN(parseInt(rawSampleId)) ? parseInt(rawSampleId).toString() : ''
+        const specimenId = !isNaN(parseInt(rawSpecimenId)) ? parseInt(rawSpecimenId).toString() : ''
+
+        // Look up the plant ancestry and format it
+        const plantAncestry = TaxaService.getPlantAncestry(observation.taxon)
+
+        /* Final Formatting */
+
+        let occurrence = { ...partialOccurrence, partial: false }
+
+        occurrence[fieldNames.iNaturalistId] = observation.user?.id?.toString() ?? ''
+        occurrence[fieldNames.iNaturalistAlias] = observation.user?.login ?? ''
+
+        occurrence[fieldNames.sampleId] = sampleId
+        occurrence[fieldNames.specimenId] = specimenId
+
+        // Overwrite the current elevation at the current coordinates
+        const coordinate = `${partialOccurrence[fieldNames.latitude]},${partialOccurrence[fieldNames.longitude]}`
+        occurrence[fieldNames.elevation] = elevations[coordinate] || ''
+
+        // Update the coordinate fields if the accuracy is better (smaller) or as good
+        // Treat an empty accuracy as perfect precision
+        const prevAccuracy = parseInt(partialOccurrence[fieldNames.accuracy]) || ''
+        const newAccuracy = observation?.positional_accuracy ?? ''
+        if (newAccuracy === '' || newAccuracy < prevAccuracy) {
+            const prevLatitude = partialOccurrence[fieldNames.latitude]
+            const prevLongitude = partialOccurrence[fieldNames.longitude]
+            const newLatitude = observation?.geojson?.coordinates?.at(1)?.toFixed(4)?.toString() || ''
+            const newLongitude = observation?.geojson?.coordinates?.at(0)?.toFixed(4)?.toString() || ''
+            const newCoordinate = `${newLatitude},${newLongitude}`
+
+            // Check that either coordinate changed before updating the occurrence fields
+            if (newLatitude !== prevLatitude || newLongitude !== prevLongitude) {
+                occurrence[fieldNames.elevation] = elevations[newCoordinate] || await ElevationService.getElevation(newLatitude, newLongitude) || ''
+                occurrence[fieldNames.latitude] = newLatitude
+                occurrence[fieldNames.longitude] = newLongitude
+                occurrence[fieldNames.accuracy] = newAccuracy.toString() || ''
+            }
+        }
+
+        occurrence[fieldNames.resourceRelationship] = 'visits flowers of'
+        occurrence[fieldNames.relatedResourceId] = observation.uuid
+
+        occurrence[fieldNames.plantPhylum] = plantAncestry.phylum
+        occurrence[fieldNames.plantOrder] = plantAncestry.order
+        occurrence[fieldNames.plantFamily] = plantAncestry.family
+        occurrence[fieldNames.plantGenus] = plantAncestry.genus
+        occurrence[fieldNames.plantSpecies] = plantAncestry.species
+
+        // As a fallback, search the plant ancestry upward for the first truthy rank
+        const minRank = ['species', 'genus', 'family', 'order', 'phylum'].find((rank) => !!plantAncestry[rank])
+        occurrence[fieldNames.plantTaxonRank] = observation.taxon?.rank || minRank || ''
+
+        // Set error flags
+        occurrence = this.updateErrorFlags(occurrence)
+
+        // Generate a unique ID for the occurrence and overwrite the _id field with it
+        occurrence._id = this.generateOccurrenceId(occurrence)
+
+        return occurrence
+    }
+
     /* Main Methods */
 
     /*
@@ -231,6 +308,191 @@ class OccurrenceService {
             results.insertedCount += chunkResults.insertedCount
             results.insertedIds = results.insertedIds.concat(chunkResults.insertedIds)
             results.duplicates = results.duplicates.concat(chunkResults.duplicates)
+        }
+
+        return results
+    }
+
+    /*
+     * createPartialOccurrenceFromEcdysisEntry()
+     * Creates a partial formatted occurrence from a given Ecdysis entry; does not insert occurrence
+     */
+    createPartialOccurrenceFromEcdysisEntry(ecdysisEntry) {
+        // Return if no Ecdysis entry is provided
+        if (!ecdysisEntry) return
+
+        // Start from the template occurrence object
+        let occurrence = Object.assign({}, template)
+
+        /* Constants */
+
+        const catalogNumber = ecdysisEntry[fieldNames.catalogNumber] ?? ''
+        const fieldNumber = catalogNumber.replace('WSDA_', '')
+
+        const recordedBy = ecdysisEntry[fieldNames.recordedBy] ?? ''
+        const { firstName, firstNameInitial, lastName } = UsernamesService.getUserNameByFullName(recordedBy)
+
+        const day = ecdysisEntry[fieldNames.day] ?? ''
+        const month = ecdysisEntry[fieldNames.month] ?? ''
+        const year = ecdysisEntry[fieldNames.year] ?? ''
+        const verbatimDate = ecdysisEntry[fieldNames.verbatimDate] || (day && month && year ? `${month}/${day}/${year}` : '')
+
+        const country = ecdysisEntry[fieldNames.country] ?? ''
+        const stateProvince = ecdysisEntry[fieldNames.stateProvince] ?? ''
+
+        // Remove 'County' or 'Co' or 'Co.' from the county field (case insensitive)
+        const countyRegex = new RegExp(/(?<![^,.\s])Co(?:unty)?\.?(?![^,.\s])+/ig)
+        const locality = ecdysisEntry[fieldNames.locality]?.replace(countyRegex, '')?.replace('near', '')?.trim() ?? ''
+
+        const ecdysisLatitude = ecdysisEntry[fieldNames.latitude] ?? ''
+        const ecdysisLongitude = ecdysisEntry[fieldNames.longitude] ?? ''
+        const numericLatitude = parseFloat(ecdysisLatitude)
+        const numericLongitude = parseFloat(ecdysisLongitude)
+        const formattedLatitude = !isNaN(numericLatitude) ? numericLatitude.toFixed(4).toString() : ecdysisLatitude
+        const formattedLongitude = !isNaN(numericLongitude) ? numericLongitude.toFixed(4).toString() : ecdysisLongitude
+
+        const associatedOccurrences = ecdysisEntry.associatedOccurrences ?? ''
+        const associatedOccurrencesSplit = associatedOccurrences.split(', ')
+        const associatedOccurrenceFields = {}
+        associatedOccurrencesSplit.forEach((field) => {
+            const fieldSplit = field.split(': ')
+            if (fieldSplit.length >= 2) {
+                associatedOccurrenceFields[fieldSplit[0].trim()] = fieldSplit[1].trim()
+            }
+        })
+
+        /* Final formatting */
+
+        // errorFlags should be unfilled for partial occurrences
+
+        occurrence[fieldNames.fieldNumber] = fieldNumber
+        occurrence[fieldNames.catalogNumber] = catalogNumber
+        occurrence[fieldNames.occurrenceId] = ecdysisEntry[fieldNames.occurrenceId] ?? ''
+
+        // iNaturalistId unfillable from Ecdysis data
+        // iNaturalistAlias unfillable from Ecdysis data
+
+        occurrence[fieldNames.firstName] = firstName
+        occurrence[fieldNames.firstNameInitial] = firstNameInitial
+        occurrence[fieldNames.lastName] = lastName
+        occurrence[fieldNames.recordedBy] = recordedBy || `${firstName}${(firstName && lastName) ? ' ' : ''}${lastName}`
+
+        // sampleId unfillable from Ecdysis data
+        // specimenId unfillable from Ecdysis data
+
+        occurrence[fieldNames.day] = day
+        occurrence[fieldNames.month] = month
+        occurrence[fieldNames.year] = year
+        occurrence[fieldNames.verbatimDate] = verbatimDate
+
+        occurrence[fieldNames.country] = abbreviations.countries[country] ?? country
+        occurrence[fieldNames.stateProvince] = abbreviations.stateProvinces[stateProvince] ?? stateProvince
+        occurrence[fieldNames.county] = ecdysisEntry[fieldNames.county] ?? ''
+        occurrence[fieldNames.locality] = locality
+
+        // elevation unfillable from Ecdysis data
+
+        occurrence[fieldNames.latitude] = formattedLatitude
+        occurrence[fieldNames.longitude] = formattedLongitude
+        occurrence[fieldNames.accuracy] = ecdysisEntry[fieldNames.accuracy] ?? ''
+
+        occurrence[fieldNames.samplingProtocol] = ecdysisEntry[fieldNames.samplingProtocol] ?? ''
+
+        // resourceRelationship should be unfilled if relatedResourceId is unfilled
+        occurrence[fieldNames.resourceId] = ''
+        // relatedResourceId unfillable from Ecdysis data
+
+        // plantPhylum unfillable from Ecdysis data
+        // plantOrder unfillable from Ecdysis data
+        // plantFamily unfillable from Ecdysis data
+        // plantGenus unfillable from Ecdysis data
+        // plantSpecies unfillable from Ecdysis data
+        // plantTaxonRank unfillable from Ecdysis data
+
+        occurrence[fieldNames.iNaturalistUrl] = associatedOccurrenceFields.resourceUrl ?? ''
+
+        occurrence[fieldNames.beePhylum] = ecdysisEntry[fieldNames.beePhylum] ?? ''
+        occurrence[fieldNames.beeClass] = ecdysisEntry[fieldNames.beeClass] ?? ''
+        occurrence[fieldNames.beeOrder] = ecdysisEntry[fieldNames.beeOrder] ?? ''
+        occurrence[fieldNames.beeFamily] = ecdysisEntry[fieldNames.beeFamily] ?? ''
+        occurrence[fieldNames.beeGenus] = ecdysisEntry[fieldNames.beeGenus] ?? ''
+        occurrence[fieldNames.beeSubgenus] = ecdysisEntry[fieldNames.beeSubgenus] ?? ''
+        occurrence[fieldNames.specificEpithet] = ecdysisEntry[fieldNames.specificEpithet] ?? ''
+        // taxonomicNotes unfillable from Ecdysis data
+        occurrence[fieldNames.scientificName] = ecdysisEntry[fieldNames.scientificName] ?? ''
+        occurrence[fieldNames.sex] = ecdysisEntry[fieldNames.sex] ?? ''
+        // caste unfillable from Ecdysis data
+        occurrence[fieldNames.beeTaxonRank] = ecdysisEntry[fieldNames.beeTaxonRank] ?? ''
+        occurrence[fieldNames.identifiedBy] = ecdysisEntry[fieldNames.identifiedBy] ?? ''
+
+        // Mark the occurrence as a partial occurrence for querying later
+        occurrence.partial = true
+
+        return occurrence
+    }
+
+    /*
+     * createPartialOccurrencesFromEcdysisFile()
+     * Reads a given Ecdysis file and creates partial formatted occurrences from each entry; inserts occurrences
+     */
+    async createPartialOccurrencesFromEcdysisFile(filePath) {
+        const ecdysisEntries = FileManager.readCSV(filePath) ?? []
+
+        const partialOccurrences = ecdysisEntries.map((entry) => this.createPartialOccurrenceFromEcdysisEntry(entry))
+
+        return await this.createOccurrences(partialOccurrences, true)   // Skip formatting
+    }
+
+    /*
+     * createOccurrencesFromPartialOccurrences()
+     * Completes the formatting of partial occurrences using matching iNaturalist observations and place, taxonomy, and elevation data
+     */
+    async createOccurrencesFromPartialOccurrences(observations, elevations, updateProgress) {
+        const observationsUrlKeys = {}
+        for (const observation of observations) {
+            if (observation.uri) {
+                observationsUrlKeys[observation.uri] = observation
+            }
+        }
+
+        const results = {
+            insertedCount: 0,
+            insertedIds: [],
+            duplicates: [],
+            errors: []
+        }
+        let page = await this.getOccurrencesPage({ page: 1, filter: { partial: true } })
+        let i = 0
+        const totalPartialOccurrences = page.pagination.totalDocuments
+        while (page.pagination.totalDocuments > 0) {
+            const partialOccurrenceIds = []
+            const occurrencesPage = []
+            for (const partialOccurrence of page.data) {
+                const observation = observationsUrlKeys[partialOccurrence[fieldNames.iNaturalistUrl]]
+
+                const occurrence = await this.formatPartialOccurrence(partialOccurrence, observation, elevations)
+
+                partialOccurrenceIds.push(partialOccurrence._id)
+                if (occurrence.partial) {
+                    results.errors.push(occurrence)
+                } else {
+                    occurrencesPage.push(occurrence)
+                }
+
+                await updateProgress(100 * (++i) / totalPartialOccurrences)
+            }
+
+            // Delete partial occurrences in this page; insert completed occurrences
+            await this.deleteOccurrences({ _id: { $in: partialOccurrenceIds } })
+            const pageResults = await this.createOccurrences(occurrencesPage, true)     // Skip formatting
+
+            // Append page results to overall results
+            results.insertedCount += pageResults.insertedCount
+            results.insertedIds = results.insertedIds.concat(pageResults.insertedIds)
+            results.duplicates = results.duplicates.concat(pageResults.duplicates)
+
+            // Query the next page (always the first page of partial occurrences because the previous pages were deleted)
+            page = await this.getOccurrencesPage({ page: 1, filter: { partial: true } })
         }
 
         return results

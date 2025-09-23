@@ -12,8 +12,6 @@ const AdminPanelContainer = styled.div`
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    
-    margin: 0px 5%;
 
     border: 1px solid gray;
     border-radius: 5px;
@@ -42,15 +40,14 @@ export default function AdminPanel({ loggedIn, setLoggedIn }) {
     })
 
     return (
-        <AdminPanelContainer>
-            <AdminAccountForm loggedIn={loggedIn} setLoggedIn={setLoggedIn} />
+        <>
             { loggedIn &&
-                <>
+                <AdminPanelContainer>
                     <UsernamesQueryBuilder />
                     <AdminManagementForm />
                     <ArchiveBrowser />
-                </>
+                </AdminPanelContainer>
             }
-        </AdminPanelContainer>
+        </>
     )
 }

@@ -3,19 +3,27 @@ import axios from 'axios'
 import styled from '@emotion/styled'
 
 const AdminAccountFormContainer = styled.form`
+    position: absolute;
+    top: 30px;
+    right: 0px;
+
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 5px;
 
-    border: 1px solid gray;
-    border-radius: 5px;
+    padding: 15px;
 
-    padding: 20px;
+    white-space: nowrap;
+
+    background-color: white;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+
+    color: black;
     
-    h2 {
+    h3 {
         margin: 0px;
 
-        font-size: 16pt;
+        font-size: 12pt;
     }
 
     p {
@@ -30,12 +38,10 @@ const AdminAccountFormContainer = styled.form`
         justify-content: space-between;
         align-items: center;
         gap: 10px;
-
-        white-space: nowrap;
     }
 `
 
-export default function AdminAccountForm({ loggedIn, setLoggedIn }) {
+export default function AdminAccountForm({ loggedIn, setLoggedIn, setAccountModalOpen }) {
     const [ formDisabled, setFormDisabled ] = useState(false)
 
     const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
@@ -43,6 +49,7 @@ export default function AdminAccountForm({ loggedIn, setLoggedIn }) {
     function handleSubmit(event) {
         event.preventDefault()
         setFormDisabled(true)
+        setAccountModalOpen(false)
 
         if (event.target.loginSubmit) {
             const credentials = {
@@ -77,9 +84,9 @@ export default function AdminAccountForm({ loggedIn, setLoggedIn }) {
 
     return (
         <AdminAccountFormContainer onSubmit={ handleSubmit } disabled={formDisabled}>
-            <h2>Admin Account</h2>
             { !loggedIn &&
                 <>
+                    <h3>Admin Account</h3>
                     <div>
                         <label for='adminUsername'>Username:</label>
                         <input type='text' id='adminUsername' />
@@ -91,11 +98,8 @@ export default function AdminAccountForm({ loggedIn, setLoggedIn }) {
                     <input type='submit' id='loginSubmit' value='Log In' />
                 </>
             }
-            { !!loggedIn &&
-                <>
-                    <p>Current account: {loggedIn}</p>
-                    <input type='submit' id='logoutSubmit' value='Log Out' />
-                </>
+            { loggedIn &&
+                <input type='submit' id='logoutSubmit' value='Log Out' />
             }
         </AdminAccountFormContainer>
     )

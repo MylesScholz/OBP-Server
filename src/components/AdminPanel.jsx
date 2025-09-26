@@ -1,12 +1,11 @@
-import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import styled from '@emotion/styled'
 
-import AdminAccountForm from './AdminAccountForm'
 import UsernamesQueryBuilder from './UsernamesQueryBuilder'
 import AdminManagementForm from './AdminManagementForm'
 import ArchiveBrowser from './ArchiveBrowser'
+import DeterminationsAccessForm from './DeterminationsAccessForm'
 
 const AdminPanelContainer = styled.div`
     display: flex;
@@ -43,6 +42,7 @@ export default function AdminPanel({ loggedIn, setLoggedIn }) {
         <>
             { loggedIn &&
                 <AdminPanelContainer>
+                    <DeterminationsAccessForm />
                     <UsernamesQueryBuilder />
                     <AdminManagementForm />
                     <ArchiveBrowser />

@@ -100,19 +100,20 @@ export default class BaseRepository {
     }
 
     // Update
-    async updateById(id, update = {}) {
+    async updateById(id, update = {}, options = {}) {
         const queryId = ObjectId.isValid(id) ? new ObjectId(id) : id
 
         const result = await this.collection.updateOne(
             { _id: queryId },
-            update
+            update,
+            options
         )
 
         return result.modifiedCount
     }
 
-    async updateMany(filter = {}, update = {}) {
-        const result = await this.collection.updateMany(filter, update)
+    async updateMany(filter = {}, update = {}, options = {}) {
+        const result = await this.collection.updateMany(filter, update, options)
 
         return result.modifiedCount
     }

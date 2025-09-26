@@ -1,5 +1,6 @@
 export { default as AdminService } from './AdminService.js'
 export { default as ApiService } from './ApiService.js'
+export { default as DeterminationsService } from './DeterminationsService.js'
 export { default as ElevationService } from './ElevationService.js'
 export { default as ObservationService } from './ObservationService.js'
 export { default as ObservationViewService } from './ObservationViewService.js'

@@ -256,6 +256,7 @@ const constants = {
         ]
     },
     usernames: {
+        // Username field names
         fieldNames: {
             userLogin: 'userLogin',
             fullName: 'fullName',
@@ -268,6 +269,52 @@ const constants = {
             stateProvince: 'stateProvince',
             zipPostal: 'zipPostal',
             country: 'country'
+        }
+    },
+    determinations: {
+        // Determination field names
+        fieldNames: {
+            fieldNumber: FIELD_NO,
+            beePhylum: BEE_PHYLUM,
+            beeClass: BEE_CLASS,
+            beeOrder: BEE_ORDER,
+            beeFamily: BEE_FAMILY,
+            beeGenus: BEE_GENUS,
+            beeSubgenus: BEE_SUBGENUS,
+            specificEpithet: SPECIFIC_EPITHET,
+            taxonomicNotes: TAXONOMIC_NOTES,
+            scientificName: SCIENTIFIC_NAME,
+            sex: SEX,
+            caste: CASTE,
+            beeTaxonRank: BEE_TAXON_RANK,
+            identifiedBy: IDENTIFIED_BY,
+            volDetFamily: VOL_DET_FAMILY,
+            volDetGenus: VOL_DET_GENUS,
+            volDetSpecies: VOL_DET_SPECIES,
+            volDetSex: VOL_DET_SEX,
+            volDetCaste: VOL_DET_CASTE
+        },
+        // Template object for determinations
+        template: {
+            [FIELD_NO]: '',
+            [BEE_PHYLUM]: '',
+            [BEE_CLASS]: '',
+            [BEE_ORDER]: '',
+            [BEE_FAMILY]: '',
+            [BEE_GENUS]: '',
+            [BEE_SUBGENUS]: '',
+            [SPECIFIC_EPITHET]: '',
+            [TAXONOMIC_NOTES]: '',
+            [SCIENTIFIC_NAME]: '',
+            [SEX]: '',
+            [CASTE]: '',
+            [BEE_TAXON_RANK]: '',
+            [IDENTIFIED_BY]: '',
+            [VOL_DET_FAMILY]: '',
+            [VOL_DET_GENUS]: '',
+            [VOL_DET_SPECIES]: '',
+            [VOL_DET_SEX]: '',
+            [VOL_DET_CASTE]: ''
         }
     },
     abbreviations: {
@@ -383,6 +430,7 @@ export const { ofvs } = constants.observations
 export const { labels } = constants
 export const { requiredFields } = constants.labels
 export const { usernames } = constants
+export const { determinations } = constants
 export const { abbreviations } = constants
 
 export default constants

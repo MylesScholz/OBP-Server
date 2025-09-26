@@ -393,6 +393,10 @@ class OccurrenceService {
         )
     }
 
+    /*
+     * getUnprintableOccurrences()
+     * Returns occurrences that have either already been printed or that have error flags on a given list of required fields
+     */
     async getUnprintableOccurrences(requiredFields) {
         const filter = {
             $or: [

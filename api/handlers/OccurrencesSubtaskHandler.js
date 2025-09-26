@@ -245,14 +245,7 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
 
         await TaskService.logTaskStep(taskId, 'Writing output files')
 
-        // Write old and unflagged occurrences to the occurrences output file
-        const occurrencesFilter = {
-            $or: [
-                { new: { $exists: false } },
-                { [fieldNames.errorFlags]: { $in: [ null, undefined, '' ] } }
-            ]
-        }
-        await OccurrenceService.writeOccurrencesFromDatabase(occurrencesFilePath, occurrencesFilter)
+        await OccurrenceService.writeOccurrencesFromDatabase(occurrencesFilePath)
 
         // Write duplicate occurrences from the input file into the duplicates output file
         OccurrenceService.writeOccurrencesFile(duplicatesFilePath, duplicateOccurrences)

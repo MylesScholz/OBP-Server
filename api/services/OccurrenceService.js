@@ -95,7 +95,9 @@ class OccurrenceService {
         formattedOccurrence[fieldNames.recordedBy] ||= `${firstName}${(firstName && lastName) ? ' ' : ''}${lastName}`
 
         // Set verbatimDate to default formatting
-        formattedOccurrence[fieldNames.verbatimDate] = `${formattedOccurrence[fieldNames.month]}/${formattedOccurrence[fieldNames.day]}/${formattedOccurrence[fieldNames.year]}`
+        formattedOccurrence[fieldNames.verbatimDate] = formattedOccurrence[fieldNames.day] && formattedOccurrence[fieldNames.month] && formattedOccurrence[fieldNames.year]
+            ? `${formattedOccurrence[fieldNames.month]}/${formattedOccurrence[fieldNames.day]}/${formattedOccurrence[fieldNames.year]}`
+            : ''
 
         // Fill startDayOfYear and endDayOfYear if day2, month2, and year2 are defined
         // Overwrite verbatimDate with two-date format
@@ -120,6 +122,10 @@ class OccurrenceService {
 
             formattedOccurrence[fieldNames.verbatimDate] = `${formattedOccurrence[fieldNames.year]}-${formattedOccurrence[fieldNames.month]}-${formattedOccurrence[fieldNames.day]}/${formattedOccurrence[fieldNames.year2]}-${formattedOccurrence[fieldNames.month2]}-${formattedOccurrence[fieldNames.day2]}`
         }
+
+        // Enforce county abbreviations
+        const county = formattedOccurrence[fieldNames.county] ?? ''
+        formattedOccurrence[fieldNames.county] = abbreviations.counties[county] ?? county
 
         // Enforce 4-decimal-point latitude and longitude
         const latitude = parseFloat(formattedOccurrence[fieldNames.latitude])

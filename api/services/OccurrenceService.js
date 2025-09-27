@@ -379,6 +379,10 @@ class OccurrenceService {
         return await this.repository.paginate({ ...options, filter, sortConfig })
     }
 
+    /*
+     * getPrintableOccurrences()
+     * Returns occurrences that have not been printed and do not have error flags on a given list of required fields; optional filtering by a list of userLogins
+     */
     async getPrintableOccurrences(requiredFields, userLogins) {
         // First, query occurrences with an empty dateLabelPrint field
         const filter = {
@@ -389,7 +393,7 @@ class OccurrenceService {
 
         // Filter by occurrences with all required fields
         requiredFields?.forEach((field) => filter[field] = { $nin: [ null, undefined, '' ] })
-        const unprintedAndComplete = await this.repository.findMany(filter)
+        const unprintedAndComplete = await this.repository.findMany(filter, {}, { [fieldNames.recordedBy]: 1, [fieldNames.fieldNumber]: 1 })
 
         // Filter out occurrences where any of the required fields show up in errorFlags
         return unprintedAndComplete.filter(

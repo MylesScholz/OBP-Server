@@ -81,10 +81,19 @@ class DatabaseManager {
                 {
                     [fieldNames.errorFlags]: 1,
                     'new': 1
+                },
+                {
+                    [fieldNames.recordedBy]: 1,
+                    [fieldNames.fieldNumber]: 1
                 }
             ],
             'observations': [
                 { 'uri': 1, 'matched': 1 }
+            ],
+            'determinations': [
+                {
+                    [fieldNames.fieldNumber]: 1
+                }
             ]
         }
     }

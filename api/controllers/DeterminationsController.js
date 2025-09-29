@@ -11,18 +11,27 @@ export default class DeterminationsController {
     }
 
     static async uploadDeterminationsFile(req, res, next) {
-        // Check that required field exists
-        if (!req.file) {
+        // Check that required fields exist
+        if (!req.file || !req.body.format) {
             res.status(400).send({
                 error: 'Missing required request field'
             })
             return
         }
+        // Check that req.format is valid
+        if (req.body.format !== 'ecdysis' && req.body.format !== 'determinations') {
+            res.status(400).send({
+                error: 'Unknown file format provided'
+            })
+            return
+        }
 
+        // Delete previous determinations from database
+        await DeterminationsService.deleteDeterminations()
         // Read determinations data from CSV into database
         await DeterminationsService.createDeterminationsFromFile()
         // Append determinations data from the upload file onto database determinations
-        await DeterminationsService.upsertDeterminationsFromFile(path.join('./api/data/uploads/', req.file.filename))
+        await DeterminationsService.upsertDeterminationsFromFile(path.join('./api/data/uploads/', req.file.filename), req.body.format)
         // Write database determinations to determinations.csv
         await DeterminationsService.writeDeterminationsFromDatabase()
 

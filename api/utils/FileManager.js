@@ -127,7 +127,7 @@ class FileManager {
     async *readCSVChunks(filePath, chunkSize) {
         // Check that the input file path exists
         if (!fs.existsSync(filePath)) {
-            throw new Error(`File does not exist: ${filePath}`)
+            return []
         }
 
         // Create the read stream and pipe it to a CSV parser

@@ -133,7 +133,7 @@ export default class BaseRepository {
         return result.deletedCount
     }
 
-    async deleteMany(filter) {
+    async deleteMany(filter = {}) {
         const result = await this.collection.deleteMany(filter)
 
         return result.deletedCount

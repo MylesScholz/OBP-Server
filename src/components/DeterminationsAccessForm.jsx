@@ -79,6 +79,7 @@ const DeterminationsAccessFormContainer = styled.div`
 
 export default function DeterminationsAccessForm() {
     const [ queryType, setQueryType ] = useState('get')
+    const [ uploadFormat, setUploadFormat ] = useState('ecdysis')
     const [ file, setFile ] = useState()
     const [ formDisabled, setFormDisabled ] = useState(false)
     const [ queryResponse, setQueryResponse ] = useState()
@@ -104,6 +105,7 @@ export default function DeterminationsAccessForm() {
         } else if (queryType === 'post') {
             const formData = new FormData()
             formData.append('file', file)
+            formData.append('format', uploadFormat)
 
             axios.postForm(queryURL, formData).then((res) => {
                 setFormDisabled(false)
@@ -134,16 +136,25 @@ export default function DeterminationsAccessForm() {
                         </div>
 
                         { queryType === 'post' &&
-                            <div>
-                                <label for='determinationsFileUpload'>File:</label>
-                                <input
-                                    type='file'
-                                    accept='.csv'
-                                    id='determinationsFileUpload'
-                                    required
-                                    onChange={ (event) => setFile(event.target.files[0]) }
-                                />
-                            </div>
+                            <>
+                                <div>
+                                    <label for='determinationsUploadFormat'>Upload Format:</label>
+                                    <select id='determinationsUploadFormat' onChange={(event) => setUploadFormat(event.target.value)}>
+                                        <option value='ecdysis' selected={uploadFormat === 'ecdysis'}>Ecdysis</option>
+                                        <option value='determinations' selected={uploadFormat === 'determinations'}>Determinations</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for='determinationsFileUpload'>File:</label>
+                                    <input
+                                        type='file'
+                                        accept='.csv'
+                                        id='determinationsFileUpload'
+                                        required
+                                        onChange={ (event) => setFile(event.target.files[0]) }
+                                    />
+                                </div>
+                            </>
                         }
 
                         <input type='submit' value='Submit' />

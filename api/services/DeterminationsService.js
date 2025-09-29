@@ -1,5 +1,5 @@
 import DeterminationsRepository from '../repositories/DeterminationsRepository.js'
-import { determinations } from '../utils/constants.js'
+import { determinations, fieldNames } from '../utils/constants.js'
 import FileManager from '../utils/FileManager.js'
 
 class DeterminationsService {
@@ -11,9 +11,9 @@ class DeterminationsService {
 
     /*
      * formatDetermination()
-     * Applies basic formatting to a determination
+     * Applies basic formatting to a determination; if format is 'ecdysis' extracts the fieldNumber from the catalogNumber field
      */
-    formatDetermination(document) {
+    formatDetermination(document, format) {
         if (!document) return determinations.template
 
         // Starting from the determinations template, assign values with matching keys from the provided document
@@ -23,6 +23,11 @@ class DeterminationsService {
                 determination[key] = document[key]
             }
         })
+
+        // If format is 'ecdysis', try to extract the fieldNumber from the catalogNumber field
+        if (format === 'ecdysis') {
+            determination[determinations.fieldNames.fieldNumber] ||= document[fieldNames.catalogNumber]?.replace('WSDA_', '') ?? ''
+        }
 
         // Set the fieldNumber field as the _id (key) field
         determination._id = determination[determinations.fieldNames.fieldNumber]
@@ -131,7 +136,7 @@ class DeterminationsService {
      * upsertDeterminations()
      * Inserts or updates multiple determinations
      */
-    async upsertDeterminations(documents) {
+    async upsertDeterminations(documents, format) {
         // Return object containing information about updated and inserted determinations
         const results = {
             modifiedCount: 0,
@@ -139,7 +144,7 @@ class DeterminationsService {
             upsertedIds: []
         }
 
-        const determinations = documents?.map((document) => this.formatDetermination(document))
+        const determinations = documents?.map((document) => this.formatDetermination(document, format))
 
         // Return if no documents were provided
         if (!determinations || determinations.length === 0) return results
@@ -159,7 +164,7 @@ class DeterminationsService {
      * upsertDeterminationsFromFile()
      * Inserts or updates determinations data from a given file path into the database
      */
-    async upsertDeterminationsFromFile(filePath) {
+    async upsertDeterminationsFromFile(filePath, format) {
         const chunkSize = 5000
         // Return object containing information about updated and inserted determinations
         const results = {
@@ -169,7 +174,14 @@ class DeterminationsService {
         }
 
         for await (const chunk of FileManager.readCSVChunks(filePath, chunkSize)) {
-            const chunkResults = await this.upsertDeterminations(chunk)
+            // Filter 'undetermined' records (from Ecdysis)
+            const filteredChunk = chunk.filter((record) => {
+                // Check that some field (from the template fieldset) is defined other than fieldNumber and sex
+                const determinationFields = Object.keys(determinations.template).filter((key) => key !== determinations.fieldNames.sex && key !== determinations.fieldNames.fieldNumber)
+                // If sex is defined and not 'undetermined', include the record as well
+                return determinationFields.some((key) => !!record[key]) || (record[determinations.fieldNames.sex] !== 'undetermined' && !!record[determinations.fieldNames.sex])
+            })
+            const chunkResults = await this.upsertDeterminations(filteredChunk, format)
 
             results.modifiedCount += chunkResults.modifiedCount
             results.upsertedCount += chunkResults.upsertedCount

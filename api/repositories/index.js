@@ -3,5 +3,4 @@ export { default as DeterminationsRepository } from './DeterminationsRepository.
 export { default as ObservationRepository } from './ObservationRepository.js'
 export { default as ObservationViewRepository } from './ObservationViewRepository.js'
 export { default as OccurrenceRepository } from './OccurrenceRepository.js'
-export { default as OccurrenceViewRepository } from './OccurrenceViewRepository.js'
 export { default as TaskRepository } from './TaskRepository.js'

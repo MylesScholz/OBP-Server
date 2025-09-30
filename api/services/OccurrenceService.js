@@ -1,7 +1,7 @@
 import Crypto from 'node:crypto'
 
 import { OccurrenceRepository } from '../repositories/index.js'
-import { fieldNames, template, nonEmptyFields, ofvs, abbreviations } from '../utils/constants.js'
+import { fieldNames, template, nonEmptyFields, ofvs, abbreviations, determinations } from '../utils/constants.js'
 import { includesStreetSuffix, getDayOfYear, getOFV } from '../utils/utilities.js'
 import PlacesService from './PlacesService.js'
 import TaxaService from './TaxaService.js'
@@ -374,8 +374,14 @@ class OccurrenceService {
     async getUnindexedOccurrencesPage(options = {}) {
         // Query occurrences with empty errorFlags and fieldNumber
         const filter = {
-            [fieldNames.errorFlags]: { $in: [ null, '' ] },
-            [fieldNames.fieldNumber]: { $in: [ null, '' ] }
+            $or: [
+                { [fieldNames.errorFlags]: { $exists: false } },
+                { [fieldNames.errorFlags]: { $in: [ null, '' ] } }
+            ],
+            $or: [
+                { [fieldNames.fieldNumber]: { $exists: false } },
+                { [fieldNames.fieldNumber]: { $in: [ null, '' ] } }
+            ]
         }
         const sortConfig = [ { field: 'composite_sort', direction: 1, type: 'string' } ]
         return await this.repository.paginate({ ...options, filter, sortConfig })
@@ -388,7 +394,10 @@ class OccurrenceService {
     async getPrintableOccurrences(requiredFields, userLogins) {
         // First, query occurrences with an empty dateLabelPrint field
         const filter = {
-            [fieldNames.dateLabelPrint]: { $in: [ null, '' ] }
+            $or: [
+                { [fieldNames.dateLabelPrint]: { $exists: false } },
+                { [fieldNames.dateLabelPrint]: { $in: [ null, '' ] } }
+            ]
         }
         // If userLogins are given, filter by them
         if (userLogins) filter[fieldNames.iNaturalistAlias] = { $in: userLogins }
@@ -657,6 +666,37 @@ class OccurrenceService {
         updateDocument = this.updateErrorFlags(updateDocument)
 
         return await this.repository.updateById(updateDocument._id, updateDocument)
+    }
+
+    /*
+     * updateOccurrenceFromDetermination()
+     * Updates specific values (bee taxonomy) in an existing occurrence from its corresponding determination
+     */
+    async updateOccurrenceFromDetermination(occurrence, determination) {
+        if (!occurrence) return
+
+        let updateDocument = {}
+
+        updateDocument[fieldNames.beePhylum] = determination[determinations.fieldNames.beePhylum] ?? ''
+        updateDocument[fieldNames.beeClass] = determination[determinations.fieldNames.beeClass] ?? ''
+        updateDocument[fieldNames.beeOrder] = determination[determinations.fieldNames.beeOrder] ?? ''
+        updateDocument[fieldNames.beeFamily] = determination[determinations.fieldNames.beeFamily] ?? ''
+        updateDocument[fieldNames.beeGenus] = determination[determinations.fieldNames.beeGenus] ?? ''
+        updateDocument[fieldNames.beeSubgenus] = determination[determinations.fieldNames.beeSubgenus] ?? ''
+        updateDocument[fieldNames.specificEpithet] = determination[determinations.fieldNames.specificEpithet] ?? ''
+        updateDocument[fieldNames.taxonomicNotes] = determination[determinations.fieldNames.taxonomicNotes] ?? ''
+        updateDocument[fieldNames.scientificName] = determination[determinations.fieldNames.scientificName] ?? ''
+        updateDocument[fieldNames.sex] = determination[determinations.fieldNames.sex] ?? ''
+        updateDocument[fieldNames.caste] = determination[determinations.fieldNames.caste] ?? ''
+        updateDocument[fieldNames.beeTaxonRank] = determination[determinations.fieldNames.beeTaxonRank] ?? ''
+        updateDocument[fieldNames.identifiedBy] = determination[determinations.fieldNames.identifiedBy] ?? ''
+        updateDocument[fieldNames.volDetFamily] = determination[determinations.fieldNames.volDetFamily] ?? ''
+        updateDocument[fieldNames.volDetGenus] = determination[determinations.fieldNames.volDetGenus] ?? ''
+        updateDocument[fieldNames.volDetSpecies] = determination[determinations.fieldNames.volDetSpecies] ?? ''
+        updateDocument[fieldNames.volDetSex] = determination[determinations.fieldNames.volDetSex] ?? ''
+        updateDocument[fieldNames.volDetCaste] = determination[determinations.fieldNames.volDetCaste] ?? ''
+
+        return await this.repository.updateById(occurrence._id, updateDocument)
     }
 
     /*

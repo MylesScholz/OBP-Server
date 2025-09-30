@@ -63,8 +63,8 @@ class ObservationService {
         return this.createObservations(observations)
     }
 
-    async getObservations(filter = {}) {
-        return await this.repository.findMany(filter)
+    async getObservations(filter = {}, options = {}) {
+        return await this.repository.findMany(filter, options)
     }
 
     async getDistinctCoordinates() {

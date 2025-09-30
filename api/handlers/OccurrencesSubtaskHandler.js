@@ -1,7 +1,7 @@
 import BaseSubtaskHandler from './BaseSubtaskHandler.js'
-import { fieldNames, fileLimits, ofvs } from '../utils/constants.js'
+import { determinations, fieldNames, fileLimits, ofvs } from '../utils/constants.js'
 import { getOFV } from '../utils/utilities.js'
-import { ApiService, ElevationService, ObservationService, ObservationViewService, OccurrenceService, OccurrenceViewService, PlacesService, TaskService, TaxaService } from '../services/index.js'
+import { ApiService, DeterminationsService, ElevationService, ObservationService, ObservationViewService, OccurrenceService, PlacesService, TaskService, TaxaService } from '../services/index.js'
 import FileManager from '../utils/FileManager.js'
 
 export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
@@ -28,28 +28,40 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
     async #updateOccurrencesFromObservations(elevations, updateProgress) {
         await updateProgress(0)
 
-        // Query the joined occurrences-observations table page-by-page to avoid memory constraints
+        // Query occurrences page-by-page to avoid memory constraints
         let pageNumber = 1
         let occurrenceIndex = 0
-        const options = {
+        const occurrencesFilter = {
+            [fieldNames.iNaturalistUrl]: { $exists: true, $nin: [ null, '' ] }
+        }
+        const observationQueryOptions = {
             projection: {
                 uuid: 1,
                 positional_accuracy: 1,
                 geojson: 1,
-                taxon: 1
+                taxon: 1,
+                uri: 1
             }
         }
-        let results = await OccurrenceViewService.getOccurrenceViewPage(pageNumber, options)
-        while (pageNumber < results.pagination.totalPages + 1) {
-            for (const occurrence of results.data) {
-                // Update the occurrence data from the matching observation
-                await OccurrenceService.updateOccurrenceFromObservation(occurrence, occurrence.observation, elevations)
+        let occurrencesResults = await OccurrenceService.getOccurrencesPage({ page: pageNumber, filter: occurrencesFilter })
+        while (pageNumber <= occurrencesResults.pagination.totalPages) {
+            const urls = occurrencesResults.data.map((occurrence) => occurrence[fieldNames.iNaturalistUrl])
+            const matchingObservations = await ObservationService.getObservations({ 'uri': { $in: urls } }, observationQueryOptions)
+            const urlMap = {}
+            matchingObservations.forEach((observation) => urlMap[observation.uri] = observation)
 
-                await updateProgress(100 * (++occurrenceIndex) / results.pagination.totalDocuments)
+            for (const occurrence of occurrencesResults.data) {
+                const matchingObservation = urlMap[occurrence[fieldNames.iNaturalistUrl]]
+                if (matchingObservation) {
+                    // Update the occurrence data from the matching observation
+                    await OccurrenceService.updateOccurrenceFromObservation(occurrence, matchingObservation, elevations)
+                }
+
+                await updateProgress(100 * (++occurrenceIndex) / occurrencesResults.pagination.totalDocuments)
             }
 
             // Query the next page
-            results = await OccurrenceViewService.getOccurrenceViewPage(++pageNumber, options)
+            occurrencesResults = await OccurrenceService.getOccurrencesPage({ page: ++pageNumber, filter: occurrencesFilter })
         }
 
         await updateProgress(100)
@@ -169,7 +181,32 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
     async #updateOccurrencesFromDeterminations(updateProgress) {
         await updateProgress(0)
 
-        // TODO
+        // Query occurrences page-by-page to avoid memory constraints
+        let pageNumber = 1
+        let occurrenceIndex = 0
+        const occurrencesFilter = {
+            [fieldNames.fieldNumber]: { $exists: true, $nin: [ null, '' ] }
+        }
+        let occurrencesResults = await OccurrenceService.getOccurrencesPage({ page: pageNumber, filter: occurrencesFilter })
+        while (pageNumber <= occurrencesResults.pagination.totalPages) {
+            const fieldNumbers = occurrencesResults.data.map((occurrence) => occurrence[fieldNames.fieldNumber])
+            const matchingDeterminations = await DeterminationsService.getDeterminations({ [determinations.fieldNames.fieldNumber]: { $in: fieldNumbers } })
+            const fieldNumberMap = {}
+            matchingDeterminations.forEach((determination) => fieldNumberMap[determination[determinations.fieldNames.fieldNumber]] = determination)
+
+            for (const occurrence of occurrencesResults.data) {
+                const matchingDetermination = fieldNumberMap[occurrence[fieldNames.fieldNumber]]
+                if (matchingDetermination) {
+                    // Update the occurrence data from the matching determination
+                    await OccurrenceService.updateOccurrenceFromDetermination(occurrence, matchingDetermination)
+                }
+
+                await updateProgress(100 * (++occurrenceIndex) / occurrencesResults.pagination.totalDocuments)
+            }
+
+            // Query the next page
+            occurrencesResults = await OccurrenceService.getOccurrencesPage({ page: ++pageNumber, filter: occurrencesFilter })
+        }
 
         await updateProgress(100)
     }

@@ -192,8 +192,16 @@ class DeterminationsService {
     }
 
     /*
+     * getDeterminations()
+     * Returns all determinations matching a given filter
+     */
+    async getDeterminations(filter = {}, options = {}) {
+        return await this.repository.findMany(filter, options)
+    }
+
+    /*
      * getDeterminationsPage()
-     * Returns a sorted page of determinations from the database
+     * Returns a page of determinations from the database
      */
     async getDeterminationsPage(options = {}) {
         return await this.repository.paginate({ ...options })

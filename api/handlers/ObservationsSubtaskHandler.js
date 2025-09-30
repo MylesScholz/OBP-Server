@@ -33,7 +33,6 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
         let observationIndex = 0
         for (const observation of observations) {
             const occurrence = OccurrenceService.createOccurrenceFromObservation(observation, elevations)
-            occurrence.new = true
             await updateProgress(99 * (++observationIndex) / observations.length)    // Make the total 99% so progress does not show 100% until insertion is complete (below)
 
             // specimenId is initially set to the number of bees collected
@@ -215,10 +214,10 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
 
         await TaskService.logTaskStep(taskId, 'Writing output files')
 
-        // Write old and unflagged occurrences to the occurrences output file
+        // Write unflagged occurrences to the occurrences output file
         const occurrencesFilter = {
             $or: [
-                { new: { $exists: false } },
+                { [fieldNames.errorFlags]: { $exists: false } },
                 { [fieldNames.errorFlags]: { $in: [ null, '' ] } }
             ]
         }
@@ -227,13 +226,19 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
         // Write unprinted, flagged occurrences to the flags output file
         const flagsFilter = {
             [fieldNames.errorFlags]: { $exists: true, $nin: [ null, '' ] },
-            [fieldNames.dateLabelPrint]: { $in: [ null, '' ] }
+            $or: [
+                { [fieldNames.dateLabelPrint]: { $exists: false } },
+                { [fieldNames.dateLabelPrint]: { $in: [null, ''] } }
+            ]
         }
         await OccurrenceService.writeOccurrencesFromDatabase(flagsFilePath, flagsFilter)
 
         // Write new unflagged occurrences to the pulls output file
         const pullsFilter = {
-            [fieldNames.errorFlags]: { $in: [ null, '' ] },
+            $or: [
+                { [fieldNames.errorFlags]: { $exists: false } },
+                { [fieldNames.errorFlags]: { $in: [ null, '' ] } }
+            ],
             new: true
         }
         await OccurrenceService.writeOccurrencesFromDatabase(pullsFilePath, pullsFilter)

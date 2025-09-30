@@ -185,32 +185,7 @@ class DatabaseManager {
      * Creates preset views between occurrences and observations; drops pre-existing views
      */
     async createViews() {
-        await this.db.collection('occurrencesIJoinObservations').drop()
         await this.db.collection('observationsIJoinOccurrences').drop()
-
-        await this.db.createCollection('occurrencesIJoinObservations', {
-            viewOn: 'occurrences',
-            pipeline: [
-                {
-                    $lookup: {
-                        from: 'observations',
-                        let: { occurrenceUrl: `$${fieldNames.iNaturalistUrl}` },
-                        pipeline: [
-                            {
-                                $match: {
-                                    $expr: { $eq: [ '$uri', '$$occurrenceUrl' ] },
-                                    matched: true
-                                }
-                            }
-                        ],
-                        as: 'observation'
-                    }
-                },
-                {
-                    $unwind: '$observation'
-                }
-            ]
-        })
 
         const sortOrder = {}
         for (const config of sortConfig) {

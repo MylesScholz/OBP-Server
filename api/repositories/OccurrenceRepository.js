@@ -113,7 +113,6 @@ export default class OccurrenceRepository extends BaseRepository {
         const response = await this.aggregate([
             {
                 $match: {
-                    [fieldNames.errorFlags]: { $in: [ null, '' ] },
                     [fieldNames.fieldNumber]: { $exists: true, $nin: [ null, '' ] }
                 }
             },

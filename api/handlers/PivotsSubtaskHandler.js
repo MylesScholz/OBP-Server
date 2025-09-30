@@ -121,7 +121,7 @@ export default class PivotsSubtaskHandler extends BaseSubtaskHandler {
         await TaskService.logTaskStep(taskId, 'Generating pivot tables')
 
         // A filter for unprinted occurrences
-        const unprintedFilter = { [fieldNames.dateLabelPrint]: { $in: [ null, undefined, '' ] } }
+        const unprintedFilter = { [fieldNames.dateLabelPrint]: { $in: [ null, '' ] } }
 
         // For each state, find the count of unprinted occurrences for each collector
         const stateCollectorBeeCounts = await OccurrenceService.getStateCollectorBeeCounts(unprintedFilter)

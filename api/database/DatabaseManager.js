@@ -258,6 +258,7 @@ class DatabaseManager {
 
     /*
      * disconnect()
+     * Closes the Mongo Server connection gracefully
      */
     async disconnect() {
         try {

@@ -1,4 +1,4 @@
-import DeterminationsRepository from '../repositories/DeterminationsRepository.js'
+import { DeterminationsRepository } from '../repositories/index.js'
 import { determinations, fieldNames } from '../utils/constants.js'
 import FileManager from '../utils/FileManager.js'
 

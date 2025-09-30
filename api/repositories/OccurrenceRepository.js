@@ -66,8 +66,8 @@ export default class OccurrenceRepository extends BaseRepository {
                 $match: {
                     ...filter,
                     $and: [
-                        { [fieldNames.latitude]: { $nin: [ null, undefined, '' ] } },
-                        { [fieldNames.longitude]: { $nin: [ null, undefined, '' ] } }
+                        { [fieldNames.latitude]: { $exists: true, $nin: [ null, '' ] } },
+                        { [fieldNames.longitude]: { $exists: true, $nin: [ null, '' ] } }
                     ]
                 }
             },
@@ -113,8 +113,8 @@ export default class OccurrenceRepository extends BaseRepository {
         const response = await this.aggregate([
             {
                 $match: {
-                    [fieldNames.errorFlags]: { $in: [ null, undefined, '' ] },
-                    [fieldNames.fieldNumber]: { $nin: [ null, undefined, '' ] }
+                    [fieldNames.errorFlags]: { $in: [ null, '' ] },
+                    [fieldNames.fieldNumber]: { $exists: true, $nin: [ null, '' ] }
                 }
             },
             {

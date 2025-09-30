@@ -207,6 +207,8 @@ class OccurrenceService {
                 error.writeErrors?.forEach((writeError) => {
                     if (writeError.code === 11000 && writeError.err?.op) {  // Mongo Server E11000 duplicate key error
                         results.duplicates.push(writeError.err.op)
+                    } else {
+                        console.error(writeError)
                     }
                 })
             } else {
@@ -372,8 +374,8 @@ class OccurrenceService {
     async getUnindexedOccurrencesPage(options = {}) {
         // Query occurrences with empty errorFlags and fieldNumber
         const filter = {
-            [fieldNames.errorFlags]: { $in: [ null, undefined, '' ] },
-            [fieldNames.fieldNumber]: { $in: [ null, undefined, '' ] }
+            [fieldNames.errorFlags]: { $in: [ null, '' ] },
+            [fieldNames.fieldNumber]: { $in: [ null, '' ] }
         }
         const sortConfig = [ { field: 'composite_sort', direction: 1, type: 'string' } ]
         return await this.repository.paginate({ ...options, filter, sortConfig })
@@ -386,13 +388,13 @@ class OccurrenceService {
     async getPrintableOccurrences(requiredFields, userLogins) {
         // First, query occurrences with an empty dateLabelPrint field
         const filter = {
-            [fieldNames.dateLabelPrint]: { $in: [ null, undefined, '' ] }
+            [fieldNames.dateLabelPrint]: { $in: [ null, '' ] }
         }
         // If userLogins are given, filter by them
         if (userLogins) filter[fieldNames.iNaturalistAlias] = { $in: userLogins }
 
         // Filter by occurrences with all required fields
-        requiredFields?.forEach((field) => filter[field] = { $nin: [ null, undefined, '' ] })
+        requiredFields?.forEach((field) => filter[field] = { $exists: true, $nin: [ null, '' ] })
         const unprintedAndComplete = await this.repository.findMany(filter, {}, { [fieldNames.recordedBy]: 1, [fieldNames.fieldNumber]: 1 })
 
         // Filter out occurrences where any of the required fields show up in errorFlags
@@ -410,8 +412,8 @@ class OccurrenceService {
     async getUnprintableOccurrences(requiredFields) {
         const filter = {
             $or: [
-                { [fieldNames.errorFlags]: { $nin: [ null, undefined, '' ] } },
-                { [fieldNames.dateLabelPrint]: { $nin: [ null, undefined, '' ] } }
+                { [fieldNames.errorFlags]: { $exists: true, $nin: [ null, '' ] } },
+                { [fieldNames.dateLabelPrint]: { $exists: true, $nin: [ null, '' ] } }
             ]
         }
 
@@ -431,7 +433,7 @@ class OccurrenceService {
             {
                 $match: {
                     [fieldNames.iNaturalistAlias]: { $in: userLogins },
-                    [fieldNames.errorFlags]: { $nin: [ null, undefined, '' ] }
+                    [fieldNames.errorFlags]: { $exists: true, $nin: [ null, '' ] }
                 }
             },
             {
@@ -448,8 +450,8 @@ class OccurrenceService {
             {
                 $match: {
                     ...filter,
-                    [fieldNames.stateProvince]: { $nin: [ null, undefined, '' ] },
-                    [fieldNames.recordedBy]: { $nin: [ null, undefined, '' ] }
+                    [fieldNames.stateProvince]: { $exists: true, $nin: [ null, '' ] },
+                    [fieldNames.recordedBy]: { $exists: true, $nin: [ null, '' ] }
                 }
             },
             {
@@ -494,9 +496,9 @@ class OccurrenceService {
             {
                 $match: {
                     ...filter,
-                    [fieldNames.stateProvince]: { $nin: [ null, undefined, '' ] },
-                    [fieldNames.recordedBy]: { $nin: [ null, undefined, '' ] },
-                    [fieldNames.county]: { $nin: [ null, undefined, '' ] }
+                    [fieldNames.stateProvince]: { $exists: true, $nin: [ null, '' ] },
+                    [fieldNames.recordedBy]: { $exists: true, $nin: [ null, '' ] },
+                    [fieldNames.county]: { $exists: true, $nin: [ null, '' ] }
                 }
             },
             {
@@ -540,8 +542,8 @@ class OccurrenceService {
             {
                 $match: {
                     ...filter,
-                    [fieldNames.stateProvince]: { $nin: [ null, undefined, '' ] },
-                    [fieldNames.plantGenus]: { $nin: [ null, undefined, '' ] }
+                    [fieldNames.stateProvince]: { $exists: true, $nin: [ null, '' ] },
+                    [fieldNames.plantGenus]: { $exists: true, $nin: [ null, '' ] }
                 }
             },
             {

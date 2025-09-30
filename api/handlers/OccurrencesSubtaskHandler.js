@@ -162,6 +162,18 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
         }
     }
 
+    /*
+     * #updateOccurrencesFromDeterminations()
+     * Update existing occurrences with matching determinations data
+     */
+    async #updateOccurrencesFromDeterminations(updateProgress) {
+        await updateProgress(0)
+
+        // TODO
+
+        await updateProgress(100)
+    }
+
     /* Main Handler Method */
 
     async handleTask(taskId) {
@@ -242,6 +254,11 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
 
         const currentYear = (new Date()).getUTCFullYear()
         await this.#indexOccurrences(currentYear)
+
+        // Update existing occurrences with determinations data (keyed by fieldNumber)
+        await TaskService.logTaskStep(taskId, 'Updating occurrence data with bee species determinations')
+
+        await this.#updateOccurrencesFromDeterminations(this.#createUpdateProgressFn(taskId))
 
         await TaskService.logTaskStep(taskId, 'Writing output files')
 

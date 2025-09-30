@@ -1,4 +1,5 @@
 export { default as AdminRepository } from './AdminRepository.js'
+export { default as DeterminationsRepository } from './DeterminationsRepository.js'
 export { default as ObservationRepository } from './ObservationRepository.js'
 export { default as ObservationViewRepository } from './ObservationViewRepository.js'
 export { default as OccurrenceRepository } from './OccurrenceRepository.js'

@@ -2,6 +2,7 @@ import styled from '@emotion/styled'
 import { useState } from 'react'
 
 import ProjectSelection from './ProjectSelection'
+import SubtaskIOPanel from './SubtaskIOPanel'
 
 const SubtaskCardFormContainer = styled.div`
     display: flex;
@@ -40,30 +41,12 @@ const SubtaskCardFormContainer = styled.div`
             }
         }
 
-        .ioTipContainer {
-            display: flex;
-            flex-direction: row;
-            justify-content: space-between;
-            align-items: start;
-            gap: 5px;
+        .fileTip {
+            font-weight: bold;
+        }
 
-            .tipContainer {
-                display: flex;
-                flex-direction: column;
-                align-items: start;
-                gap: 0px;
-
-                padding: 0px 25px;
-
-                ul {
-                    margin: 0px;
-                    padding-left: 25px;
-
-                    .fileTip {
-                        font-weight: bold;
-                    }
-                }
-            }
+        .hoveredFileTip {
+            text-decoration: underline;
         }
 
         .occurrencesFileTip {
@@ -106,12 +89,7 @@ const SubtaskCardFormContainer = styled.div`
     }
 `
 
-function capitalize(text) {
-    if (!text) return ''
-    return text.charAt(0).toUpperCase() + text.slice(1)
-}
-
-export default function SubtaskCardForm({ type, io, setFile, inputOptions, handleRemove }) {
+export default function SubtaskCardForm({ type, subtaskSwitches, setFile, handleRemove, hoveredFile, setHoveredFile }) {
     const firstDay = new Date(new Date().getFullYear(), 0, 1)
     const firstDayFormatted = `${firstDay.getFullYear()}-${(firstDay.getMonth() + 1).toString().padStart(2, '0')}-${firstDay.getDate().toString().padStart(2, '0')}`
     const currentDate = new Date()
@@ -132,58 +110,9 @@ export default function SubtaskCardForm({ type, io, setFile, inputOptions, handl
         <SubtaskCardFormContainer>
             <fieldset>
                 <p>{descriptions[type]}</p>
-                { io &&
-                    <div className='ioTipContainer'>
-                        <div className='tipContainer'>
-                            <p>Input File Types:</p>
-                            { io?.inputs?.length > 0 &&
-                                <ul>
-                                    { io?.inputs?.map((input) => <li className={`fileTip ${input}FileTip`}>{input} file</li>) }
-                                </ul>
-                            }
-                        </div>
-                        <div className='tipContainer'>
-                            <p>Output File Types:</p>
-                            { io?.outputs?.length > 0 &&
-                                <ul>
-                                    { io?.outputs?.map((output) => <li className={`fileTip ${output}FileTip`}>{output} file</li>) }
-                                </ul>
-                            }
-                        </div>
-                    </div>   
-                }
 
-                { !!setFile &&
-                    <div>
-                        <label for='fileUpload'>Upload File:</label>
-                        <input
-                            type='file'
-                            accept='.csv'
-                            id='fileUpload'
-                            required
-                            onChange={ (event) => setFile(event.target.files[0]) }
-                        />
-                    </div>
-                }
-                { !setFile &&
-                    <div>
-                        <label for={`${type}Input`}>Input File:</label>
-                        <select name={`${type}Input`} id={`${type}Input`}>
-                            <option key='upload' value='upload' selected={inputOptions?.length === 0}>Upload</option>
-                            {
-                                inputOptions?.map((option) =>
-                                    <option
-                                        key={option.key}
-                                        value={option.key}
-                                        selected={!!option.default}
-                                    >
-                                        {capitalize(option.subtask)} subtask ({option.subtaskIndex + 1}): {option.output} file
-                                    </option>
-                                )
-                            }
-                        </select>
-                    </div>
-                }
+                <SubtaskIOPanel type={type} subtaskSwitches={subtaskSwitches} setFile={setFile} hoveredFile={hoveredFile} setHoveredFile={setHoveredFile} />
+
                 { type === 'observations' &&
                     <>
                         <ProjectSelection />

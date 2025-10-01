@@ -187,6 +187,7 @@ export default function SubtaskPipeline({ loggedIn }) {
     const [ selectedTaskId, setSelectedTaskId ] = useState()
     const [ file, setFile ] = useState()
     const [ subtaskSwitches, setSubtaskSwitches ] = useState(new SubtaskSwitches())
+    const [ hoveredFile, setHoveredFile ] = useState()
 
     // Subtask pipeline presets for creating new tasks
     const newTaskPresets = {
@@ -399,12 +400,12 @@ export default function SubtaskPipeline({ loggedIn }) {
                         <SubtaskCard
                             key={type}
                             type={type}
-                            io={subtaskSwitches.subtaskIO[type]}
-                            ordinal={subtaskSwitches.getSubtaskOrdinal(type)}
-                            inputOptions={subtaskSwitches.getInputOptions(type)}
+                            subtaskSwitches={subtaskSwitches}
                             formVisible={!selectedTaskId}
-                            setFile={subtaskSwitches.getFirstSubtask() === type ? setFile : undefined }
+                            setFile={setFile}
                             handleRemove={handleRemove}
+                            hoveredFile={hoveredFile}
+                            setHoveredFile={setHoveredFile}
                             selectedTaskData={selectedTaskData}
                             downloads={downloads}
                         />

@@ -34,13 +34,15 @@ function capitalize(text) {
     return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
-export default function SubtaskCard({ type, io, ordinal, inputOptions, formVisible, setFile, handleRemove, selectedTaskData, downloads }) {
+export default function SubtaskCard({ type, subtaskSwitches, formVisible, setFile, handleRemove, hoveredFile, setHoveredFile, selectedTaskData, downloads }) {
+    const ordinal = subtaskSwitches.getSubtaskOrdinal(type)
+
     return (
         <SubtaskCardContainer>
             <h2>{ordinal}. {capitalize(type)} Subtask</h2>
 
             { formVisible &&
-                <SubtaskCardForm type={type} io={io} setFile={setFile} inputOptions={inputOptions} handleRemove={handleRemove} />
+                <SubtaskCardForm type={type} subtaskSwitches={subtaskSwitches} setFile={setFile} handleRemove={handleRemove} hoveredFile={hoveredFile} setHoveredFile={setHoveredFile} />
             }
             { !formVisible &&
                 <SubtaskStatus

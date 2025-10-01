@@ -109,7 +109,7 @@ export default class BaseRepository {
             options
         )
 
-        return result.modifiedCount
+        return result
     }
 
     async updateMany(filter = {}, update = {}, options = {}) {

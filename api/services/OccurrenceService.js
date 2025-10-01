@@ -675,7 +675,7 @@ class OccurrenceService {
     async updateOccurrenceFromDetermination(occurrence, determination) {
         if (!occurrence) return
 
-        let updateDocument = {}
+        let updateDocument = { ...occurrence }
 
         updateDocument[fieldNames.beePhylum] = determination[determinations.fieldNames.beePhylum] ?? ''
         updateDocument[fieldNames.beeClass] = determination[determinations.fieldNames.beeClass] ?? ''
@@ -696,7 +696,7 @@ class OccurrenceService {
         updateDocument[fieldNames.volDetSex] = determination[determinations.fieldNames.volDetSex] ?? ''
         updateDocument[fieldNames.volDetCaste] = determination[determinations.fieldNames.volDetCaste] ?? ''
 
-        return await this.repository.updateById(occurrence._id, updateDocument)
+        return await this.repository.updateById(updateDocument._id, updateDocument)
     }
 
     /*

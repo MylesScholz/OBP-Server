@@ -155,7 +155,7 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
             // Build the input file path if the given file was found in the previous subtask outputs
             inputFilePath = outputFile ? `./api/data/${outputFile.type}/${outputFile.fileName}` : inputFilePath
         }
-        const occurrencesFileName = `occurrences_${task.tag}.csv`
+        const occurrencesFileName = `occurrences_merged_${task.tag}.csv`
         const occurrencesFilePath = './api/data/occurrences/' + occurrencesFileName
         const pullsFileName = `pulls_${task.tag}.csv`
         const pullsFilePath = './api/data/pulls/' + pullsFileName
@@ -245,7 +245,7 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
 
         // Update the task result with the output files
         const outputs = [
-            { uri: `/api/occurrences/${occurrencesFileName}`, fileName: occurrencesFileName, type: 'occurrences' },
+            { uri: `/api/occurrences/${occurrencesFileName}`, fileName: occurrencesFileName, type: 'occurrences', subtype: 'merged' },
             { uri: `/api/pulls/${pullsFileName}`, fileName: pullsFileName, type: 'pulls' },
             { uri: `/api/flags/${flagsFileName}`, fileName: flagsFileName, type: 'flags' }
         ]

@@ -537,7 +537,7 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         const labelFilePath = './api/data/labels/' + labelsFileName
         const warningLabelsFileName = `labels_warnings_${task.tag}.pdf`
         const warningLabelsFilePath = './api/data/labels/' + warningLabelsFileName
-        const flagsFileName = `flags_${task.tag}.csv`
+        const flagsFileName = `flags_unprintable_${task.tag}.csv`
         const flagsFilePath = './api/data/flags/' + flagsFileName
 
         await TaskService.logTaskStep(taskId, 'Formatting and uploading provided dataset')
@@ -605,7 +605,7 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         if (warningLabels.length > 0) {
             outputs.push({ uri: `/api/labels/${warningLabelsFileName}`, fileName: warningLabelsFileName, type: 'labels', subtype: 'warnings' })
         }
-        outputs.push({ uri: `/api/flags/${flagsFileName}`, fileName: flagsFileName, type: 'flags' })
+        outputs.push({ uri: `/api/flags/${flagsFileName}`, fileName: flagsFileName, type: 'flags', subtype: 'unprintable' })
         previousSubtaskOutputs.push({ type: subtask.type, outputs })
         await TaskService.updateResultById(taskId, {
             subtaskOutputs: previousSubtaskOutputs

@@ -149,8 +149,8 @@ export default class OccurrenceRepository extends BaseRepository {
     // Update
     async updateById(id, updateDocument = {}) {
         // Require that the update document has all of the sort fields
-        const keys = Object.keys(updateDocument)
-        if (!this.sortConfig.every(({ field }) => keys.includes(field))) return 0
+        // const keys = Object.keys(updateDocument)
+        // if (!this.sortConfig.every(({ field }) => keys.includes(field))) return 0
 
         const processedDocument = this.setSortField(updateDocument, this.sortConfig)
         return await super.updateById(id, { $set: processedDocument })
@@ -158,8 +158,8 @@ export default class OccurrenceRepository extends BaseRepository {
 
     async updateMany(filter = {}, updateDocument = {}) {
         // Require that the update document has all of the sort fields
-        const keys = Object.keys(updateDocument)
-        if (!this.sortConfig.every(({ field }) => keys.includes(field))) return 0
+        // const keys = Object.keys(updateDocument)
+        // if (!this.sortConfig.every(({ field }) => keys.includes(field))) return 0
 
         const processedDocument = this.setSortField(updateDocument, this.sortConfig)
         return await super.updateMany(filter, { $set: processedDocument })

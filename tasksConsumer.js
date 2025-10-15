@@ -97,7 +97,7 @@ async function start() {
 
     try {
         // Connect to MongoDB
-        await DatabaseManager.initialize()
+        await DatabaseManager.initialize({ skipIndexes: true, skipViews: true })
         // Connect to RabbitMQ
         await taskConsumer.connect()
 

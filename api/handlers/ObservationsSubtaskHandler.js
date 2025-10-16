@@ -140,7 +140,7 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
         // Input and output file names
         
         // Set the default input file to the file upload
-        let inputFilePath = task.upload.filePath
+        let inputFilePath = task.upload?.filePath ?? ''
         // If not using the upload file, try to find the specified input file in the previous subtask outputs
         if (subtask.input !== 'upload') {
             const subtaskInputSplit = subtask.input?.split('_') ?? []
@@ -155,7 +155,14 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
             // Build the input file path if the given file was found in the previous subtask outputs
             inputFilePath = outputFile ? `./api/data/${outputFile.type}/${outputFile.fileName}` : inputFilePath
         }
-        const occurrencesFileName = `occurrences_merged_${task.tag}.csv`
+        const sourceAbbreviations = {
+            '18521': 'OBA',
+            '99706': 'MM',
+            '166376': 'WaBA'
+        }
+        const sourceString = subtask.sources?.map((id) => sourceAbbreviations[id] ?? id)?.join('_') || 'merged'
+
+        const occurrencesFileName = `occurrences_${sourceString}_${task.tag}.csv`
         const occurrencesFilePath = './api/data/occurrences/' + occurrencesFileName
         const pullsFileName = `pulls_${task.tag}.csv`
         const pullsFilePath = './api/data/pulls/' + pullsFileName

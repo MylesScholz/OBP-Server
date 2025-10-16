@@ -63,7 +63,7 @@ class TaskService {
      * createTask()
      * Creates a new task with the given properties
      */
-    async createTask(uploadFileName, subtasksJSON) {
+    async createTask(subtasksJSON, uploadFileName) {
         // Parse a valid subtasks object from the given JSON argument (throws InvalidArgumentErrors and ValidationErrors)
         const subtasks = this.parseSubtasks(subtasksJSON)
 
@@ -71,20 +71,25 @@ class TaskService {
         const createdAt = new Date()
         const createdAtDate = `${createdAt.getFullYear()}-${createdAt.getMonth() + 1}-${createdAt.getDate()}`
         const createdAtTime = `${createdAt.getHours()}.${createdAt.getMinutes()}.${createdAt.getSeconds()}`
-        let tag = `${createdAtDate}T${createdAtTime}`
-
-        const uploadFilePath = `./api/data/uploads/${uploadFileName}`
-        const uploadUri = `/api/uploads/${uploadFileName}`
+        const tag = `${createdAtDate}T${createdAtTime}`
+        const name = `task_${tag}`
 
         const task = {
-            upload: {
-                fileName: uploadFileName,
-                filePath: uploadFilePath,
-                uri: uploadUri
-            },
+            name,
+            tag,
             subtasks,
             status: 'Pending',
             createdAt: createdAt.toISOString()
+        }
+        // Set the upload file if provided
+        if (uploadFileName) {
+            const uploadFilePath = `./api/data/uploads/${uploadFileName}`
+            const uploadUri = `/api/uploads/${uploadFileName}`
+            task.upload = {
+                fileName: uploadFileName,
+                filePath: uploadFilePath,
+                uri: uploadUri
+            }
         }
         // Set the first subtask as the current one
         if (subtasks.length > 0) {
@@ -92,23 +97,6 @@ class TaskService {
                 currentSubtask: subtasks[0]?.type
             }
         }
-
-        // If there is an observations subtask, include the sources in the task tag
-        const observationsSubtask = subtasks.find((subtask) => subtask.type === 'observations')
-        if (observationsSubtask) {
-            const sourceAbbreviations = {
-                '18521': 'OBA',
-                '99706': 'MM',
-                '166376': 'WaBA'
-            }
-            const sourceString = observationsSubtask.sources?.map((id) => sourceAbbreviations[id] ?? id)?.join('_')
-            
-            tag = `${sourceString ? sourceString + '_' : ''}${tag}`
-        }
-
-        // Set the task name and tag (depends on whether there are sources provided)
-        task.name = `task_${tag}`
-        task.tag = tag
 
         // Create the task
         const insertedId = await this.repository.create(task)

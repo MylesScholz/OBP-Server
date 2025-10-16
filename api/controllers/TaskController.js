@@ -12,7 +12,7 @@ export default class TaskController {
      */
     static async createTask(req, res, next) {
         // Check that required fields exist
-        if (!req.file || !req.body || !req.body.subtasks) {
+        if (!req.body || !req.body.subtasks) {
             res.status(400).send({
                 error: 'Missing required request field'
             })
@@ -21,7 +21,7 @@ export default class TaskController {
 
         try {
             // Create task and send its ID to the RabbitMQ queue
-            const { insertedId, createdAt } = await TaskService.createTask(req.file.filename, req.body.subtasks)
+            const { insertedId, createdAt } = await TaskService.createTask(req.body.subtasks, req.file?.filename)
 
             // Return 'Accepted' response and HATEOAS link
             res.status(202).send({

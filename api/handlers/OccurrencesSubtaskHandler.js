@@ -224,7 +224,7 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
         const subtask = task.subtasks.find((subtask) => subtask.type === 'occurrences')
 
         // Input and output file names
-        const uploadFilePath = task.upload.filePath
+        const uploadFilePath = task.upload?.filePath ?? ''
         const occurrencesFileName = `occurrences_${task.tag}.csv`
         const occurrencesFilePath = './api/data/occurrences/' + occurrencesFileName
         const duplicatesFileName = `duplicates_${task.tag}.csv`

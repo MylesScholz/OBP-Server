@@ -518,7 +518,7 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         // Input and output file names
 
         // Set the default input file to the file upload
-        let inputFilePath = task.upload.filePath
+        let inputFilePath = task.upload?.filePath ?? ''
         // If not using the upload file, try to find the specified input file in the previous subtask outputs
         if (subtask.input !== 'upload') {
             const subtaskInputSplit = subtask.input?.split('_') ?? []

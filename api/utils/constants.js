@@ -60,18 +60,38 @@ const VOL_DET_SPECIES = 'speciesVolDet'
 const VOL_DET_SEX = 'sexVolDet'
 const VOL_DET_CASTE = 'casteVolDet'
 
+// Observation field names
+const UUID = 'uuid'
+const OBS_ID = 'id'
+const POSITIONAL_ACCURACY = 'positional_accuracy'
+const OBSERVED_ON = 'observed_on'
+const PLACE_IDS = 'place_ids'
+const MIN_SPECIES_ANCESTRY = 'min_species_ancestry'
+const OBS_SCIENTIFIC_NAME = 'scientific_name'
+const OBS_TAXON_RANK = 'taxon_rank'
+const COMMON_NAME = 'common_name'
+const OBS_SAMPLE_ID = 'sample_id'
+const BEES_COLLECTED = 'bees_collected'
+const URI = 'uri'
+const OBS_LATITUDE = 'latitude'
+const OBS_LONGITUDE = 'longitude'
+const USER_ID = 'user_id'
+const USER_LOGIN = 'user_login'
+const PLACE_GUESS = 'place_guess'
+
 const constants = {
     // Maximum number of output files stored on the server for each output type
     fileLimits: {
-        maxUploads: 25,
-        maxOccurrences: 25,
-        maxPulls: 25,
-        maxFlags: 25,
-        maxDuplicates: 25,
-        maxLabels: 25,
         maxAddresses: 25,
+        maxDuplicates: 25,
         maxEmails: 25,
-        maxPivots: 25
+        maxFlags: 25,
+        maxLabels: 25,
+        maxOccurrences: 25,
+        maxPivots: 25,
+        maxPulls: 25,
+        maxReports: 25,
+        maxUploads: 25
     },
     auth: {
         saltLength: 10
@@ -181,7 +201,7 @@ const constants = {
             [PLANT_ORDER]: null,
             [PLANT_FAMILY]: null,
             [PLANT_GENUS]: null,
-            [PLANT_GENUS]: null,
+            [PLANT_SPECIES]: null,
             [PLANT_TAXON_RANK]: null,
             [INATURALIST_URL]: null,
             [BEE_PHYLUM]: '',
@@ -232,6 +252,47 @@ const constants = {
         ]
     },
     observations: {
+        // Observation field names (CSV)
+        fieldNames: {
+            uuid: UUID,
+            id: OBS_ID,
+            positionalAccuracy: POSITIONAL_ACCURACY,
+            observedOn: OBSERVED_ON,
+            placeIds: PLACE_IDS,
+            minSpeciesAncestry: MIN_SPECIES_ANCESTRY,
+            scientificName: OBS_SCIENTIFIC_NAME,
+            taxonRank: OBS_TAXON_RANK,
+            commonName: COMMON_NAME,
+            sampleId: OBS_SAMPLE_ID,
+            beesCollected: BEES_COLLECTED,
+            uri: URI,
+            latitude: OBS_LATITUDE,
+            longitude: OBS_LONGITUDE,
+            userId: USER_ID,
+            userLogin: USER_LOGIN,
+            placeGuess: PLACE_GUESS
+        },
+        // Template object for observation CSV rows
+        template: {
+            [UUID]: '',
+            [OBS_ID]: '',
+            [POSITIONAL_ACCURACY]: '',
+            [OBSERVED_ON]: '',
+            [PLACE_IDS]: '',
+            [MIN_SPECIES_ANCESTRY]: '',
+            [OBS_SCIENTIFIC_NAME]: '',
+            [OBS_TAXON_RANK]: '',
+            [COMMON_NAME]: '',
+            [OBS_SAMPLE_ID]: '',
+            [BEES_COLLECTED]: '',
+            [URI]: '',
+            [OBS_LATITUDE]: '',
+            [OBS_LONGITUDE]: '',
+            [USER_ID]: '',
+            [USER_LOGIN]: '',
+            [PLACE_GUESS]: ''
+        },
+        // OFV names
         ofvs: {
             sampleId: 'Sample ID.',
             beesCollected: 'Number of bees collected'
@@ -428,7 +489,8 @@ export const { fileLimits } = constants
 export const { auth } = constants
 export const { occurrences } = constants
 export const { template, fieldNames, nonEmptyFields, sortConfig } = constants.occurrences
-export const { ofvs } = constants.observations
+export const { observations } = constants
+export const { ofvs, fieldNames: obsFieldNames, template: obsTemplate } = constants.observations
 export const { labels } = constants
 export const { requiredFields } = constants.labels
 export const { usernames } = constants

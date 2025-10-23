@@ -67,8 +67,10 @@ const POSITIONAL_ACCURACY = 'positional_accuracy'
 const OBSERVED_ON = 'observed_on'
 const PLACE_IDS = 'place_ids'
 const MIN_SPECIES_ANCESTRY = 'min_species_ancestry'
+const NATIVE = 'native'
 const OBS_SCIENTIFIC_NAME = 'scientific_name'
 const OBS_TAXON_RANK = 'taxon_rank'
+const SYNONYMS = 'synonyms'
 const COMMON_NAME = 'common_name'
 const OBS_SAMPLE_ID = 'sample_id'
 const BEES_COLLECTED = 'bees_collected'
@@ -260,8 +262,10 @@ const constants = {
             observedOn: OBSERVED_ON,
             placeIds: PLACE_IDS,
             minSpeciesAncestry: MIN_SPECIES_ANCESTRY,
+            native: NATIVE,
             scientificName: OBS_SCIENTIFIC_NAME,
             taxonRank: OBS_TAXON_RANK,
+            synonyms: SYNONYMS,
             commonName: COMMON_NAME,
             sampleId: OBS_SAMPLE_ID,
             beesCollected: BEES_COLLECTED,
@@ -280,8 +284,10 @@ const constants = {
             [OBSERVED_ON]: '',
             [PLACE_IDS]: '',
             [MIN_SPECIES_ANCESTRY]: '',
+            [NATIVE]: '',
             [OBS_SCIENTIFIC_NAME]: '',
             [OBS_TAXON_RANK]: '',
+            [SYNONYMS]: '',
             [COMMON_NAME]: '',
             [OBS_SAMPLE_ID]: '',
             [BEES_COLLECTED]: '',

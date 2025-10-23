@@ -8,9 +8,11 @@ api/data/elevation
 api/data/emails
 api/data/flags
 api/data/labels
+api/data/observations
 api/data/occurrences
 api/data/pivots
 api/data/pulls
+api/data/reports
 api/data/uploads
 api/data/places.json
 api/data/taxa.json

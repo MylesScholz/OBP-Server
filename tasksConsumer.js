@@ -3,7 +3,7 @@ import amqp from 'amqplib'
 import { messageBroker } from './api/config/environment.js'
 import DatabaseManager from './api/database/DatabaseManager.js'
 import { TaskService } from './api/services/index.js'
-import { AddressesSubtaskHandler, EmailsSubtaskHandler, LabelsSubtaskHandler, ObservationsSubtaskHandler, OccurrencesSubtaskHandler, PivotsSubtaskHandler } from './api/handlers/index.js'
+import { AddressesSubtaskHandler, EmailsSubtaskHandler, LabelsSubtaskHandler, ObservationsSubtaskHandler, OccurrencesSubtaskHandler, PivotsSubtaskHandler, StewardshipReportSubtaskHandler } from './api/handlers/index.js'
 
 class TaskConsumer {
     constructor() {
@@ -63,6 +63,7 @@ class TaskConsumer {
             const addressesHandler = new AddressesSubtaskHandler()
             const emailsHandler = new EmailsSubtaskHandler()
             const pivotsHandler = new PivotsSubtaskHandler()
+            const stewardshipReportHandler = new StewardshipReportSubtaskHandler()
 
             for (const subtask of task.subtasks) {
                 console.log(`\t${new Date().toLocaleTimeString('en-US')} Processing ${subtask.type} subtask...`)
@@ -79,6 +80,8 @@ class TaskConsumer {
                     await emailsHandler.handleTask(task._id)
                 } else if (subtask.type === 'pivots') {
                     await pivotsHandler.handleTask(task._id)
+                } else if (subtask.type === 'stewardshipReport') {
+                    await stewardshipReportHandler.handleTask(task._id)
                 }
             }
 

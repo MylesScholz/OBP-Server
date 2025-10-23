@@ -20,12 +20,12 @@ class ApiService {
                     console.error(`Hit API request limit. Waiting ${i} milliseconds...`)
                     await delay(i)
                 } else {
-                    console.error(`Bad response while fetching '${requestUrl}':`, response)
+                    console.error(`Bad response while fetching '${url}':`, response)
                     break
                 }
             }
         } catch (error) {
-            console.error(`Error while fetching ${requestUrl}:`, error)
+            console.error(`Error while fetching ${url}:`, error)
         }
     }
 
@@ -50,6 +50,44 @@ class ApiService {
             pageEnd = Math.min(pageEnd + pageSize, ids.length)
 
             await updateProgress(100 * (i + 1) / totalPages)
+        }
+
+        return results
+    }
+
+    async fetchUrlPages(url, updateProgress) {
+        if (!url) return []
+        
+        await updateProgress(0)
+
+        const pagedUrl = (page) => {
+            const urlObj = new URL(url)
+            const params = urlObj.searchParams
+
+            urlObj.hostname = 'api.inaturalist.org'
+            urlObj.pathname = '/v1/observations'
+
+            params.delete('per_page')
+            params.delete('page')
+
+            params.set('per_page', '200')
+            params.set('page', page ? page.toString() : '1')
+
+            return urlObj.toString()
+        }
+
+        let response = await this.fetchUrl(pagedUrl(1))
+        let results = response?.results ?? []
+
+        const totalResults = parseInt(response?.total_results ?? '0')
+        let totalPages = Math.ceil(totalResults / 200)
+
+        await updateProgress(100 / totalPages)
+
+        for (let i = 2; i <= totalPages; i++) {
+            response = await this.fetchUrl(pagedUrl(i))
+            results = results.concat(response?.results ?? [])
+            await updateProgress(100 * i / totalPages)
         }
 
         return results
@@ -99,7 +137,7 @@ class ApiService {
 
         await updateProgress(100 / totalPages)
 
-        for (let i = 2; i < totalPages + 1; i++) {
+        for (let i = 2; i <= totalPages; i++) {
             response = await this.fetchObservations(sourceId, minDate, maxDate, i, 200)
             results = results.concat(response?.results ?? [])
             await updateProgress(100 * i / totalPages)

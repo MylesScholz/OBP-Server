@@ -37,6 +37,12 @@ services:
         ports:
             - '27017:27017'
         env_file: ./.env
+        command: mongod --logpath /var/log/mongodb/mongod.log --logRotate reopen --logappend
+        logging:
+            driver: 'json-file'
+            options:
+                max-size: '10m'
+                max-file: '3'
         volumes:
             - mongo-data:/data/db
             - mongo-config:/data/configdb

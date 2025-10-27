@@ -6,6 +6,7 @@ import UsernamesQueryBuilder from './UsernamesQueryBuilder'
 import AdminManagementForm from './AdminManagementForm'
 import ArchiveBrowser from './ArchiveBrowser'
 import DeterminationsAccessForm from './DeterminationsAccessForm'
+import PlantListAccessForm from './PlantListAccessForm'
 
 const AdminPanelContainer = styled.div`
     display: flex;
@@ -42,6 +43,7 @@ export default function AdminPanel({ loggedIn, setLoggedIn }) {
         <>
             { loggedIn &&
                 <AdminPanelContainer>
+                    <PlantListAccessForm />
                     <DeterminationsAccessForm />
                     <UsernamesQueryBuilder />
                     <AdminManagementForm />

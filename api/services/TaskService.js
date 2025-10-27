@@ -19,7 +19,7 @@ class TaskService {
         try {
             const subtasks = JSON.parse(subtasksJSON)
 
-            const subtaskTypes = [ 'occurrences', 'observations', 'labels', 'addresses', 'emails', 'pivots', 'stewardshipReport' ]
+            const subtaskTypes = [ 'occurrences', 'observations', 'labels', 'addresses', 'emails', 'pivots', 'plantList', 'stewardshipReport' ]
             for (let i = 0; i < subtasks.length; i++) {
                 const subtask = subtasks[i]
                 if (!subtaskTypes.includes(subtask.type)) { throw new ValidationError(`Invalid subtask type '${subtask.type}'`) }

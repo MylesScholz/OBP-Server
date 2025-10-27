@@ -42,18 +42,12 @@ const uploadUsernames = multer({
     }
 })
 
-// Multer object for processing determinations.csv uploads; only allows CSV files, assigns a timestamped file name, and places the upload in ./api/data/uploads
-const uploadDeterminations = multer({
+// Multer object for processing plantList.csv uploads; only allows CSV files and overwrites the existing plantList.csv
+const uploadPlantList = multer({
     storage: multer.diskStorage({
-        destination: './api/data/uploads',
+        destination: './api/data',
         filename: (req, file, cb) => {
-            // Create a unique file name
-            const createdAt = new Date()
-            const createdAtDate = `${createdAt.getFullYear()}-${createdAt.getMonth() + 1}-${createdAt.getDate()}`
-            const createdAtTime = `${createdAt.getHours()}.${createdAt.getMinutes()}.${createdAt.getSeconds()}`
-
-            const fileName = `upload_${createdAtDate}T${createdAtTime}.${fileTypes[file.mimetype]}`
-            cb(null, fileName)
+            cb(null, 'plantList.csv')
         }
     }),
     fileFilter: (req, file, cb) => {
@@ -71,4 +65,4 @@ function limitUploadFiles(req, res, next) {
     next()
 }
 
-export { uploadCSV, uploadUsernames, uploadDeterminations, limitUploadFiles }
+export { uploadCSV, uploadUsernames, uploadPlantList, limitUploadFiles }

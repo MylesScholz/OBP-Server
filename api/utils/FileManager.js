@@ -29,7 +29,7 @@ class FileManager {
      */
     writeCSV(filePath, data, header) {
         try {
-            const csv = stringifySync(data, { header: true, columns: header })
+            const csv = stringifySync(data, { header: true, columns: header, bom: true })
             fs.writeFileSync(filePath, csv)
             return true
         } catch (error) {
@@ -48,7 +48,7 @@ class FileManager {
         try {
             // Create an output stringifier
             const outputFileStream = fs.createWriteStream(filePath, { encoding: 'utf-8' })
-            const stringifier = stringifyAsync({ header: true, columns: header })
+            const stringifier = stringifyAsync({ header: true, columns: header, bom: true })
             stringifier.pipe(outputFileStream)
         
             // Create a function that guarantees write completion before continuing
@@ -114,7 +114,7 @@ class FileManager {
 
         try {
             const data = fs.readFileSync(filePath)
-            return parseSync(data, { columns: true, skip_empty_lines: true, relax_quotes: true, trim: true })
+            return parseSync(data, { columns: true, skip_empty_lines: true, relax_quotes: true, trim: true, bom: true })
         } catch (error) {
             console.error(`Error while attempting to read and parse '${filePath}':`, error)
         }
@@ -132,7 +132,7 @@ class FileManager {
 
         // Create the read stream and pipe it to a CSV parser
         const fileStream = fs.createReadStream(filePath, { encoding: 'utf-8' })
-        const parser = parseAsync({ columns: true, skip_empty_lines: true, relax_quotes: true, trim: true })
+        const parser = parseAsync({ columns: true, skip_empty_lines: true, relax_quotes: true, trim: true, bom: true })
         const csvStream = fileStream.pipe(parser)
 
         // Create a chunk to store rows

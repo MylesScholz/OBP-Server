@@ -69,14 +69,17 @@ export default function ArchiveBrowser() {
                     setSelectedFileURI(undefined)
                 } }>
                     <option value='' disabled selected={!selectedFileType}>Select an archive file type...</option>
-                    <option value='uploads'>Uploads</option>
-                    <option value='occurrences'>Occurrences</option>
-                    <option value='pulls'>Pulls</option>
-                    <option value='flags'>Flags</option>
-                    <option value='duplicates'>Duplicates</option>
-                    <option value='labels'>Labels</option>
                     <option value='addresses'>Addresses</option>
+                    <option value='duplicates'>Duplicates</option>
                     <option value='emails'>Emails</option>
+                    <option value='flags'>Flags</option>
+                    <option value='labels'>Labels</option>
+                    <option value='observations'>Observations</option>
+                    <option value='occurrences'>Occurrences</option>
+                    <option value='pivots'>Pivots</option>
+                    <option value='pulls'>Pulls</option>
+                    <option value='reports'>Reports</option>
+                    <option value='uploads'>Uploads</option>
                 </select>
             </div>            
 

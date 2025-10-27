@@ -79,6 +79,23 @@ class TaxaService {
         return plantAncestry
     }
 
+    getTaxonNamesByIds(taxonIds) {
+        // Read taxa data if not defined
+        if (!Object.keys(this.taxa).length === 0) {
+            this.readTaxa()
+        }
+
+        const taxonNames = []
+
+        for (const id of taxonIds) {
+            if (this.taxa[id] && this.taxa[id].name) {
+                taxonNames.push(this.taxa[id].name)
+            }
+        }
+
+        return taxonNames
+    }
+
     /*
      * updateTaxaFromObservations()
      * Updates local taxonomy data from the given observations
@@ -91,8 +108,14 @@ class TaxaService {
         const unknownTaxa = []
         for (const observation of observations) {
             const ancestors = observation.taxon?.min_species_ancestry?.split(',') ?? []
+            const synonyms = observation.taxon?.current_synonymous_taxon_ids?.map((id) => id.toString()) ?? []
     
             for (const id of ancestors) {
+                if (!(id in this.taxa) && !unknownTaxa.includes(id)) {
+                    unknownTaxa.push(id)
+                }
+            }
+            for (const id of synonyms) {
                 if (!(id in this.taxa) && !unknownTaxa.includes(id)) {
                     unknownTaxa.push(id)
                 }

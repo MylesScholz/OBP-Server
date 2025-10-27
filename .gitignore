@@ -18,6 +18,7 @@ api/data/places.json
 api/data/taxa.json
 api/data/usernames.csv
 api/data/determinations.csv
+api/data/plantList.csv
 
 # Logs
 logs

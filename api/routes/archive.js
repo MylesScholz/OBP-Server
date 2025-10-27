@@ -23,20 +23,26 @@ function createReadDirMiddleware(directory, uriStem) {
     }
 }
 
-archiveRouter.get('/uploads', requireAuthentication, createReadDirMiddleware('./api/data/uploads', '/api/uploads/'))
-
-archiveRouter.get('/occurrences', requireAuthentication, createReadDirMiddleware('./api/data/occurrences', '/api/occurrences/'))
-
-archiveRouter.get('/pulls', requireAuthentication, createReadDirMiddleware('./api/data/pulls', '/api/pulls/'))
-
-archiveRouter.get('/flags', requireAuthentication, createReadDirMiddleware('./api/data/flags', '/api/flags/'))
+archiveRouter.get('/addresses', requireAuthentication, createReadDirMiddleware('./api/data/addresses', '/api/addresses/'))
 
 archiveRouter.get('/duplicates', requireAuthentication, createReadDirMiddleware('./api/data/duplicates', '/api/duplicates/'))
 
+archiveRouter.get('/emails', requireAuthentication, createReadDirMiddleware('./api/data/emails', '/api/emails/'))
+
+archiveRouter.get('/flags', requireAuthentication, createReadDirMiddleware('./api/data/flags', '/api/flags/'))
+
 archiveRouter.get('/labels', requireAuthentication, createReadDirMiddleware('./api/data/labels', '/api/labels/'))
 
-archiveRouter.get('/addresses', requireAuthentication, createReadDirMiddleware('./api/data/addresses', '/api/addresses/'))
+archiveRouter.get('/observations', requireAuthentication, createReadDirMiddleware('./api/data/observations', '/api/observations/'))
 
-archiveRouter.get('/emails', requireAuthentication, createReadDirMiddleware('./api/data/emails', '/api/emails/'))
+archiveRouter.get('/occurrences', requireAuthentication, createReadDirMiddleware('./api/data/occurrences', '/api/occurrences/'))
+
+archiveRouter.get('/pivots', requireAuthentication, createReadDirMiddleware('./api/data/pivots', '/api/pivots/'))
+
+archiveRouter.get('/pulls', requireAuthentication, createReadDirMiddleware('./api/data/pulls', '/api/pulls/'))
+
+archiveRouter.get('/reports', requireAuthentication, createReadDirMiddleware('./api/data/reports', '/api/reports/'))
+
+archiveRouter.get('/uploads', requireAuthentication, createReadDirMiddleware('./api/data/uploads', '/api/uploads/'))
 
 export default archiveRouter

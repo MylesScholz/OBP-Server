@@ -81,6 +81,34 @@ const USER_ID = 'user_id'
 const USER_LOGIN = 'user_login'
 const PLACE_GUESS = 'place_guess'
 
+// Plant field names
+const PLANT_LIST_SCIENTIFIC_NAME = 'Scientific_name'
+const PLANT_LIST_SYNONYM = 'Synonym'
+const PLANT_LIST_COMMON_NAME = 'Common_name'
+const PLANT_LIST_BLOOM_START = 'Bloom_start'
+const PLANT_LIST_BLOOM_END = 'Bloom_end'
+const PLANT_LIST_LIFECYCLE = 'Lifecycle'
+const PLANT_LIST_TAXON_NOTE = 'Taxon_note'
+const PLANT_LIST_FLOWER_COLOR = 'Flower_color'
+const PLANT_LIST_ORIGIN = 'Origin'
+const PLANT_LIST_WEEDY = 'Weedy_species'
+const PLANT_LIST_NOXIOUS = 'Noxious_weed'
+const PLANT_LIST_GARDEN_TYPE = 'Garden_type'
+const PLANT_LIST_HEIGHT_MIN = 'PlantHeightMinFeet'
+const PLANT_LIST_HEIGHT_MAX = 'PlantHeightMaxFeet'
+const PLANT_LIST_WIDTH_MIN = 'GardenPlantWidthMinFeet'
+const PLANT_LIST_WIDTH_MAX = 'GardenPlantWidthMaxFeet'
+const PLANT_LIST_SEEDS_LB = 'Seeds/Lb'
+const PLANT_LIST_LBS_ACRE = 'Lbs/Acre'
+const PLANT_LIST_PROPAGATION_PRIMARY = 'PropagationPrimary'
+const PLANT_LIST_PROPAGATION_SECONDARY = 'PropagationSecondary'
+const PLANT_LIST_FAMILY = 'Family'
+const PLANT_LIST_ABSTRACT = 'PlantAbstract'
+const PLANT_LIST_RECOMMENDED = 'OF_RecommendedPlants'
+const PLANT_LIST_SUPER_BEE = 'SuperBeePlants'
+const PLANT_LIST_URL = 'PlantURL'
+const PLANT_LIST_WEED_URL = 'NoxiousWeedURL'
+
 const constants = {
     // Maximum number of output files stored on the server for each output type
     fileLimits: {
@@ -384,6 +412,66 @@ const constants = {
             [VOL_DET_CASTE]: ''
         }
     },
+    plants: {
+        // Plant field names
+        fieldNames: {
+            scientificName: PLANT_LIST_SCIENTIFIC_NAME,
+            synonym: PLANT_LIST_SYNONYM,
+            commonName: PLANT_LIST_COMMON_NAME,
+            bloomStart: PLANT_LIST_BLOOM_START,
+            bloomEnd: PLANT_LIST_BLOOM_END,
+            lifecycle: PLANT_LIST_LIFECYCLE,
+            taxonNote: PLANT_LIST_TAXON_NOTE,
+            flowerColor: PLANT_LIST_FLOWER_COLOR,
+            origin: PLANT_LIST_ORIGIN,
+            weedy: PLANT_LIST_WEEDY,
+            noxious: PLANT_LIST_NOXIOUS,
+            gardenType: PLANT_LIST_GARDEN_TYPE,
+            heightMin: PLANT_LIST_HEIGHT_MIN,
+            heightMax: PLANT_LIST_HEIGHT_MAX,
+            widthMin: PLANT_LIST_WIDTH_MIN,
+            widthMax: PLANT_LIST_WIDTH_MAX,
+            seedsPerLb: PLANT_LIST_SEEDS_LB,
+            lbsPerAcre: PLANT_LIST_LBS_ACRE,
+            propagationPrimary: PLANT_LIST_PROPAGATION_PRIMARY,
+            propagationSecondary: PLANT_LIST_PROPAGATION_SECONDARY,
+            family: PLANT_LIST_FAMILY,
+            abstract: PLANT_LIST_ABSTRACT,
+            recommended: PLANT_LIST_RECOMMENDED,
+            superBeePlant: PLANT_LIST_SUPER_BEE,
+            plantUrl: PLANT_LIST_URL,
+            noxiousWeedUrl: PLANT_LIST_WEED_URL
+        },
+        // Template object for plants (in plantList.csv)
+        template: {
+            [PLANT_LIST_SCIENTIFIC_NAME]: '',
+            [PLANT_LIST_SYNONYM]: '',
+            [PLANT_LIST_COMMON_NAME]: '',
+            [PLANT_LIST_BLOOM_START]: '',
+            [PLANT_LIST_BLOOM_END]: '',
+            [PLANT_LIST_LIFECYCLE]: '',
+            [PLANT_LIST_TAXON_NOTE]: '',
+            [PLANT_LIST_FLOWER_COLOR]: '',
+            [PLANT_LIST_ORIGIN]: '',
+            [PLANT_LIST_WEEDY]: '',
+            [PLANT_LIST_NOXIOUS]: '',
+            [PLANT_LIST_GARDEN_TYPE]: '',
+            [PLANT_LIST_HEIGHT_MIN]: '',
+            [PLANT_LIST_HEIGHT_MAX]: '',
+            [PLANT_LIST_WIDTH_MIN]: '',
+            [PLANT_LIST_WIDTH_MAX]: '',
+            [PLANT_LIST_SEEDS_LB]: '',
+            [PLANT_LIST_LBS_ACRE]: '',
+            [PLANT_LIST_PROPAGATION_PRIMARY]: '',
+            [PLANT_LIST_PROPAGATION_SECONDARY]: '',
+            [PLANT_LIST_FAMILY]: '',
+            [PLANT_LIST_ABSTRACT]: '',
+            [PLANT_LIST_RECOMMENDED]: '',
+            [PLANT_LIST_SUPER_BEE]: '',
+            [PLANT_LIST_URL]: '',
+            [PLANT_LIST_WEED_URL]: ''
+        }
+    },
     abbreviations: {
         countries: {
             'United States': 'USA',
@@ -501,6 +589,7 @@ export const { labels } = constants
 export const { requiredFields } = constants.labels
 export const { usernames } = constants
 export const { determinations } = constants
+export const { plants } = constants
 export const { abbreviations } = constants
 
 export default constants

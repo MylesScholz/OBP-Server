@@ -2,7 +2,7 @@ import { useState } from 'react'
 import axios from 'axios'
 import styled from '@emotion/styled'
 
-const UsernamesQueryBuilderContainer = styled.div`
+const UsernamesAccessFormContainer = styled.div`
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -11,6 +11,8 @@ const UsernamesQueryBuilderContainer = styled.div`
     border-radius: 5px;
 
     padding: 20px;
+
+    width: 400px;
 
     h2 {
         margin: 0px;
@@ -77,7 +79,7 @@ const UsernamesQueryBuilderContainer = styled.div`
     }
 `
 
-export default function UsernamesQueryBuilder() {
+export default function UsernamesAccessForm() {
     const [ queryType, setQueryType ] = useState('get')
     const [ file, setFile ] = useState()
     const [ formDisabled, setFormDisabled ] = useState(false)
@@ -116,7 +118,7 @@ export default function UsernamesQueryBuilder() {
     }
 
     return (
-        <UsernamesQueryBuilderContainer>
+        <UsernamesAccessFormContainer>
             <h2>Username Dataset Access</h2>
 
             <div id='usernamesQueryPanel'>
@@ -164,6 +166,6 @@ export default function UsernamesQueryBuilder() {
                     </div>
                 }
             </div>
-        </UsernamesQueryBuilderContainer>
+        </UsernamesAccessFormContainer>
     )
 }

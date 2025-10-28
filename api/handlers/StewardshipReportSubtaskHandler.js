@@ -33,6 +33,8 @@ export default class StewardshipReportSubtaskHandler extends BaseSubtaskHandler 
         const subtask = task.subtasks.find((subtask) => subtask.type === 'stewardshipReport')
         const previousSubtaskOutputs = task.result?.subtaskOutputs ?? []
 
+        // Input and output file names
+        const uploadFilePath = task.upload?.filePath ?? ''
         const stewardshipReportFileName = `report_stewardship_${task.tag}.pdf`
         const stewardshipReportFilePath = './api/data/reports/' + stewardshipReportFileName
         const observationsFileName = `observations_${task.tag}.csv`
@@ -52,12 +54,12 @@ export default class StewardshipReportSubtaskHandler extends BaseSubtaskHandler 
         // Execute the stewardship report R script
         await TaskService.logTaskStep(taskId, 'Creating stewardship report')
         
-        const { success, stdout, stderr } = await ScriptService.runRScript('./api/scripts/makeReports.R', [ './api/data/occurrences/occurrences_2025-10-22T15.31.21.csv' ])
+        const { success, stdout, stderr } = await ScriptService.runRScript('./api/scripts/makeReports.R', [ uploadFilePath ])
 
         // Clean up observations files
         await TaskService.logTaskStep(taskId, 'Cleaning up files')
 
-        // FileManager.clearDirectory('./api/data/observations')
+        FileManager.clearDirectory('./api/data/observations')
 
         // Update the task result with the output files
         const outputs = [

@@ -12,6 +12,8 @@ const DeterminationsAccessFormContainer = styled.div`
 
     padding: 20px;
 
+    width: 400px;
+
     h2 {
         margin: 0px;
         margin-bottom: 5px;

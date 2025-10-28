@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import styled from '@emotion/styled'
 
-import UsernamesQueryBuilder from './UsernamesQueryBuilder'
+import AdminToolList from './AdminToolList'
+import UsernamesAccessForm from './UsernamesAccessForm'
 import AdminManagementForm from './AdminManagementForm'
 import ArchiveBrowser from './ArchiveBrowser'
 import DeterminationsAccessForm from './DeterminationsAccessForm'
@@ -20,6 +22,8 @@ const AdminPanelContainer = styled.div`
 `
 
 export default function AdminPanel({ loggedIn, setLoggedIn }) {
+    const [ selectedTool, setSelectedTool ] = useState('plantList')
+
     const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
 
     useQuery({
@@ -43,11 +47,23 @@ export default function AdminPanel({ loggedIn, setLoggedIn }) {
         <>
             { loggedIn &&
                 <AdminPanelContainer>
-                    <PlantListAccessForm />
-                    <DeterminationsAccessForm />
-                    <UsernamesQueryBuilder />
-                    <AdminManagementForm />
-                    <ArchiveBrowser />
+                    <AdminToolList selectedTool={selectedTool} setSelectedTool={setSelectedTool} />
+
+                    { selectedTool === 'plantList' &&
+                        <PlantListAccessForm />
+                    }
+                    { selectedTool === 'determinations' &&
+                        <DeterminationsAccessForm />
+                    }
+                    { selectedTool === 'usernames' &&
+                        <UsernamesAccessForm />
+                    }
+                    { selectedTool === 'archive' &&
+                        <ArchiveBrowser />
+                    }
+                    { selectedTool === 'accountManager' &&
+                        <AdminManagementForm />
+                    }
                 </AdminPanelContainer>
             }
         </>

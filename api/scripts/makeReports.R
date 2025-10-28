@@ -483,7 +483,7 @@ makeReports <- function(plantListCSV = NA,
     vyPlantGen <- unique(gsub('\\s.+$','',vyPlantSpp)) #Plant genus list for this vineyard
     vyEcoreg <- unique(vpDat$ecoreg[vpDat$vineyard==vy]) #Ecoregion for this vineyard
     print(vyEcoreg)
-    if(length(vyEcoreg)!=1) stop('More than 1 ecoregion per vineyard')
+    if(length(vyEcoreg)!=1) stop('Not exactly 1 ecoregion per vineyard')
     #Ecoregion network
     ecoregNtwk_summary <- c('ecoRegName'=vyEcoreg,
                             lapply(list('ntwk_all'=erNtwk[[vyEcoreg]]$ntwk_all,
@@ -812,7 +812,7 @@ args <- commandArgs(trailingOnly = TRUE)
 
 #Run the reports function with the given argument
 makeReports(
-  plantListCSV = './api/data/cleanedPlantList2024.csv',
+  plantListCSV = './api/data/plantList.csv',
   beeDataCSV = args[1],
   iNatFolder =  './api/data/observations',
   reportFolder = './api/data/reports',

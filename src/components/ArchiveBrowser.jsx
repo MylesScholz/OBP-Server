@@ -13,6 +13,8 @@ const ArchiveBrowserContainer = styled.div`
 
     padding: 20px;
 
+    width: 400px;
+
     h2 {
         margin: 0px;
         margin-bottom: 5px;
@@ -23,7 +25,12 @@ const ArchiveBrowserContainer = styled.div`
     div {
         display: flex;
         flex-direction: row;
+        justify-content: stretch;
         gap: 10px;
+
+        select {
+            flex-grow: 1;
+        }
     }
 `
 

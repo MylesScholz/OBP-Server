@@ -13,6 +13,8 @@ const AdminManagementFormContainer = styled.div`
 
     padding: 20px;
 
+    width: 400px;
+
     h2 {
         margin: 0px;
         margin-bottom: 5px;
@@ -46,11 +48,15 @@ const AdminManagementFormContainer = styled.div`
 
                 div {
                     display: flex;
-                    justify-content: space-between;
+                    justify-content: stretch;
                     align-items: center;
                     gap: 10px;
 
                     white-space: nowrap;
+
+                    input, select {
+                        flex-grow: 1;
+                    }
                 }
             }
         }

@@ -54,7 +54,7 @@ const PlantListAccessFormContainer = styled.div`
 
                     white-space: nowrap;
 
-                    select {
+                    select, input {
                         flex-grow: 1;
                     }
                 }
@@ -240,7 +240,7 @@ export default function PlantListAccessForm() {
 
                         { queryType === 'update' &&
                             <div>
-                                <label for='plantListUrl'>iNaturalist Query URL:</label>
+                                <label for='plantListUrl'>URL:</label>
                                 <input
                                     type='url'
                                     id='plantListUrl'

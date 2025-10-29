@@ -13,7 +13,7 @@ const AdminManagementFormContainer = styled.div`
 
     padding: 20px;
 
-    width: 400px;
+    min-width: 400px;
 
     h2 {
         margin: 0px;

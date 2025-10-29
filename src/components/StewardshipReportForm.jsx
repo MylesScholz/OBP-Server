@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import styled from '@emotion/styled'
 
-const PlantListAccessFormContainer = styled.div`
+const StewardshipReportFormContainer = styled.div`
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -22,7 +22,7 @@ const PlantListAccessFormContainer = styled.div`
         font-size: 16pt;
     }
 
-    #plantListQueryPanel {
+    #stewardshipReportQueryPanel {
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
@@ -61,7 +61,7 @@ const PlantListAccessFormContainer = styled.div`
             }
         }
 
-        #plantListQueryResults {
+        #stewardshipReportQueryResults {
             display: flex;
             flex-direction: column;
             gap: 10px;
@@ -80,8 +80,7 @@ const PlantListAccessFormContainer = styled.div`
     }
 `
 
-export default function PlantListAccessForm() {
-    const [ queryType, setQueryType ] = useState('get')
+export default function StewardshipReportForm() {
     const [ file, setFile ] = useState()
     const [ formDisabled, setFormDisabled ] = useState(false)
     const [ queryResponse, setQueryResponse ] = useState()
@@ -164,103 +163,60 @@ export default function PlantListAccessForm() {
         setQueryResponse(null)
         setSelectedTaskId(null)
 
-        const plantListQueryUrl = `http://${serverAddress}/api/plantList`
-        const plantListTaskUrl = `http://${serverAddress}/api/tasks`
+        const taskUrl = `http://${serverAddress}/api/tasks`
 
-        if (queryType === 'get') {
-            axios.get(plantListQueryUrl, { responseType: 'blob' }).then((res) => {
-                setFormDisabled(false)
-                setQueryResponse({ status: res.status, data: URL.createObjectURL(res.data) })
-            }).catch((err) => {
-                setFormDisabled(false)
-                setQueryResponse({ status: err.response?.status, error: err.response?.data?.error ?? err.message })
-            })
-        } else if (queryType === 'post') {
-            const formData = new FormData()
-            formData.append('file', file)
+        const formData = new FormData()
 
-            axios.postForm(plantListQueryUrl, formData).then((res) => {
-                setFormDisabled(false)
-                setQueryResponse({ status: res.status, data: res.data })
-            }).catch((err) => {
-                setFormDisabled(false)
-                setQueryResponse({ status: err.response?.status, error: err.response?.data?.error ?? err.message })
-            })
-        } else if (queryType === 'update') {
-            const formData = new FormData()
+        formData.append('file', file)
 
-            const url = event.target.plantListUrl?.value ?? ''
-            const subtasks = [ { type: 'plantList', url } ]
-            formData.append('subtasks', JSON.stringify(subtasks))
+        const url = event.target.stewardshipReportUrl?.value ?? ''
+        const subtasks = [ { type: 'stewardshipReport', input: 'upload', url } ]
+        formData.append('subtasks', JSON.stringify(subtasks))
 
-            axios.postForm(plantListTaskUrl, formData).then((res) => {
-                setFormDisabled(false)
-                setQueryResponse({ status: res.status, data: res.data })
+        axios.postForm(taskUrl, formData).then((res) => {
+            setFormDisabled(false)
+            setQueryResponse({ status: res.status, data: res.data })
 
-                const postedTaskId = res.data?.uri?.replace('/api/tasks/', '')
-                setSelectedTaskId(postedTaskId)
-            }).catch((err) => {
-                setFormDisabled(false)
-                setQueryResponse({ status: err.response?.status, error: err.response?.data?.error ?? err.message })
-            })
-        }
+            const postedTaskId = res.data?.uri?.replace('/api/tasks/', '')
+            setSelectedTaskId(postedTaskId)
+        }).catch((err) => {
+            setFormDisabled(false)
+            setQueryResponse({ status: err.response?.status, error: err.response?.data?.error ?? err.message })
+        })
     }
 
     return (
-        <PlantListAccessFormContainer>
-            <h2>Plant List Access</h2>
+        <StewardshipReportFormContainer>
+            <h2>Stewardship Report Script</h2>
 
-            <div id='plantListQueryPanel'>
+            <div id='stewardshipReportQueryPanel'>
                 <form onSubmit={ handleSubmit }>
                     <fieldset disabled={formDisabled}>
                         <div>
-                            <label for='plantListQueryType'>Operation:</label>
-                            <select id='plantListQueryType' onChange={(event) => {
-                                setQueryResponse(undefined)
-                                setQueryType(event.target.value)
-                            }}>
-                                <option value='get' selected={queryType === 'get'}>Download</option>
-                                <option value='post' selected={queryType === 'post'}>Upload</option>
-                                <option value='update' selected={queryType === 'update'}>Update</option>
-                            </select>
+                            <label for='stewardshipReportFileUpload'>Melittoflora Dataset:</label>
+                            <input
+                                type='file'
+                                accept='.csv'
+                                id='stewardshipReportFileUpload'
+                                required
+                                onChange={ (event) => setFile(event.target.files[0]) }
+                            />
                         </div>
-
-                        { queryType === 'post' &&
-                            <div>
-                                <label for='plantListFileUpload'>File:</label>
-                                <input
-                                    type='file'
-                                    accept='.csv'
-                                    id='plantListFileUpload'
-                                    required
-                                    onChange={ (event) => setFile(event.target.files[0]) }
-                                />
-                            </div>
-                        }
-
-                        { queryType === 'update' &&
-                            <div>
-                                <label for='plantListUrl'>URL:</label>
-                                <input
-                                    type='url'
-                                    id='plantListUrl'
-                                    required
-                                />
-                            </div>
-                        }
+                        <div>
+                            <label for='stewardshipReportUrl'>URL:</label>
+                            <input
+                                type='url'
+                                id='stewardshipReportUrl'
+                                required
+                            />
+                        </div>
 
                         <input type='submit' value='Submit' />
                     </fieldset>
                 </form>
 
                 { queryResponse &&
-                    <div id='plantListQueryResults'>
-                        { queryResponse.status === 200 && queryType === 'get' &&
-                            <a href={queryResponse.data} download='plantList.csv'>Download Plant List</a>
-                        }
-                        { queryResponse.status === 200 && queryType === 'post' &&
-                            <p>File uploaded successfully</p>
-                        }
+                    <div id='stewardshipReportQueryResults'>
                         { selectedTaskData?.task &&
                             <>
                                 { selectedTaskData.task.progress &&
@@ -291,6 +247,6 @@ export default function PlantListAccessForm() {
                     </div>
                 }
             </div>
-        </PlantListAccessFormContainer>
+        </StewardshipReportFormContainer>
     )
 }

@@ -9,6 +9,7 @@ import AdminManagementForm from './AdminManagementForm'
 import ArchiveBrowser from './ArchiveBrowser'
 import DeterminationsAccessForm from './DeterminationsAccessForm'
 import PlantListAccessForm from './PlantListAccessForm'
+import StewardshipReportForm from './StewardshipReportForm'
 
 const AdminPanelContainer = styled.div`
     display: flex;
@@ -63,6 +64,9 @@ export default function AdminPanel({ loggedIn, setLoggedIn }) {
                     }
                     { selectedTool === 'accountManager' &&
                         <AdminManagementForm />
+                    }
+                    { selectedTool === 'stewardshipReport' &&
+                        <StewardshipReportForm />
                     }
                 </AdminPanelContainer>
             }

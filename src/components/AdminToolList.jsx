@@ -19,13 +19,14 @@ const AdminToolListContainer = styled.dix`
         font-size: 16pt;
     }
 
-    #adminToolList {
+    .adminToolList {
         display: flex;
         flex-direction: column;
         align-items: start;
         gap: 5px;
 
         margin: 0px;
+        margin-bottom: 10px;
 
         padding: 0px;
         padding-left: 10px;
@@ -56,7 +57,7 @@ export default function AdminToolList({ selectedTool, setSelectedTool }) {
     return (
         <AdminToolListContainer>
             <h2>Admin Tools</h2>
-            <div id='adminToolList'>
+            <div className='adminToolList'>
                 <button
                     className={ selectedTool === 'plantList' ? 'selectedAdminTool' : '' }
                     onClick={(e) => setSelectedTool('plantList')}
@@ -77,6 +78,14 @@ export default function AdminToolList({ selectedTool, setSelectedTool }) {
                     className={ selectedTool === 'accountManager' ? 'selectedAdminTool' : '' }
                     onClick={(e) => setSelectedTool('accountManager')}
                 >Admin Account Manager</button>
+            </div>
+
+            <h2>Scripts</h2>
+            <div className='adminToolList'>
+                <button
+                    className={ selectedTool === 'stewardshipReport' ? 'selectedAdminTool' : '' }
+                    onClick={(e) => setSelectedTool('stewardshipReport')}
+                >Stewardship Report</button>
             </div>
         </AdminToolListContainer>
     )

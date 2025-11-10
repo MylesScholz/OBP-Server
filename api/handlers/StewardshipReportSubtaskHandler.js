@@ -2,6 +2,7 @@ import BaseSubtaskHandler from './BaseSubtaskHandler.js'
 import { fileLimits } from '../utils/constants.js'
 import { ApiService, ObservationService, ScriptService, TaskService } from '../services/index.js'
 import FileManager from '../utils/FileManager.js'
+import { delay } from '../utils/utilities.js'
 
 export default class StewardshipReportSubtaskHandler extends BaseSubtaskHandler {
     constructor() {
@@ -35,10 +36,10 @@ export default class StewardshipReportSubtaskHandler extends BaseSubtaskHandler 
 
         // Input and output file names
         const uploadFilePath = task.upload?.filePath ?? ''
-        const stewardshipReportFileName = `report_stewardship_${task.tag}.pdf`
-        const stewardshipReportFilePath = './api/data/reports/' + stewardshipReportFileName
         const observationsFileName = `observations_${task.tag}.csv`
         const observationsFilePath = './api/data/observations/' + observationsFileName
+        const stewardshipReportFileName = `observations_${task.tag}-report.pdf`
+        const stewardshipReportFilePath = './api/data/reports/' + stewardshipReportFileName
 
         // Pull iNaturalist observations and write them to a CSV in /api/data/observations
         await TaskService.logTaskStep(taskId, 'Querying observations from iNaturalist')
@@ -53,8 +54,14 @@ export default class StewardshipReportSubtaskHandler extends BaseSubtaskHandler 
 
         // Execute the stewardship report R script
         await TaskService.logTaskStep(taskId, 'Creating stewardship report')
+        await TaskService.updateProgressPercentageById(taskId, 0)
         
         const { success, stdout, stderr } = await ScriptService.runRScript('./api/scripts/makeReports.R', [ uploadFilePath ])
+        
+        // Wait 5 seconds for rendering to finish
+        await delay(5000)
+
+        await TaskService.updateProgressPercentageById(taskId, 0)
 
         // Clean up observations files
         await TaskService.logTaskStep(taskId, 'Cleaning up files')

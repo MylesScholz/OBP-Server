@@ -38,7 +38,6 @@ makeReports <- function(plantListCSV = NA,
 ){
   
   # Preamble ---------------------------
-  
   library(ggplot2)
   theme_set(theme_classic())
   library(dplyr)
@@ -54,7 +53,6 @@ makeReports <- function(plantListCSV = NA,
   source('./api/scripts/makeGenSpp.R')
   source('./api/scripts/replaceSynonyms.R')
   source('./api/scripts/st_within_fast.R')
-  
   
   #BS checking
   
@@ -165,7 +163,7 @@ makeReports <- function(plantListCSV = NA,
                       strip.white = TRUE,na.strings=c('NA',''))
   
   reqBeeCols <- c('recordedBy','sex','genusPlant', 'speciesPlant','samplingProtocol',
-                  'verbatimEventDate','county','genus','scientificName',
+                  'verbatimEventDate','county','genus','specificEpithet',
                   'decimalLatitude','decimalLongitude')
   
   if(any(!reqBeeCols %in% colnames(beeData))){
@@ -173,9 +171,9 @@ makeReports <- function(plantListCSV = NA,
   }
   
   beeData <- beeData %>% filter(!is.na(genus)) %>%
-    transmute(recordedBy=recordedBy,sex=sex,foragePlant=paste(genusPlant,speciesPlant),
+    transmute(recordedBy=recordedBy,sex=sex,foragePlant=speciesPlant,
               samplingProtocol=samplingProtocol,date=verbatimEventDate,county=county,
-              order='Hymenoptera',family=NA,genus=genus,species=scientificName,genSpp=NA,plantGenus=NA,plantSpp=NA,
+              order='Hymenoptera',family=NA,genus=genus,species=specificEpithet,genSpp=NA,plantGenus=NA,plantSpp=NA,
               lat=decimalLatitude,lon=decimalLongitude) %>%
     mutate(across(where(is.character),~str_trim(.))) %>% #Trim whitespace across columns
     mutate(date=as.Date(date,format='%d/%m/%Y')) %>% #Create date
@@ -218,7 +216,7 @@ makeReports <- function(plantListCSV = NA,
   
   beeData <- beeData %>% 
     mutate(foragePlant=case_when( #Get rid of weird plant records
-      grepl('^(N|n)et\\s*$',foragePlant) ~ NA, #"Net"
+      grepl('^(N|n)et\\s*$',foragePlant) ~ NA_character_, #"Net"
       !grepl('\\s',foragePlant) & !is.na(foragePlant) ~ paste0(foragePlant,' spp.'), #Adds "spp." to singletons
       .default = gsub('sp+\\.*$','spp.',as.character(foragePlant)
       ))) %>% ungroup() %>% 
@@ -300,7 +298,7 @@ makeReports <- function(plantListCSV = NA,
       stop(paste0('Columns missing from iNaturalist record: ',x,'. Required columns: ',paste0(reqCols,collapse = ', ')))
     }
     l <- l %>% select(all_of(reqCols)) %>% #Select relevant columns
-      mutate(vineyard=gsub('(^.+\\d{4}/|\\.csv$)','',x)) %>% #Gets vineyard name and year
+      mutate(vineyard=gsub('.csv','',basename(x))) %>% #Gets vineyard name and year
       mutate(year=format(as.Date(observed_on),format='%Y')) %>% select(-observed_on)
     return(l)
   }
@@ -482,7 +480,7 @@ makeReports <- function(plantListCSV = NA,
       pull(scientific_name)
     vyPlantGen <- unique(gsub('\\s.+$','',vyPlantSpp)) #Plant genus list for this vineyard
     vyEcoreg <- unique(vpDat$ecoreg[vpDat$vineyard==vy]) #Ecoregion for this vineyard
-    print(vyEcoreg)
+
     if(length(vyEcoreg)!=1) stop('Not exactly 1 ecoregion per vineyard')
     #Ecoregion network
     ecoregNtwk_summary <- c('ecoRegName'=vyEcoreg,
@@ -565,18 +563,20 @@ makeReports <- function(plantListCSV = NA,
     mutate(across(everything(),factor)) %>% 
     relocate(bee,plant,vineyard) %>% table() %>% 
     as.array()>0
-  
+
   #Reorder array (most-to-least bee richness)
   vyCounts <- vyCounts[order(marginSums(vyCounts,1),decreasing = TRUE),
                        order(marginSums(vyCounts,2),decreasing = TRUE),
-                       order(marginSums(vyCounts,3),decreasing = TRUE)]
-  
+                       order(marginSums(vyCounts,3),decreasing = TRUE),
+                       drop = FALSE]
+
   #Sequential approach - rarest to most common
-  
+
   #Storage dataframe for combinations
-  vyCombos <- data.frame('vineyard'=names(vyCounts[1,1,]),
-                         'bee'=rep(NA,dim(vyCounts)[3]),'plant'=rep(NA,dim(vyCounts)[3]))
-  vyc <- vyCounts[!grepl('Apis',names(vyCounts[,1,1])),,] #Copy of vyCounts (removes honeybees)
+  vy_names <- dimnames(vyCounts)
+  vyCombos <- data.frame('vineyard'=vy_names[[3]],
+                         'bee'=rep(NA_character_,length(vy_names[[3]])),'plant'=rep(NA_character_,length(vy_names[[3]])))
+  vyc <- vyCounts[!grepl('Apis',dimnames(vyCounts)[[1]]),,,drop = FALSE] #Copy of vyCounts (removes honeybees)
   vyCombos[marginSums(vyc,3)==0,c(2,3)] <- 'All weeds' #Vineyards with no non-weedy plants
   vyc <- vyc[marginSums(vyc,1)>0,marginSums(vyc,2)>0,marginSums(vyc,3)>0,drop=FALSE] #Remove empty rows/cols/vineyards
   
@@ -701,23 +701,23 @@ makeReports <- function(plantListCSV = NA,
   #NOTE: this Highlight List is not used at the moment. Future versions could select between different versions
   
   #Storage dataframe
-  vyCombos2 <- data.frame('vineyard'=names(vyCounts[1,1,]),
-                          'bee'=rep(NA,dim(vyCounts)[3]),'plant'=rep(NA,dim(vyCounts)[3]))
+  vyCombos2 <- data.frame('vineyard'=vy_names[[3]],
+                         'bee'=rep(NA_character_,length(vy_names[[3]])),'plant'=rep(NA_character_,length(vy_names[[3]])))
   vyCombos2[vyCombos2$vineyard %in% names(vyNetworks)[sapply(vyNetworks,function(x) any(is.na(x$ntwk_noWeed)))],
             c('bee','plant')] <- 'All weeds' #Vineyards with no non-weedy plants
-  
+
   #Vineyard/plant matrix
   vyp <- sapply(vyNetworks,function(x) data.frame(plants=rownames(x$ntwk_noWeed)),simplify = FALSE) %>% #Non-weedy plants from each vineyards
     bind_rows(.id='vineyard') %>% table() %>% as.array()>0
   # Reorder matrix
-  vyp <- vyp[order(rowSums(vyp),decreasing = FALSE),] #Vineyards, from least spp-rich to least
-  vyp <- vyp[,order(colSums(vyp),decreasing = TRUE)] #Plants, from most common to least
+  vyp <- vyp[order(rowSums(vyp),decreasing = FALSE),,drop = FALSE] #Vineyards, from least spp-rich to least
+  vyp <- vyp[,order(colSums(vyp),decreasing = TRUE),drop = FALSE] #Plants, from most common to least
   #Vineyard/bee matrix
   vyb <- sapply(vyNetworks,function(x) data.frame(bees=colnames(x$ntwk_noWeed)),simplify = FALSE) %>% #Bees from each vineyards
     bind_rows(.id='vineyard') %>% filter(bees!='Apis mellifera') %>% table() %>% as.array()>0
   # Reorder matrix
-  vyb <- vyb[order(rowSums(vyb),decreasing = FALSE),] #Vineyards, from most spp-rich to least
-  vyb <- vyb[,order(colSums(vyb),decreasing = TRUE)] #Bees, from least common to most
+  vyb <- vyb[order(rowSums(vyb),decreasing = FALSE),,drop = FALSE] #Vineyards, from most spp-rich to least
+  vyb <- vyb[,order(colSums(vyb),decreasing = TRUE),drop = FALSE] #Bees, from least common to most
   
   while(any(is.na(vyCombos2$plant))){
     loc <- which(vyp,arr.ind = TRUE) #Get combos from last (lowest-diversity) vineyard
@@ -777,7 +777,9 @@ makeReports <- function(plantListCSV = NA,
     } else {
       
       #Path to Rmd template
-      rmdPath <- system.file('rmdTemplates','vineyard-report-template.Rmd',package=packageName(),mustWork = TRUE)  
+      rmdPath <- './api/inst/rmdTemplates/vineyard-report-template.Rmd'
+      reportFolder <- normalizePath(reportFolder, mustWork = FALSE)
+      projectRoot <- normalizePath(".", mustWork = FALSE)
     
       suppressWarnings({
         render(rmdPath,
@@ -785,10 +787,10 @@ makeReports <- function(plantListCSV = NA,
                output_format = "pdf_document",
                output_dir = reportFolder,
                intermediates_dir = reportFolder,
-               knit_root_dir = reportFolder,
+               knit_root_dir = projectRoot,
                params = list(set_title=names(vyNetworks)[vy]),
                envir=new.env(),
-               quiet = TRUE
+               quiet = FALSE
         )  
       })
       

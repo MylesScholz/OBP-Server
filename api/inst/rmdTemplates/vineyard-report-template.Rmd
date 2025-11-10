@@ -53,6 +53,7 @@ library(sf)
 # library(bipartite)
 library(basemaps) #https://jakob.schwalb-willmann.de/basemaps/ #Open source mapping package
 library(stars)
+source("./api/scripts/getPlGenScores.R")
 
 #knitr options
 knitr::opts_chunk$set(
@@ -501,6 +502,7 @@ if(nrow(vyCombos_vy)==0){
     # mutate(ScientificName=paste0('\\emph{',ScientificName,'}')) %>% 
     mutate(Species=paste0('\\textbf{',CommonName,'}',' (\\emph{',ScientificName,'})')) %>% select(-CommonName,-ScientificName) %>% 
     relocate(partner,Species,Abstract) %>% 
+    mutate(across(where(is.character), ~iconv(., from = "UTF-8", to = "UTF-8", sub = ""))) %>%
     kable(escape=FALSE,format = 'latex',col.names = c('Partner','Species Name','Description'), position = "h") %>% 
     column_spec(1:2,width='3cm') %>%  
     column_spec(3,width='10cm') #%>% kable_styling(latex_options="scale_down")

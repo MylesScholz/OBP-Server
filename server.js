@@ -32,15 +32,16 @@ app.use(express.static('public'))
 app.use(express.static('dist'))
 
 // API routes
-apiRouter.use('/uploads', express.static('api/data/uploads'))
-apiRouter.use('/occurrences', express.static('api/data/occurrences'))
-apiRouter.use('/pulls', express.static('api/data/pulls'))
-apiRouter.use('/flags', express.static('api/data/flags'))
-apiRouter.use('/duplicates', express.static('api/data/duplicates'))
-apiRouter.use('/labels', express.static('api/data/labels'))
-apiRouter.use('/pivots', express.static('api/data/pivots'))
 apiRouter.use('/addresses', requireAuthentication, express.static('api/data/addresses'))
+apiRouter.use('/duplicates', express.static('api/data/duplicates'))
 apiRouter.use('/emails', requireAuthentication, express.static('api/data/emails'))
+apiRouter.use('/flags', express.static('api/data/flags'))
+apiRouter.use('/labels', express.static('api/data/labels'))
+apiRouter.use('/occurrences', express.static('api/data/occurrences'))
+apiRouter.use('/pivots', express.static('api/data/pivots'))
+apiRouter.use('/pulls', express.static('api/data/pulls'))
+apiRouter.use('/reports', requireAuthentication, express.static('api/data/reports'))
+apiRouter.use('/uploads', express.static('api/data/uploads'))
 app.use('/api', apiRouter)
 
 app.use('*', (req, res, next) => {

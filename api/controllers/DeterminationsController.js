@@ -4,8 +4,6 @@ import { DeterminationsService } from '../services/index.js'
 
 export default class DeterminationsController {
     static async getDeterminationsFile(req, res, next) {
-        // Write database determinations (if present) to determinations.csv
-        await DeterminationsService.writeDeterminationsFromDatabase()
         // Send determinations.csv
         res.status(200).sendFile(path.resolve('./api/data/determinations.csv'))
     }

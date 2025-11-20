@@ -26,33 +26,53 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
      */
     async #insertOccurrencesFromObservations(elevations, updateProgress) {
         await updateProgress(0)
+        
+        let occurrencesChunk = []
+        let createOccurrencesResults = {
+            insertedCount: 0,
+            duplicatesCount: 0
+        }
+        const createOccurrencesChunkSize = 10000     // Approximate; actual number of inserts may be a couple dozen above this number at most
 
-        const observations = await ObservationService.getUnmatchedObservations()
-        const occurrences = []
-
+        let pageNumber = 1
         let observationIndex = 0
-        for (const observation of observations) {
-            const occurrence = OccurrenceService.createOccurrenceFromObservation(observation, elevations)
-            await updateProgress(99 * (++observationIndex) / observations.length)    // Make the total 99% so progress does not show 100% until insertion is complete (below)
+        let observationsPage = await ObservationService.getUnmatchedObservationsPage({ page: pageNumber, pageSize: 10000 })
+        while (pageNumber <= observationsPage.pagination.totalPages) {
+            for (const observation of observationsPage.data) {
+                const occurrence = OccurrenceService.createOccurrenceFromObservation(observation, elevations)
+                await updateProgress(100 * (++observationIndex) / observationsPage.pagination.totalDocuments)
 
-            // specimenId is initially set to the number of bees collected
-            // Duplicate observations a number of times equal to this value and overwrite specimenId to index the duplications
-            const beesCollected = parseInt(occurrence[fieldNames.specimenId])
-            if (!isNaN(beesCollected)) {
-                for (let i = 1; i < beesCollected + 1; i++) {
-                    const duplicateOccurrence = Object.assign({}, occurrence)
-                    duplicateOccurrence[fieldNames.specimenId] = i.toString()
+                // specimenId is initially set to the number of bees collected
+                // Duplicate observations a number of times equal to this value and overwrite specimenId to index the duplications
+                const beesCollected = parseInt(occurrence[fieldNames.specimenId])
+                if (!isNaN(beesCollected)) {
+                    for (let i = 1; i <= beesCollected; i++) {
+                        const duplicateOccurrence = Object.assign({}, occurrence)
+                        duplicateOccurrence[fieldNames.specimenId] = i.toString()
 
-                    occurrences.push(duplicateOccurrence)
+                        occurrencesChunk.push(duplicateOccurrence)
+                    }
+                }
+
+                // Limit the number of occurrences created at once to avoid memory limitations (and to create smoother task progression)
+                if (occurrencesChunk.length >= createOccurrencesChunkSize || observationIndex >= observationsPage.pagination.totalDocuments) {
+                    const chunkResults = await OccurrenceService.createOccurrences(occurrencesChunk)
+
+                    // Append chunk results
+                    createOccurrencesResults.insertedCount += chunkResults.insertedCount
+                    createOccurrencesResults.duplicatesCount += chunkResults.duplicates.length
+
+                    // Empty occurrences chunk
+                    occurrencesChunk = []
                 }
             }
+
+            // Query the next page
+            observationsPage = await ObservationService.getUnmatchedObservationsPage({ page: ++pageNumber, pageSize: 10000 })
         }
 
-        // Insert the occurrences into the database
-        const results = await OccurrenceService.createOccurrences(occurrences)
-
         await updateProgress(100)
-        return results
+        return createOccurrencesResults
     }
 
     /*
@@ -98,7 +118,7 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
         const updates = []
         let pageNumber = 1
         let results = await OccurrenceService.getUnindexedOccurrencesPage({ page: pageNumber })
-        while (pageNumber < results.pagination.totalPages + 1) {
+        while (pageNumber <= results.pagination.totalPages) {
             for (const occurrence of results.data) {
                 // Set field number, and if stateProvince is 'OR', set occurrenceId and resourceId
                 const updateDocument = { ...occurrence, observation: null }
@@ -179,6 +199,9 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
 
         // Pull new iNaturalist observations and insert them
         await TaskService.logTaskStep(taskId, 'Querying new observations from iNaturalist')
+
+        // Delete old observations (from previous tasks)
+        await ObservationService.deleteObservations()
 
         await ObservationService.pullObservations(
             subtask.sources,

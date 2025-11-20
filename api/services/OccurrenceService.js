@@ -374,14 +374,8 @@ class OccurrenceService {
     async getUnindexedOccurrencesPage(options = {}) {
         // Query occurrences with empty errorFlags and fieldNumber
         const filter = {
-            $or: [
-                { [fieldNames.errorFlags]: { $exists: false } },
-                { [fieldNames.errorFlags]: { $in: [ null, '' ] } }
-            ],
-            $or: [
-                { [fieldNames.fieldNumber]: { $exists: false } },
-                { [fieldNames.fieldNumber]: { $in: [ null, '' ] } }
-            ]
+            [fieldNames.errorFlags]: { $exists: true, $in: [ null, '' ] },
+            [fieldNames.fieldNumber]: { $exists: true, $in: [ null, '' ] }
         }
         const sortConfig = [ { field: 'composite_sort', direction: 1, type: 'string' } ]
         return await this.repository.paginate({ ...options, filter, sortConfig })

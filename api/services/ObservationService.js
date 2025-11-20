@@ -70,12 +70,21 @@ class ObservationService {
         return await this.repository.findMany(filter, options)
     }
 
+    async getObservationsPage(options = {}) {
+        return await this.repository.paginate(options)
+    }
+
     async getDistinctCoordinates() {
         return await this.repository.distinctCoordinates()
     }
 
     async getUnmatchedObservations() {
         return await this.repository.findUnmatched()
+    }
+
+    async getUnmatchedObservationsPage(options = {}) {
+        const filter = { matched: false }
+        return await this.repository.paginate({ ...options, filter })
     }
 
     /*

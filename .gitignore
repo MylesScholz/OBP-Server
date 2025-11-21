@@ -1,5 +1,5 @@
-# Config
-docker_commands.txt
+# Mongo DB backup
+backups/
 
 # API Data
 api/data/addresses

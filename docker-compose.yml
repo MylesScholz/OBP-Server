@@ -1,41 +1,8 @@
-services:
-    server:
-        depends_on:
-            - mongo
-            - rabbitmq
-        restart: on-failure
-        build:
-            context: .
-            dockerfile: server.Dockerfile
-        container_name: server
-        ports:
-            - '80:80'
-        env_file: ./.env
-        environment:
-            - PORT=80
-            - MONGO_HOST=mongo
-            - RABBITMQ_HOST=rabbitmq
-        volumes:
-            - ./api/data:/app/api/data
-    
-    tasks-consumer:
-        depends_on:
-            - mongo
-            - rabbitmq
-            - server
-        restart: on-failure
-        build:
-            context: .
-            dockerfile: tasks-consumer.Dockerfile
-        container_name: tasks-consumer
-        env_file: ./.env
-        volumes:
-            - ./api/data:/app/api/data
-    
+services:    
     mongo:
+        container_name: mongo
         image: mongo:8
         restart: always
-        container_name: 'mongo'
         ports:
             - '27017:27017'
         env_file: ./.env
@@ -48,8 +15,7 @@ services:
         volumes:
             - mongo-data:/data/db
             - mongo-config:/data/configdb
-            - ./scripts/init-mongo.js:/docker-entrypoint-initdb.d/01-init-mongo.js:ro
-            - ./scripts/init-restore.sh:/docker-entrypoint-initdb.d/02-init-restore.sh:ro
+            - ./scripts/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
             - ./backups:/backups
         healthcheck:
             test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
@@ -58,12 +24,12 @@ services:
             retries: 5
     
     mongo_backup:
+        container_name: mongo_backup
         image: mongo:8
-        restart: unless-stopped
-        container_name: 'mongo_backup'
         depends_on:
             mongo:
                 condition: service_healthy
+        restart: unless-stopped
         env_file: ./.env
         environment:
             - MONGO_HOST=mongo
@@ -85,12 +51,66 @@ services:
             "
     
     rabbitmq:
+        container_name: rabbitmq
         image: 'rabbitmq:management'
-        container_name: 'rabbitmq'
         ports:
             - '5672:5672'
             - '15672:15672'
         env_file: ./.env
+
+    server:
+        container_name: server
+        build: ./server
+        depends_on:
+            - mongo
+            - rabbitmq
+        restart: on-failure
+        ports:
+            - '3000:3000'
+        env_file: ./.env
+        environment:
+            - PORT=3000
+            - MONGO_HOST=mongo
+            - RABBITMQ_HOST=rabbitmq
+        volumes:
+            - ./shared:/app/shared
+    
+    worker:
+        container_name: worker
+        build: ./worker
+        depends_on:
+            - mongo
+            - rabbitmq
+            - server
+        restart: on-failure
+        env_file: ./.env
+        environment:
+            - MONGO_HOST=mongo
+            - RABBITMQ_HOST=rabbitmq
+        volumes:
+            - ./shared:/app/shared
+
+    client-build:
+        container_name: client-build
+        image: node:20-alpine
+        working_dir: /app
+        command: sh -c "npm install && npm run build"
+        env_file: ./.env
+        volumes:
+            - ./client:/app
+
+    nginx:
+        container_name: nginx
+        image: nginx:alpine
+        ports:
+            - '80:80'
+            - '443:443'
+        volumes:
+            - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+            - ./client/dist:/usr/share/nginx/html
+        depends_on:
+            - client-build
+            - server
 
 volumes:
     mongo-data:

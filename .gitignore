@@ -1,24 +1,24 @@
 # Mongo DB backup
 backups/
 
-# API Data
-api/data/addresses
-api/data/duplicates
-api/data/elevation
-api/data/emails
-api/data/flags
-api/data/labels
-api/data/observations
-api/data/occurrences
-api/data/pivots
-api/data/pulls
-api/data/reports
-api/data/uploads
-api/data/places.json
-api/data/taxa.json
-api/data/usernames.csv
-api/data/determinations.csv
-api/data/plantList.csv
+# Shared Data
+shared/data/addresses
+shared/data/duplicates
+shared/data/elevation
+shared/data/emails
+shared/data/flags
+shared/data/labels
+shared/data/observations
+shared/data/occurrences
+shared/data/pivots
+shared/data/pulls
+shared/data/reports
+shared/data/uploads
+shared/data/places.json
+shared/data/taxa.json
+shared/data/usernames.csv
+shared/data/determinations.csv
+shared/data/plantList.csv
 
 # Logs
 logs

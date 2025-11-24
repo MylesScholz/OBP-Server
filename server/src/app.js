@@ -22,16 +22,13 @@ app.use(morgan('dev'))
 // JSON request body parsing
 app.use(express.json())
 
-// Static website serving
-app.use(express.static('public'))
-app.use(express.static('dist'))
-
 // API routes
 apiRouter.use('/addresses', requireAuthentication, express.static('./shared/data/addresses'))
 apiRouter.use('/duplicates', express.static('./shared/data/duplicates'))
 apiRouter.use('/emails', requireAuthentication, express.static('./shared/data/emails'))
 apiRouter.use('/flags', express.static('./shared/data/flags'))
 apiRouter.use('/labels', express.static('./shared/data/labels'))
+apiRouter.use('/observations', express.static('./shared/data/observations'))
 apiRouter.use('/occurrences', express.static('./shared/data/occurrences'))
 apiRouter.use('/pivots', express.static('./shared/data/pivots'))
 apiRouter.use('/pulls', express.static('./shared/data/pulls'))

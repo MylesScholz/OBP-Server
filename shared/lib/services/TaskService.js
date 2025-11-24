@@ -69,9 +69,7 @@ class TaskService {
 
         // Create a formatted timestamp of the task's creation time (set the default tag to it)
         const createdAt = new Date()
-        const createdAtDate = `${createdAt.getFullYear()}-${createdAt.getMonth() + 1}-${createdAt.getDate()}`
-        const createdAtTime = `${createdAt.getHours()}.${createdAt.getMinutes()}.${createdAt.getSeconds()}`
-        const tag = `${createdAtDate}T${createdAtTime}`
+        const tag = createdAt.toISOString().slice(0, -5).replaceAll(':', '.')   // ISO minus milliseconds, replace : with .
         const name = `task_${tag}`
 
         const task = {

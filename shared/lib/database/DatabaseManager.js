@@ -127,8 +127,6 @@ class DatabaseManager {
                     name: indexName
                 }
 
-                // Insert TTL handling here
-
                 await collection.createIndex(indexSpec, options)
                 this.indexes.set(`${collectionName}.${indexName}`, {
                     collection: collectionName,

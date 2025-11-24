@@ -21,7 +21,7 @@ class QueueManager {
             if (retries > 0) {
                 console.error('RabbitMQ connection failed. Retrying...')
                 
-                await new Promise(r => setTimeout(r, 2000))
+                await new Promise(resolve => setTimeout(resolve, 2000))
                 return this.connect(retries - 1)
             }
             console.error('RabbitMQ connection failed:', error)

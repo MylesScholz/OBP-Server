@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon -L --watch src --watch shared/lib src/index.js"
   },
   "keywords": [],
   "author": "Myles Scholz",

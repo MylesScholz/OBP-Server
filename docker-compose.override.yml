@@ -1,0 +1,15 @@
+services:
+    server:
+        command: npm run dev
+        volumes:
+            - ./server/src:/app/src
+    
+    worker:
+        command: npm run dev
+        volumes:
+            - ./worker/src:/app/src
+
+    client-build:
+        command: sh -c "npm install && npm run dev -- --host"
+        ports:
+            - '5173:5173'

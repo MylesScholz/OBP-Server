@@ -23,8 +23,8 @@ services:
             timeout: 5s
             retries: 5
     
-    mongo_backup:
-        container_name: mongo_backup
+    mongo-backup:
+        container_name: mongo-backup
         image: mongo:8
         depends_on:
             mongo:

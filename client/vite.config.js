@@ -8,5 +8,11 @@ export default defineConfig({
         babel: {
             plugins: ["@emotion/babel-plugin"]
         }
-    })]
+    })],
+    server: {
+        host: true,
+        watch: {
+            usePolling: true
+        }
+    }
 })

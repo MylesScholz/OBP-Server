@@ -57,13 +57,21 @@ services:
             - '5672:5672'
             - '15672:15672'
         env_file: ./.env
+        healthcheck:
+            test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 40s
 
     server:
         container_name: server
         build: ./server
         depends_on:
-            - mongo
-            - rabbitmq
+            mongo:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
         restart: on-failure
         ports:
             - '3000:3000'
@@ -79,9 +87,12 @@ services:
         container_name: worker
         build: ./worker
         depends_on:
-            - mongo
-            - rabbitmq
-            - server
+            mongo:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+            server:
+                condition: service_started
         restart: on-failure
         env_file: ./.env
         environment:

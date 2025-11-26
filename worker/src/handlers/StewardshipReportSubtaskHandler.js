@@ -56,7 +56,7 @@ export default class StewardshipReportSubtaskHandler extends BaseSubtaskHandler 
         await TaskService.logTaskStep(taskId, 'Creating stewardship report')
         await TaskService.updateProgressPercentageById(taskId, 0)
         
-        const { success, stdout, stderr } = await ScriptService.runRScript('./scripts/makeReports.R', [ uploadFilePath ])
+        const { success, stdout, stderr } = await ScriptService.runRScript('./src/scripts/makeReports.R', [ uploadFilePath ])
         
         // Wait 5 seconds for rendering to finish
         await delay(5000)

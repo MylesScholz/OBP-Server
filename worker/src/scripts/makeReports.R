@@ -814,15 +814,15 @@ args <- commandArgs(trailingOnly = TRUE)
 
 #Run the reports function with the given argument
 makeReports(
-  plantListCSV = './api/data/plantList.csv',
+  plantListCSV = './shared/data/plantList.csv',
   beeDataCSV = args[1],
-  iNatFolder =  './api/data/observations',
-  reportFolder = './api/data/reports',
+  iNatFolder =  './shared/data/observations',
+  reportFolder = './shared/data/reports',
   vinePlDatCSV = NA,
   predictedBeesCSV = NA,
   dataStoragePath = NA,
-  famGenPath = './api/inst/extdata/famGenLookup.csv',
-  orCountyShpPath = './api/inst/extdata/orcntypoly.shp',
-  orEcoregShpPath = './api/inst/extdata/or_eco_l3.shp',
-  beeAbstractsPath = './api/inst/extdata/Bee_Abstracts.csv'
+  famGenPath = './worker/src/inst/extdata/famGenLookup.csv',
+  orCountyShpPath = './worker/src/inst/extdata/orcntypoly.shp',
+  orEcoregShpPath = './worker/src/inst/extdata/or_eco_l3.shp',
+  beeAbstractsPath = './worker/src/inst/extdata/Bee_Abstracts.csv'
 )

@@ -1,6 +1,9 @@
 .git*
-node_modules
-api/data/elevation
-docker-compose.yml
 *.Dockerfile
+*.Rproj
+
+node_modules
+*/node_modules
+
+docker-compose.yml
 README.md

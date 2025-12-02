@@ -1,5 +1,6 @@
 import ApiService from './ApiService.js'
 import FileManager from '../utils/FileManager.js'
+import { abbreviations } from '../utils/constants.js'
 
 class PlacesService {
     constructor() {
@@ -66,6 +67,9 @@ class PlacesService {
         // Remove 'County' or 'Co' or 'Co.' from the county field (case insensitive) before returning all values
         const countyRegex = new RegExp(/(?<![^,.\s])Co(?:unty)?\.?(?![^,.\s])+/ig)
         county = county.replace(countyRegex, '').trim()
+        // Abbreviate county if necessary
+        county = abbreviations.counties[county] ?? county
+        
         return { country, stateProvince, county }
     }
 

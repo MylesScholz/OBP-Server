@@ -146,6 +146,144 @@ export default class OccurrenceRepository extends BaseRepository {
         return maxFieldNumber
     }
 
+    async stateCollectorBeeCounts(filter = {}) {
+        return await this.aggregate([
+            {
+                $match: {
+                    ...filter,
+                    [fieldNames.stateProvince]: { $exists: true, $nin: [ null, '' ] },
+                    [fieldNames.recordedBy]: { $exists: true, $nin: [ null, '' ] }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        stateProvince: `$${fieldNames.stateProvince}`,
+                        recordedBy: `$${fieldNames.recordedBy}`
+                    },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $group: {
+                    _id: '$_id.stateProvince',
+                    totalCount: { $sum: '$count' },
+                    collectors: {
+                        $push: {
+                            recordedBy: '$_id.recordedBy',
+                            count: '$count'
+                        }
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    collectors: {
+                        $sortArray: {
+                            input: '$collectors',
+                            sortBy: { 'count': -1 }
+                        }
+                    }
+                }
+            },
+            {
+                $sort: { '_id': 1 }
+            }
+        ])
+    }
+
+    async stateCollectorCountyCounts(filter = {}) {
+        return await this.aggregate([
+            {
+                $match: {
+                    ...filter,
+                    [fieldNames.stateProvince]: { $exists: true, $nin: [ null, '' ] },
+                    [fieldNames.recordedBy]: { $exists: true, $nin: [ null, '' ] },
+                    [fieldNames.county]: { $exists: true, $nin: [ null, '' ] }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        stateProvince: `$${fieldNames.stateProvince}`,
+                        recordedBy: `$${fieldNames.recordedBy}`
+                    },
+                    uniqueCounties: { $addToSet: `$${fieldNames.county}` }
+                }
+            },
+            {
+                $group: {
+                    _id: '$_id.stateProvince',
+                    collectors: {
+                        $push: {
+                            recordedBy: '$_id.recordedBy',
+                            count: { $size: '$uniqueCounties' }
+                        }
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    collectors: {
+                        $sortArray: {
+                            input: '$collectors',
+                            sortBy: { 'count': -1 }
+                        }
+                    }
+                }
+            },
+            {
+                $sort: { '_id': 1 }
+            }
+        ])
+    }
+
+    async stateGenusBeeCounts(filter = {}) {
+        return await this.aggregate([
+            {
+                $match: {
+                    ...filter,
+                    [fieldNames.stateProvince]: { $exists: true, $nin: [ null, '' ] },
+                    [fieldNames.plantGenus]: { $exists: true, $nin: [ null, '' ] }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        stateProvince: `$${fieldNames.stateProvince}`,
+                        plantGenus: `$${fieldNames.plantGenus}`
+                    },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $group: {
+                    _id: '$_id.stateProvince',
+                    totalCount: { $sum: '$count' },
+                    genera: {
+                        $push: {
+                            plantGenus: '$_id.plantGenus',
+                            count: '$count'
+                        }
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    genera: {
+                        $sortArray: {
+                            input: '$genera',
+                            sortBy: { 'count': -1 }
+                        }
+                    }
+                }
+            },
+            {
+                $sort: { '_id': 1 }
+            }
+        ])
+    }
+
     // Update
     async updateById(id, updateDocument = {}) {
         // Require that the update document has all of the sort fields

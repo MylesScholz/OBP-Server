@@ -64,7 +64,8 @@ export default class BaseRepository {
         
         // Query data
         const data = await this.collection
-                                .find(filter, projection)
+                                .find(filter)
+                                .project(projection)
                                 .sort(sortStage)
                                 .skip(skip)
                                 .limit(pageSize)

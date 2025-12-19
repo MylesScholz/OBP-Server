@@ -157,6 +157,20 @@ class FileManager {
     }
 
     /*
+     * copyFile()
+     * Copies a given file to a specified file path (overwrites path if not empty)
+     */
+    copyFile(sourcePath, destinationPath) {
+        try {
+            fs.copyFileSync(sourcePath, destinationPath)
+            return { success: true }
+        } catch (error) {
+            console.error(`Failed to copy '${sourcePath}' to '${destinationPath}':`, error)
+            return { success: false, error }
+        }
+    }
+
+    /*
      * compressFile()
      * Compresses a given file to a zip file
      */

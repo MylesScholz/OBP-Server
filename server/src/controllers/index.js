@@ -1,5 +1,6 @@
 export { default as AdminController } from './AdminController.js'
 export { default as DeterminationsController } from './DeterminationsController.js'
+export { default as OccurrencesController } from './OccurrencesController.js'
 export { default as PlantListController } from './PlantListController.js'
 export { default as TaskController } from './TaskController.js'
 export { default as UsernamesController } from './UsernamesController.js'

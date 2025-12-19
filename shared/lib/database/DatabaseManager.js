@@ -72,8 +72,15 @@ class DatabaseManager {
     getIndexDefinitions() {
         return {
             'occurrences': [
-                { 'composite_sort': 1 },
-                { [fieldNames.iNaturalistUrl]: 1 },
+                {
+                    'composite_sort': 1
+                },
+                {
+                    'date': 1
+                },
+                {
+                    [fieldNames.iNaturalistUrl]: 1
+                },
                 {
                     [fieldNames.errorFlags]: 1,
                     [fieldNames.dateLabelPrint]: 1

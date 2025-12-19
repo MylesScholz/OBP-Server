@@ -119,7 +119,7 @@ class DeterminationsService {
         const determination = skipFormatting ? document : this.formatDetermination(document)
 
         try {
-            const response = this.repository.updateById(determination._id, { $set: determination }, { upsert: true })
+            const response = await this.repository.updateById(determination._id, { $set: determination }, { upsert: true })
 
             results.modifiedCount = response.modifiedCount
             results.upsertedCount = response.upsertedCount

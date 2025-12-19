@@ -43,17 +43,36 @@ export default class OccurrenceRepository extends BaseRepository {
         return processedDocument
     }
 
+    setDateField(document) {
+        const processedDocument = { ...document }
+
+        let year = parseInt(processedDocument[fieldNames.year] ?? '')
+        year = isNaN(year) ? 2100 : year    // Sort blank years at end; hopefully 2100 is far enough in the future
+
+        let monthIndex = parseInt(processedDocument[fieldNames.month] ?? '') - 1
+        monthIndex = isNaN(monthIndex) ? 11 : monthIndex   // Sort blank years at end of year
+
+        let day = parseInt(processedDocument[fieldNames.day] ?? '')
+        day = isNaN(day) ? new Date(year, monthIndex + 1, 0).getDate() : day    // Sort date at end of month; day 0 of the following month is the last day of the current month
+
+        processedDocument.date = new Date(year, monthIndex, day, 12, 0, 0, 0)    // Set time to noon to avoid timezone issues
+
+        return processedDocument
+    }
+
     /* CRUD Operations */
 
     // Create
     async create(document) {
-        const processedDocument = this.setSortField(document, this.sortConfig)
+        let processedDocument = this.setSortField(document, this.sortConfig)
+        processedDocument = this.setDateField(processedDocument)
 
         return await super.create(processedDocument)
     }
 
     async createMany(documents) {
-        const processedDocuments = documents.map((doc) => this.setSortField(doc, this.sortConfig))
+        let processedDocuments = documents.map((doc) => this.setSortField(doc, this.sortConfig))
+        processedDocuments = processedDocuments.map((doc) => this.setDateField(doc))
 
         return await super.createMany(processedDocuments)
     }
@@ -290,7 +309,8 @@ export default class OccurrenceRepository extends BaseRepository {
         // const keys = Object.keys(updateDocument)
         // if (!this.sortConfig.every(({ field }) => keys.includes(field))) return 0
 
-        const processedDocument = this.setSortField(updateDocument, this.sortConfig)
+        let processedDocument = this.setSortField(updateDocument, this.sortConfig)
+        processedDocument = this.setDateField(processedDocument)
         return await super.updateById(id, { $set: processedDocument })
     }
 
@@ -299,7 +319,8 @@ export default class OccurrenceRepository extends BaseRepository {
         // const keys = Object.keys(updateDocument)
         // if (!this.sortConfig.every(({ field }) => keys.includes(field))) return 0
 
-        const processedDocument = this.setSortField(updateDocument, this.sortConfig)
+        let processedDocument = this.setSortField(updateDocument, this.sortConfig)
+        processedDocument = this.setDateField(processedDocument)
         return await super.updateMany(filter, { $set: processedDocument })
     }
 }

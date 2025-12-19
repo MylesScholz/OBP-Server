@@ -157,7 +157,7 @@ class OccurrenceService {
         }
 
         // Apply formatting
-        const occurrence = this.formatOccurrence(document)
+        const occurrence = skipFormatting ? document : this.formatOccurrence(document)
 
         // Check if a occurrence with the same _id already exists; insert the occurrence if not
         const existing = await this.repository.findById(occurrence._id)
@@ -360,6 +360,86 @@ class OccurrenceService {
         occurrence = this.updateErrorFlags(occurrence)
 
         return occurrence
+    }
+
+    /*
+     * upsertOccurrence()
+     * Inserts or updates an occurrence
+     */
+    async upsertOccurrence(document, skipFormatting = false) {
+        // Return object containing information about updated and inserted occurrences
+        const results = {
+            modifiedCount: 0,
+            upsertedCount: 0,
+            upsertedIds: []
+        }
+
+        const occurrence = skipFormatting ? document : this.formatOccurrence(document)
+
+        try {
+            const response = await this.repository.updateById(occurrence._id, { $set: occurrence }, { upsert: true })
+
+            results.modifiedCount = response.modifiedCount
+            results.upsertedCount = response.upsertedCount
+            results.upsertedIds.push(response.upsertedId)
+        } catch (error) {
+            console.error('Error while upserting occurrence:', document)
+            console.error(error)
+        }
+
+        return results
+    }
+
+    /*
+     * upsertOccurrences()
+     * Inserts or updates multiple occurrences
+     */
+    async upsertOccurrences(documents) {
+        // Return object containing information about updated and inserted occurrences
+        const results = {
+            modifiedCount: 0,
+            upsertedCount: 0,
+            upsertedIds: []
+        }
+
+        const occurrences = documents?.map((doc) => this.formatOccurrence(doc))
+
+        // Return if no documents were provided
+        if (!occurrences || occurrences.length === 0) return results
+
+        for (const occurrence of occurrences) {
+            const occurrenceResults = await this.upsertOccurrence(occurrence, true)
+
+            results.modifiedCount += occurrenceResults.modifiedCount
+            results.upsertedCount += occurrenceResults.upsertedCount
+            results.upsertedIds = results.upsertedIds.concat(occurrenceResults.upsertedIds)
+        }
+
+        return results
+    }
+
+    /*
+     * upsertOccurrencesFromFile()
+     * Inserts or updates occurrences data from a given file path into the database
+     */
+    async upsertOccurrencesFromFile(filePath) {
+        const chunkSize = 5000
+        // Return object containing information about updated and inserted occurrences
+        const results = {
+            modifiedCount: 0,
+            upsertedCount: 0,
+            upsertedIds: []
+        }
+
+        for await (const chunk of FileManager.readCSVChunks(filePath, chunkSize)) {
+            const chunkResults = await this.upsertOccurrences(chunk, format)
+
+            results.modifiedCount += chunkResults.modifiedCount
+            results.upsertedCount += chunkResults.upsertedCount
+            results.upsertedIds = results.upsertedIds.concat(chunkResults.upsertedIds)
+        }
+
+        return results
     }
 
     async getOccurrences(filter = {}, options = {}) {

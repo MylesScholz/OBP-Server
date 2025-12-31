@@ -40,8 +40,8 @@ class TaskService {
                     }
 
                     // Format dates how the API (and iNaturalist) expect (YYYY-MM-DD)
-                    const formattedMinDate = `${parsedMinDate.getUTCFullYear()}-${(parsedMinDate.getUTCMonth() + 1).toString().padStart(2, '0')}-${parsedMinDate.getUTCDate().toString().padStart(2, '0')}`
-                    const formattedMaxDate = `${parsedMaxDate.getUTCFullYear()}-${(parsedMaxDate.getUTCMonth() + 1).toString().padStart(2, '0')}-${parsedMaxDate.getUTCDate().toString().padStart(2, '0')}`
+                    const formattedMinDate = parsedMinDate.toISOString().slice(0, 10)
+                    const formattedMaxDate = parsedMaxDate.toISOString().slice(0, 10)
 
                     // Modify subtasks with the formatted dates
                     subtasks[i].minDate = formattedMinDate

@@ -126,24 +126,81 @@ class ApiService {
         )
     }
 
-    async fetchSourceObservations(sourceId, minDate, maxDate, updateProgress) {
+    async *fetchObservationsBySourceChunks(sourceId, minDate, maxDate, updateProgress) {
         await updateProgress(0)
 
-        let response = await this.fetchObservations(sourceId, minDate, maxDate, 1, 200)
-        let results = response?.results ?? []
+        let chunk = []
+        const chunkSize = 5000
 
-        const totalResults = parseInt(response?.total_results ?? '0')
-        let totalPages = Math.ceil(totalResults / 200)
+        // Break date range into 6-month partitions to avoid iNaturalist API search window restrictions
+        const d1 = new Date(minDate + 'T12:00Z')    // Use noon GMT so every location is the same calendar date
+        const d2 = new Date(maxDate + 'T12:00Z')
 
-        await updateProgress(100 / totalPages)
+        let partitionStart = new Date(d1)
+        let sixMonths = new Date(d1)
+        sixMonths.setMonth(sixMonths.getMonth() + 6)
+        sixMonths.setDate(sixMonths.getDate() - 1)  // Subtract one day to avoid overlapping partitions
+        let partitionEnd = new Date(Math.min(d2, sixMonths))
 
-        for (let i = 2; i <= totalPages; i++) {
-            response = await this.fetchObservations(sourceId, minDate, maxDate, i, 200)
-            results = results.concat(response?.results ?? [])
-            await updateProgress(100 * i / totalPages)
+        let totalPages = 0
+        const partitions = []
+        while (partitionStart <= d2) {
+            // Format parition boundaries to iNaturalist query strings (YYYY-MM-DD)
+            const partitionStartString = partitionStart.toISOString().slice(0, 10)
+            const partitionEndString = partitionEnd.toISOString().slice(0, 10)
+
+            // Fetch first page
+            let response = await this.fetchObservations(sourceId, partitionStartString, partitionEndString, 1, 200)
+
+            const observationCount = parseInt(response?.total_results ?? '0')
+            const pageCount = Math.ceil(observationCount / 200)
+            totalPages += pageCount
+            partitions.push({
+                start: partitionStart.toISOString().slice(0, 10),
+                end: partitionEnd.toISOString().slice(0, 10),
+                firstPage: response?.results ?? [],
+                observationCount,
+                pageCount
+            })
+
+            // Increment partition
+            partitionStart = new Date(partitionEnd)
+            partitionStart.setDate(partitionStart.getDate() + 1)    // Add one day to avoid overlapping partitions
+            sixMonths = new Date(partitionStart)
+            sixMonths.setMonth(sixMonths.getMonth() + 6)
+            sixMonths.setDate(sixMonths.getDate() - 1)              // Subtract one day to avoid overlapping partitions
+            partitionEnd = new Date(Math.min(d2, sixMonths))
         }
 
-        return results
+        let k = 0
+        for (let i = 0; i < partitions.length; i++) {
+            // Add first page of current partition to chunk
+            chunk = chunk.concat(partitions[i].firstPage)
+            // If the chunk is large enough, yield it and reset the chunk for the next call
+            if (chunk.length >= chunkSize) {
+                yield chunk
+                chunk = []
+            }
+
+            await updateProgress(100 * (++k) / totalPages)
+
+            for (let j = 2; j <= partitions[i].pageCount; j++) {
+                const response = await this.fetchObservations(sourceId, partitions[i].start, partitions[i].end, j, 200)
+                chunk = chunk.concat(response?.results ?? [])
+                await updateProgress(100 * (++k) / totalPages)
+
+                // If the chunk is large enough, yield it and reset the chunk for the next call
+                if (chunk.length >= chunkSize) {
+                    yield chunk
+                    chunk = []
+                }
+            }
+        }
+
+        // Yield any remaining observations (a partial chunk)
+        if (chunk.length > 0) {
+            yield chunk
+        }
     }
 }
 

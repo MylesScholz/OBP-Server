@@ -54,16 +54,28 @@ class ObservationService {
     async pullObservations(sources, minDate, maxDate, updateProgress) {
         if (!sources || !minDate || !maxDate) return
 
-        let observations = []
-        for (let i = 0; i < sources.length; i++) {
-            const sourceObservations = await ApiService.fetchSourceObservations(sources[i], minDate, maxDate, async (percentage) => {
-                await updateProgress((100 * i + percentage) / sources.length)
-            })
-            observations = observations.concat(sourceObservations)
+        const results = {
+            insertedCount: 0,
+            insertedIds: [],
+            duplicates: []
         }
-        observations = observations.map((obs) => ({ ...obs, matched: false }))
 
-        return this.createObservations(observations)
+        for (let i = 0; i < sources.length; i++) {
+            for await (const chunk of ApiService.fetchObservationsBySourceChunks(sources[i], minDate, maxDate, async (percentage) => {
+                await updateProgress((100 * i + percentage) / sources.length)
+            })) {
+                const observations = chunk.map((obs) => ({ ...obs, matched: false }))
+
+                const chunkResults = await this.createObservations(observations)
+
+                // Add the results for this chunk to the running total
+                results.insertedCount += chunkResults.insertedCount
+                results.insertedIds = results.insertedIds.concat(chunkResults.insertedIds)
+                results.duplicates = results.duplicates.concat(chunkResults.duplicates)
+            }
+        }
+
+        return results
     }
 
     async getObservations(filter = {}, options = {}) {

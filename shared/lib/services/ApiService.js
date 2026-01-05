@@ -142,6 +142,7 @@ class ApiService {
         sixMonths.setDate(sixMonths.getDate() - 1)  // Subtract one day to avoid overlapping partitions
         let partitionEnd = new Date(Math.min(d2, sixMonths))
 
+        // Precalculate partitions and fetch first page to get total page count
         let totalPages = 0
         const partitions = []
         while (partitionStart <= d2) {
@@ -172,7 +173,8 @@ class ApiService {
             partitionEnd = new Date(Math.min(d2, sixMonths))
         }
 
-        let k = 0
+        // Fetch remaining pages of each partition
+        let k = 0   // Total page index across all partitions
         for (let i = 0; i < partitions.length; i++) {
             // Add first page of current partition to chunk
             chunk = chunk.concat(partitions[i].firstPage)

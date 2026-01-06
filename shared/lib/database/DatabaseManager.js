@@ -61,7 +61,11 @@ class DatabaseManager {
      */
     async collectionExists(name) {
         const db = this.getDatabase()
-        const collections = await db.listCollections({ name: name }).toArray()
+        const collections = await db.listCollections(
+            { name: name },
+            { nameOnly: true }
+        ).toArray()
+
         return collections.length > 0
     }
 
@@ -155,8 +159,6 @@ class DatabaseManager {
         const indexDefinitions = this.getIndexDefinitions()
 
         for (const [collectionName, indexes] of Object.entries(indexDefinitions)) {
-            // Reset indexes first to ensure only predefined indexes are set
-            await this.dropCollectionIndexes(collectionName)
             await this.createCollectionIndexes(collectionName, indexes)
         }
     }
@@ -181,7 +183,9 @@ class DatabaseManager {
 
             console.log(`Dropped indexes for ${collectionName}`)
         } catch (error) {
-            console.error(`Failed to drop indexes for '${collectionName}':`, error)
+            if (error.code !== 26 && !error.message.includes('ns not found')) {
+                console.error(`Failed to drop indexes for '${collectionName}':`, error)
+            }
         }
     }
 

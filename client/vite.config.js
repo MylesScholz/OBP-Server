@@ -9,6 +9,11 @@ export default defineConfig({
             plugins: ["@emotion/babel-plugin"]
         }
     })],
+    build: {
+        outDir: 'dist',
+        assetsDir: 'assets',
+        emptyOutDir: true,
+    },
     server: {
         host: true,
         watch: {

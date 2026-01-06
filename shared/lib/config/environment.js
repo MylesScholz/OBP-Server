@@ -41,7 +41,7 @@ const rabbitmqUri = `amqp://${rabbitmqHost}`
 /* Full Config */
 
 const config = {
-    port: parseNumber(process.env.PORT, 80),
+    port: parseNumber(process.env.PORT, 3000),
     database: {
         host: mongoHost,
         port: process.env.MONGO_PORT || 27017,

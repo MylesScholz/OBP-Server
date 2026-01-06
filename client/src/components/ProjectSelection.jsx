@@ -92,7 +92,7 @@ export default function ProjectSelection() {
 
     return (
         <ProjectSelectionContainer>
-            <label for='sources'>iNaturalist Projects:</label>
+            <label htmlFor='sources'>iNaturalist Projects:</label>
             <input type='hidden' id='sources' value={projects.map((p) => p.id).join(',')} />
 
             { projects.map((project) => (

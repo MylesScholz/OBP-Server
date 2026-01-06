@@ -1,10 +1,14 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Global, css } from '@emotion/react'
 
 import App from './App'
+import LandingPage from './pages/landing/LandingPage'
+import ErrorPage from './pages/error/ErrorPage'
+import AdminLoginPage from './pages/adminLogin/AdminLoginPage'
+import AdminRecordsPage from './pages/adminRecords/AdminRecordsPage'
 
 const queryClient = new QueryClient()
 
@@ -12,12 +16,20 @@ const router = createBrowserRouter([
     {
         path: '/',
         element: <App />,
+        errorElement: <App><ErrorPage /></App>,
+        children: [
+            { index: true, element: <LandingPage /> },
+            { path: 'adminLogin', element: <AdminLoginPage /> },
+            { path: 'adminRecords', element: <AdminRecordsPage /> }
+        ]
     }
 ])
 
 const globalStyles = css`
     html {
         font-family: 'Helvetica', sans-serif;
+
+        color: #222;
 
         --occurrences-file-color: #ceb721;
         --duplicates-file-color: #d75fdd;

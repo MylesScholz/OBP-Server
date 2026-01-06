@@ -214,7 +214,7 @@ export default function PlantListAccessForm() {
                 <form onSubmit={ handleSubmit }>
                     <fieldset disabled={formDisabled}>
                         <div>
-                            <label for='plantListQueryType'>Operation:</label>
+                            <label htmlFor='plantListQueryType'>Operation:</label>
                             <select id='plantListQueryType' onChange={(event) => {
                                 setQueryResponse(undefined)
                                 setQueryType(event.target.value)
@@ -227,7 +227,7 @@ export default function PlantListAccessForm() {
 
                         { queryType === 'post' &&
                             <div>
-                                <label for='plantListFileUpload'>File:</label>
+                                <label htmlFor='plantListFileUpload'>File:</label>
                                 <input
                                     type='file'
                                     accept='.csv'
@@ -240,7 +240,7 @@ export default function PlantListAccessForm() {
 
                         { queryType === 'update' &&
                             <div>
-                                <label for='plantListUrl'>URL:</label>
+                                <label htmlFor='plantListUrl'>URL:</label>
                                 <input
                                     type='url'
                                     id='plantListUrl'

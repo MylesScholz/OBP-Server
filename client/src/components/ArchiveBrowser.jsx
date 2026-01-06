@@ -70,7 +70,7 @@ export default function ArchiveBrowser() {
             <h2>Archive Browser</h2>
 
             <div>
-                <label for='archiveFileTypeSelect'>File Type:</label>
+                <label htmlFor='archiveFileTypeSelect'>File Type:</label>
                 <select id='archiveFileTypeSelect' onChange={ (event) => {
                     setSelectedFileType(event.target.value)
                     setSelectedFileURI(undefined)
@@ -92,7 +92,7 @@ export default function ArchiveBrowser() {
 
             { selectedFileType &&
                 <div>
-                    <label for='archiveFileSelect'>File:</label>
+                    <label htmlFor='archiveFileSelect'>File:</label>
                     <select id='archiveFileSelect' onChange={ (event) => {
                         setSelectedFileURI(event.target.value)
                         downloadURL = undefined

@@ -127,7 +127,7 @@ export default function DeterminationsAccessForm() {
                 <form onSubmit={ handleSubmit }>
                     <fieldset disabled={formDisabled}>
                         <div>
-                            <label for='determinationsQueryType'>Operation:</label>
+                            <label htmlFor='determinationsQueryType'>Operation:</label>
                             <select id='determinationsQueryType' onChange={(event) => {
                                 setQueryResponse(undefined)
                                 setQueryType(event.target.value)
@@ -140,14 +140,14 @@ export default function DeterminationsAccessForm() {
                         { queryType === 'post' &&
                             <>
                                 <div>
-                                    <label for='determinationsUploadFormat'>Upload Format:</label>
+                                    <label htmlFor='determinationsUploadFormat'>Upload Format:</label>
                                     <select id='determinationsUploadFormat' onChange={(event) => setUploadFormat(event.target.value)}>
                                         <option value='ecdysis' selected={uploadFormat === 'ecdysis'}>Ecdysis</option>
                                         <option value='determinations' selected={uploadFormat === 'determinations'}>Determinations</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label for='determinationsFileUpload'>File:</label>
+                                    <label htmlFor='determinationsFileUpload'>File:</label>
                                     <input
                                         type='file'
                                         accept='.csv'

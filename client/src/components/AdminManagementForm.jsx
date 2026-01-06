@@ -152,11 +152,11 @@ export default function AdminManagementForm() {
                         { queryType === 'create' &&
                             <>
                                 <div>
-                                    <label for='newAdminUsername'>New Username:</label>
+                                    <label htmlFor='newAdminUsername'>New Username:</label>
                                     <input type='text' id='newAdminUsername' />
                                 </div>
                                 <div>
-                                    <label for='newAdminPassword'>New Password:</label>
+                                    <label htmlFor='newAdminPassword'>New Password:</label>
                                     <input
                                         type='password'
                                         minLength='8'

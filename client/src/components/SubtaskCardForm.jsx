@@ -118,12 +118,12 @@ export default function SubtaskCardForm({ type, subtaskSwitches, setFile, handle
                         <ProjectSelection />
                         
                         <div>
-                            <label for='minDate'>Minimum Date:</label>
+                            <label htmlFor='minDate'>Minimum Date:</label>
                             <input type='date' id='minDate' value={minDate} onChange={(e) => setMinDate(e.target.value)} required />
                         </div>
 
                         <div>
-                            <label for='maxDate'>Maximum Date:</label>
+                            <label htmlFor='maxDate'>Maximum Date:</label>
                             <input type='date' id='maxDate' value={maxDate} onChange={(e) => setMaxDate(e.target.value)} required />
                         </div>
                     </>

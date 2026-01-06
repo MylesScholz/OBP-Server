@@ -3,14 +3,15 @@ import styled from '@emotion/styled'
 
 import TaskPanel from './components/TaskPanel.jsx'
 import AdminPanel from './components/AdminPanel.jsx'
-import LogInButton from './components/LogInButton.jsx'
+import CurrentUserButton from './components/CurrentUserButton.jsx'
+import { Outlet, useNavigate } from 'react-router'
 
 const AppContainer = styled.div`
     display: flex;
     flex-direction: column;
     align-items: stretch;
 
-    min-width: 600px;
+    min-width: 1080px;
 
     header {
         display: flex;
@@ -37,6 +38,8 @@ const AppContainer = styled.div`
                 border-right: 1px solid white;
 
                 padding: 10px 20px;
+
+                cursor: pointer;
 
                 h1 {
                     margin: 0px;
@@ -78,25 +81,27 @@ const AppContainer = styled.div`
     }
 `
 
-function App() {
+function App({ children }) {
     const [ loggedIn, setLoggedIn ] = useState()
+    const navigate = useNavigate()
 
     return (
         <AppContainer>
             <header>
                 <div id='appTitleText'>
-                    <div id='appTitle'>
+                    <div id='appTitle' onClick={() => navigate('/') }>
                         <h1>Beeline</h1>
                     </div>
                     <div id='appSubtitle'>
                         <h3>The Bee Atlas Automated Interaction-Occurrence Data Pipeline</h3>
                     </div>
                 </div>
-                <LogInButton loggedIn={loggedIn} setLoggedIn={setLoggedIn} />
+                { loggedIn && <CurrentUserButton loggedIn={loggedIn} setLoggedIn={setLoggedIn} /> }
             </header>
             <main>
-                <TaskPanel loggedIn={loggedIn} />
-                <AdminPanel loggedIn={loggedIn} setLoggedIn={setLoggedIn} />
+                { children || <Outlet context={ [ loggedIn, setLoggedIn ] } /> }
+                {/* <TaskPanel loggedIn={loggedIn} />
+                <AdminPanel loggedIn={loggedIn} setLoggedIn={setLoggedIn} /> */}
             </main>
         </AppContainer>
     )

@@ -125,7 +125,7 @@ export default function UsernamesAccessForm() {
                 <form onSubmit={ handleSubmit }>
                     <fieldset disabled={formDisabled}>
                         <div>
-                            <label for='usernamesQueryType'>Operation:</label>
+                            <label htmlFor='usernamesQueryType'>Operation:</label>
                             <select id='usernamesQueryType' onChange={(event) => {
                                 setQueryResponse(undefined)
                                 setQueryType(event.target.value)
@@ -137,7 +137,7 @@ export default function UsernamesAccessForm() {
 
                         { queryType === 'post' &&
                             <div>
-                                <label for='usernamesFileUpload'>File:</label>
+                                <label htmlFor='usernamesFileUpload'>File:</label>
                                 <input
                                     type='file'
                                     accept='.csv'

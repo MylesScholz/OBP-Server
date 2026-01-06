@@ -95,7 +95,7 @@ export default function SubtaskIOPanel({ type, subtaskSwitches, setFile, hovered
         <SubtaskIOPanelContainer>
             { subtaskSwitches.getFirstSubtask() === type && setFile &&
                 <div className='fileUploadContainer'>
-                    <label for='fileUpload'>Upload File:</label>
+                    <label htmlFor='fileUpload'>Upload File:</label>
                     <input
                         type='file'
                         accept='.csv'
@@ -117,7 +117,7 @@ export default function SubtaskIOPanel({ type, subtaskSwitches, setFile, hovered
                             checked={selectedInputFile === 'upload'}
                             onChange={(event) => setSelectedInputFile(event.target.value)}
                         />
-                        <label for={`${type}Input-upload`}>Upload</label>
+                        <label htmlFor={`${type}Input-upload`}>Upload</label>
                     </div>
                     {
                         inputOptions?.map((option) =>
@@ -130,7 +130,7 @@ export default function SubtaskIOPanel({ type, subtaskSwitches, setFile, hovered
                                     checked={selectedInputFile === option.key}
                                     onChange={(event) => setSelectedInputFile(event.target.value)}
                                 />
-                                <label for={`${type}Input-${option.key}`}>
+                                <label htmlFor={`${type}Input-${option.key}`}>
                                     {capitalize(option.subtask)} subtask ({option.subtaskIndex + 1}):
                                     <span className={`fileTip ${option.output}FileTip ${hoveredFile === option.key ? 'hoveredFileTip' : ''}`}>{option.output} file</span>
                                 </label>

@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import styled from '@emotion/styled'
 
-import AdminAccountForm from './AdminAccountForm.jsx'
+import LogoutModal from './LogoutModal.jsx'
 
-const LogInButtonContainer = styled.div`
+const CurrentUserButtonContainer = styled.div`
     position: relative;
     display: flex;
     flex-direction: row;
@@ -29,15 +29,15 @@ const LogInButtonContainer = styled.div`
     }
 `
 
-export default function LogInButton({ loggedIn, setLoggedIn }) {
+export default function CurrentUserButton({ loggedIn, setLoggedIn }) {
     const [ accountModalOpen, setAccountModalOpen ] = useState(false)
 
     return (
-        <LogInButtonContainer onKeyDown={(e) => e.key === 'Escape' ? setAccountModalOpen(false) : null }>
+        <CurrentUserButtonContainer onKeyDown={(e) => e.key === 'Escape' ? setAccountModalOpen(false) : null }>
             <button id='logInButton' onClick={(e) => setAccountModalOpen(!accountModalOpen)}>
                 { loggedIn ? `Account: ${loggedIn}` : 'Log In' }
             </button>
-            { accountModalOpen && <AdminAccountForm loggedIn={loggedIn} setLoggedIn={setLoggedIn} setAccountModalOpen={setAccountModalOpen} /> }
-        </LogInButtonContainer>
+            { accountModalOpen && <LogoutModal loggedIn={loggedIn} setLoggedIn={setLoggedIn} setAccountModalOpen={setAccountModalOpen} /> }
+        </CurrentUserButtonContainer>
     )
 }

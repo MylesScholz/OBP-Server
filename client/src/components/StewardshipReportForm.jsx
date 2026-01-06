@@ -193,7 +193,7 @@ export default function StewardshipReportForm() {
                 <form onSubmit={ handleSubmit }>
                     <fieldset disabled={formDisabled}>
                         <div>
-                            <label for='stewardshipReportFileUpload'>Melittoflora Dataset:</label>
+                            <label htmlFor='stewardshipReportFileUpload'>Melittoflora Dataset:</label>
                             <input
                                 type='file'
                                 accept='.csv'
@@ -203,7 +203,7 @@ export default function StewardshipReportForm() {
                             />
                         </div>
                         <div>
-                            <label for='stewardshipReportUrl'>URL:</label>
+                            <label htmlFor='stewardshipReportUrl'>URL:</label>
                             <input
                                 type='url'
                                 id='stewardshipReportUrl'

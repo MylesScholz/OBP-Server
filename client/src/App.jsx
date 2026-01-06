@@ -5,6 +5,7 @@ import TaskPanel from './components/TaskPanel.jsx'
 import AdminPanel from './components/AdminPanel.jsx'
 import CurrentUserButton from './components/CurrentUserButton.jsx'
 import { Outlet, useNavigate } from 'react-router'
+import { useAuth } from './AuthProvider.jsx'
 
 const AppContainer = styled.div`
     display: flex;
@@ -20,6 +21,8 @@ const AppContainer = styled.div`
         align-items: center;
 
         padding: 20px 100px;
+
+        white-space: nowrap;
 
         background-color: #222;
 
@@ -82,7 +85,7 @@ const AppContainer = styled.div`
 `
 
 function App({ children }) {
-    const [ loggedIn, setLoggedIn ] = useState()
+    const { loggedIn } = useAuth()
     const navigate = useNavigate()
 
     return (
@@ -96,10 +99,10 @@ function App({ children }) {
                         <h3>The Bee Atlas Automated Interaction-Occurrence Data Pipeline</h3>
                     </div>
                 </div>
-                { loggedIn && <CurrentUserButton loggedIn={loggedIn} setLoggedIn={setLoggedIn} /> }
+                { loggedIn && <CurrentUserButton /> }
             </header>
             <main>
-                { children || <Outlet context={ [ loggedIn, setLoggedIn ] } /> }
+                { children || <Outlet /> }
                 {/* <TaskPanel loggedIn={loggedIn} />
                 <AdminPanel loggedIn={loggedIn} setLoggedIn={setLoggedIn} /> */}
             </main>

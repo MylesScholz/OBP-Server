@@ -2,6 +2,7 @@ import { useState } from 'react'
 import styled from '@emotion/styled'
 
 import LogoutModal from './LogoutModal.jsx'
+import { useAuth } from '../AuthProvider.jsx'
 
 const CurrentUserButtonContainer = styled.div`
     position: relative;
@@ -29,7 +30,8 @@ const CurrentUserButtonContainer = styled.div`
     }
 `
 
-export default function CurrentUserButton({ loggedIn, setLoggedIn }) {
+export default function CurrentUserButton() {
+    const { loggedIn } = useAuth()
     const [ accountModalOpen, setAccountModalOpen ] = useState(false)
 
     return (
@@ -37,7 +39,7 @@ export default function CurrentUserButton({ loggedIn, setLoggedIn }) {
             <button id='logInButton' onClick={(e) => setAccountModalOpen(!accountModalOpen)}>
                 { loggedIn ? `Account: ${loggedIn}` : 'Log In' }
             </button>
-            { accountModalOpen && <LogoutModal loggedIn={loggedIn} setLoggedIn={setLoggedIn} setAccountModalOpen={setAccountModalOpen} /> }
+            { accountModalOpen && <LogoutModal setAccountModalOpen={setAccountModalOpen} /> }
         </CurrentUserButtonContainer>
     )
 }

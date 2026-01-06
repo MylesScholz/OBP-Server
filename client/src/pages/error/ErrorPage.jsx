@@ -1,5 +1,6 @@
 import styled from '@emotion/styled'
 import { useRouteError, Link } from 'react-router'
+import { useAuth } from '../../AuthProvider'
 
 const ErrorPageContainer = styled.div`
     display: grid;
@@ -24,6 +25,7 @@ const ErrorPageContainer = styled.div`
     a {
         font-size: 16pt;
         text-decoration: none;
+        font-weight: bold;
 
         &:hover {
             text-decoration: underline;
@@ -36,7 +38,10 @@ const ErrorPageContainer = styled.div`
 `
 
 export default function ErrorPage() {
+    const { loggedIn } = useAuth()
     const error = useRouteError()
+
+    console.log('/error:', loggedIn)
 
     return (
         <ErrorPageContainer>

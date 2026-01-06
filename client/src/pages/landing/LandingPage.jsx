@@ -1,5 +1,6 @@
 import styled from '@emotion/styled'
 import { Link } from 'react-router'
+import { useAuth } from '../../AuthProvider'
 
 const LandingPageContainer = styled.div`
     display: grid;
@@ -47,11 +48,15 @@ const LandingPageContainer = styled.div`
 `
 
 export default function LandingPage() {
+    const { loggedIn } = useAuth()
+
+    console.log('/:', loggedIn)
+
     return (
         <LandingPageContainer>
             <h2 id='rolePrompt'>Select your role</h2>
             <div id='roleContainer'>
-                <Link to='/adminLogin'>Administrator</Link>
+                <Link to={loggedIn ? '/dashboard' : '/adminLogin'}>Administrator</Link>
                 <Link to='/volunteerLogin'>Volunteer</Link>
             </div>
         </LandingPageContainer>

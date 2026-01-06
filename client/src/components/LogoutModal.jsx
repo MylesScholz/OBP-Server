@@ -2,6 +2,8 @@ import { useState } from 'react'
 import axios from 'axios'
 import styled from '@emotion/styled'
 
+import { useAuth } from '../AuthProvider'
+
 const LogoutModalContainer = styled.form`
     position: absolute;
     top: 30px;
@@ -36,7 +38,8 @@ const LogoutModalContainer = styled.form`
     }
 `
 
-export default function LogoutModal({ loggedIn, setLoggedIn, setAccountModalOpen }) {
+export default function LogoutModal({ setAccountModalOpen }) {
+    const { loggedIn, setLoggedIn } = useAuth()
     const [ formDisabled, setFormDisabled ] = useState(false)
 
     const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`

@@ -1,7 +1,8 @@
 import styled from '@emotion/styled'
-import { useOutletContext, Navigate } from 'react-router'
+import { Navigate } from 'react-router'
 
 import AdminLoginForm from './AdminLoginForm'
+import { useAuth } from '../../AuthProvider'
 
 const AdminLoginPageContainer = styled.div`
     display: flex;
@@ -12,11 +13,13 @@ const AdminLoginPageContainer = styled.div`
 `
 
 export default function AdminLoginPage() {
-    const [ loggedIn, setLoggedIn ] = useOutletContext()
+    const { loggedIn } = useAuth()
+
+    console.log('/adminLogin:', loggedIn)
 
     return (
         <AdminLoginPageContainer>
-            { loggedIn ? <Navigate to='/adminRecords' /> : <AdminLoginForm loggedIn={loggedIn} setLoggedIn={setLoggedIn} /> }
+            { loggedIn ? <Navigate to='/dashboard' /> : <AdminLoginForm /> }
         </AdminLoginPageContainer>
     )
 }

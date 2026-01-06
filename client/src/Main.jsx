@@ -8,7 +8,8 @@ import App from './App'
 import LandingPage from './pages/landing/LandingPage'
 import ErrorPage from './pages/error/ErrorPage'
 import AdminLoginPage from './pages/adminLogin/AdminLoginPage'
-import AdminRecordsPage from './pages/adminRecords/AdminRecordsPage'
+import DashboardPage from './pages/dashboard/DashboardPage'
+import { AuthProvider } from './AuthProvider'
 
 const queryClient = new QueryClient()
 
@@ -20,7 +21,7 @@ const router = createBrowserRouter([
         children: [
             { index: true, element: <LandingPage /> },
             { path: 'adminLogin', element: <AdminLoginPage /> },
-            { path: 'adminRecords', element: <AdminRecordsPage /> }
+            { path: 'dashboard', element: <DashboardPage /> }
         ]
     }
 ])
@@ -50,7 +51,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
         <QueryClientProvider client={queryClient}>
             <Global styles={globalStyles} />
-            <RouterProvider router={router} />
+            <AuthProvider>
+                <RouterProvider router={router} />
+            </AuthProvider>
         </QueryClientProvider>
     </React.StrictMode>
 )

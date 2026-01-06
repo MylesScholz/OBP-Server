@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import axios from 'axios'
 import styled from '@emotion/styled'
-import { Link } from 'react-router'
+import { useNavigate, Link } from 'react-router'
+
+import arrowBackIcon from '/src/assets/arrow_back.svg'
+import { useAuth } from '../../AuthProvider'
 
 const AdminLoginFormContainer = styled.form`
     display: grid;
@@ -104,8 +107,10 @@ const AdminLoginFormContainer = styled.form`
     }
 `
 
-export default function AdminLoginForm({ loggedIn, setLoggedIn }) {
+export default function AdminLoginForm() {
+    const { setLoggedIn } = useAuth()
     const [ formDisabled, setFormDisabled ] = useState(false)
+    const navigate = useNavigate()
 
     const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
 
@@ -124,6 +129,7 @@ export default function AdminLoginForm({ loggedIn, setLoggedIn }) {
             setFormDisabled(false)
             if (res.status === 200) {
                 setLoggedIn(credentials.username)
+                navigate('/dashboard')
             }
         }).catch((error) => {
             console.error(error)
@@ -134,7 +140,7 @@ export default function AdminLoginForm({ loggedIn, setLoggedIn }) {
         <AdminLoginFormContainer onSubmit={ handleSubmit } disabled={formDisabled}>
             <div id='adminLoginFormHeader'>
                 <Link to='/'>
-                    <img src='/src/assets/arrow_back.svg' alt='Back' />
+                    <img src={arrowBackIcon} alt='Back' />
                 </Link>
                 <h2>Admin Account</h2>
             </div>

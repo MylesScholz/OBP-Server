@@ -1,8 +1,5 @@
-import { useState } from 'react'
 import styled from '@emotion/styled'
 
-import TaskPanel from './components/TaskPanel.jsx'
-import AdminPanel from './components/AdminPanel.jsx'
 import CurrentUserButton from './components/CurrentUserButton.jsx'
 import { Outlet, useNavigate } from 'react-router'
 import { useAuth } from './AuthProvider.jsx'
@@ -103,8 +100,7 @@ function App({ children }) {
             </header>
             <main>
                 { children || <Outlet /> }
-                {/* <TaskPanel loggedIn={loggedIn} />
-                <AdminPanel loggedIn={loggedIn} setLoggedIn={setLoggedIn} /> */}
+                {/* <AdminPanel loggedIn={loggedIn} setLoggedIn={setLoggedIn} /> */}
             </main>
         </AppContainer>
     )

@@ -19,11 +19,11 @@ const TaskPanelContainer = styled.div`
     }
 `
 
-export default function TaskPanel({ loggedIn }) {
+export default function TaskPanel() {
     return (
         <TaskPanelContainer>
             <h1>Tasks</h1>
-            <SubtaskPipeline loggedIn={loggedIn} />
+            <SubtaskPipeline />
         </TaskPanelContainer>
     )
 }

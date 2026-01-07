@@ -15,8 +15,6 @@ const AdminLoginPageContainer = styled.div`
 export default function AdminLoginPage() {
     const { loggedIn } = useAuth()
 
-    console.log('/adminLogin:', loggedIn)
-
     return (
         <AdminLoginPageContainer>
             { loggedIn ? <Navigate to='/dashboard' /> : <AdminLoginForm /> }

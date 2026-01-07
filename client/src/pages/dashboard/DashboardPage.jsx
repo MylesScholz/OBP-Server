@@ -160,8 +160,6 @@ const DashboardPageContainer = styled.form`
 export default function DashboardPage() {
     const { loggedIn } = useAuth()
 
-    console.log('/dashboard:', loggedIn)
-
     return (
         <DashboardPageContainer>
             { !loggedIn && <Navigate to='/' /> }

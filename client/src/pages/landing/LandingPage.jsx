@@ -50,8 +50,6 @@ const LandingPageContainer = styled.div`
 export default function LandingPage() {
     const { loggedIn } = useAuth()
 
-    console.log('/:', loggedIn)
-
     return (
         <LandingPageContainer>
             <h2 id='rolePrompt'>Select your role</h2>

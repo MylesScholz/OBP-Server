@@ -4,6 +4,7 @@ import axios from 'axios'
 import styled from '@emotion/styled'
 
 import SubtaskCard from './SubtaskCard'
+import { useAuth } from '../../AuthProvider'
 
 const SubtaskPipelineContainer = styled.div`
     display: flex;
@@ -182,7 +183,8 @@ class SubtaskSwitches {
     }    
 }
 
-export default function SubtaskPipeline({ loggedIn }) {
+export default function SubtaskPipeline() {
+    const { loggedIn } = useAuth()
     const [ postTaskResponse, setPostTaskResponse ] = useState()
     const [ selectedTaskId, setSelectedTaskId ] = useState()
     const [ file, setFile ] = useState()

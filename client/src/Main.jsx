@@ -4,12 +4,13 @@ import { createBrowserRouter, RouterProvider } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Global, css } from '@emotion/react'
 
+import { AuthProvider } from './AuthProvider'
 import App from './App'
 import LandingPage from './pages/landing/LandingPage'
 import ErrorPage from './pages/error/ErrorPage'
 import AdminLoginPage from './pages/adminLogin/AdminLoginPage'
 import DashboardPage from './pages/dashboard/DashboardPage'
-import { AuthProvider } from './AuthProvider'
+import TasksPage from './pages/tasks/TasksPage'
 
 const queryClient = new QueryClient()
 
@@ -21,7 +22,8 @@ const router = createBrowserRouter([
         children: [
             { index: true, element: <LandingPage /> },
             { path: 'adminLogin', element: <AdminLoginPage /> },
-            { path: 'dashboard', element: <DashboardPage /> }
+            { path: 'dashboard', element: <DashboardPage /> },
+            { path: 'dashboard/tasks', element: <TasksPage /> }
         ]
     }
 ])

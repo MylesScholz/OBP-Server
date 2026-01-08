@@ -43,7 +43,7 @@ class ApiService {
             const requestUrl = await buildUrl(ids.slice(pageStart, pageEnd).join(','))
 
             const response = await this.fetchUrl(requestUrl)
-            results = results.concat(response['results'])
+            results = results.concat(response?.results ?? [])
 
             // Increment page
             pageStart = pageEnd

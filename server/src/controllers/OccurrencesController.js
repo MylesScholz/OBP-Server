@@ -8,9 +8,7 @@ export default class OccurrencesController {
         // Default query parameters
         let page = 1
         let pageSize = 50
-        const filter = {
-            date: {}
-        }
+        const filter = {}
         const projection = {
             composite_sort: 0,
             date: 0
@@ -38,9 +36,11 @@ export default class OccurrencesController {
             return
         }
         if (startDate.toString() !== 'Invalid Date') {
+            if (!filter.date) filter.date = {}
             filter.date.$gte = startDate
         }        
         if (endDate.toString() !== 'Invalid Date') {
+            if (!filter.date) filter.date = {}
             filter.date.$lte = endDate
         }
 

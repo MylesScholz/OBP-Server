@@ -8,8 +8,8 @@ import { OccurrencesPanel } from '../../components/OccurrencesPanel'
 
 const DashboardContainer = styled.form`
     display: grid;
-    grid-template-columns: 1fr 4fr;
-    grid-template-rows: 1fr 9fr;
+    grid-template-columns: 350px minmax(0, 1fr);
+    grid-template-rows: 55px 1fr;
     grid-column-gap: 15px;
     grid-row-gap: 15px;
 
@@ -151,7 +151,7 @@ export default function Dashboard() {
         const queryUrl = new URL(`http://${serverAddress}/api/occurrences`)
         const params = queryUrl.searchParams
 
-        console.log(queryUrl.toString())
+        params.set('per_page', '25')
 
         axios.get(queryUrl.toString()).then((res) => {
             setResults(res.data)

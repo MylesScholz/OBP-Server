@@ -43,9 +43,9 @@ export default class BaseRepository {
     }
 
     async paginate(options = {}) {
+        const page = Math.max(1, options.page ?? 1)
+        const pageSize = Math.max(1, options.pageSize ?? 1000)
         const {
-            page = 1,
-            pageSize = 1000,
             filter = {},
             sortConfig = [],
             projection = {},
@@ -72,21 +72,22 @@ export default class BaseRepository {
                                 .toArray()
 
         // Get total count
-        let total = 0
+        let totalDocuments = 0
         if (includeTotal) {
-            total = Object.keys(filter).length === 0
+            totalDocuments = Object.keys(filter).length === 0
                         ? await this.collection.estimatedDocumentCount()
                         : await this.collection.countDocuments(filter)
         }
 
+        const totalPages = Math.ceil(totalDocuments / pageSize)
         return {
             data,
             pagination: {
                 currentPage: page,
                 pageSize,
-                totalDocuments: total,
-                totalPages: Math.ceil(total / pageSize),
-                hasNextPage: page < Math.ceil(total / pageSize),
+                totalDocuments: totalDocuments,
+                totalPages: totalPages,
+                hasNextPage: page < totalPages,
                 hasPrevPage: page > 1
             }
         }

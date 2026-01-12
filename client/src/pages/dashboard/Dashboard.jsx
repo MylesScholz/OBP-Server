@@ -3,7 +3,8 @@ import { Link } from 'react-router'
 import styled from '@emotion/styled'
 import axios from 'axios'
 
-import arrowForwardIcon from '/src/assets/arrow_forward.svg'
+import chevronLeftIcon from '/src/assets/chevron_left.svg'
+import chevronRightIcon from '/src/assets/chevron_right.svg'
 import closeIcon from '/src/assets/close.svg'
 import { OccurrencesPanel } from '../../components/OccurrencesPanel'
 
@@ -170,9 +171,23 @@ const DashboardContainer = styled.form`
 
                     width: 50px;
 
+                    appearance: textfield;
                     -moz-appearance: textfield;
                     &::-webkit-inner-spin-button, &::-webkit-outer-spin-button {
                         -webkit-appearance: none;
+                    }
+                }
+
+                .pageIncrementButton {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+
+                    padding: 0px;
+                    
+                    img {
+                        width: 25px;
+                        height: 25px;
                     }
                 }
             }
@@ -311,7 +326,7 @@ export default function Dashboard() {
                         </select>
                         <input id='queryText' type='text' placeholder='Enter a query...' />
                         <button className='clearButton' onClick={(event) => handleClear(event, 'queryText')}>
-                            <img src={closeIcon} />
+                            <img src={closeIcon} alt='Clear' />
                         </button>
                     </div>
                     <div id='dateFilter'>
@@ -320,13 +335,13 @@ export default function Dashboard() {
                         <label>From</label>
                         <input id='minDate' type='date' />
                         <button className='clearButton' onClick={(event) => handleClear(event, 'minDate')}>
-                            <img src={closeIcon} />
+                            <img src={closeIcon} alt='Clear' />
                         </button>
 
                         <label>To</label>
                         <input id='maxDate' type='date' />
                         <button className='clearButton' onClick={(event) => handleClear(event, 'maxDate')}>
-                            <img src={closeIcon} />
+                            <img src={closeIcon} alt='Clear' />
                         </button>
                     </div>
                     <input type='submit' value='Search' />
@@ -347,7 +362,9 @@ export default function Dashboard() {
                     <p>{records}</p>
                     <p>{pages}</p>
                     <div id='resultsPageSelector'>
-                        <button onClick={() => setPage(Math.max(1, page - 1))}>Prev</button>
+                        <button className='pageIncrementButton' onClick={() => setPage(Math.max(1, page - 1))}>
+                            <img src={chevronLeftIcon} alt='Prev' />
+                        </button>
                         <input
                             id='resultsPage'
                             type='number'
@@ -356,7 +373,9 @@ export default function Dashboard() {
                             max={pageMax}
                             onChange={(event) => setPage(parseInt(event.target.value))}
                         />
-                        <button onClick={() => setPage(Math.min(pageMax, page + 1))}>Next</button>
+                        <button className='pageIncrementButton' onClick={() => setPage(Math.min(pageMax, page + 1))}>
+                            <img src={chevronRightIcon} alt='Next' />
+                        </button>
                     </div>
                 </div>
             </fieldset>

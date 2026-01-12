@@ -286,6 +286,12 @@ export default function Dashboard() {
         document.getElementById(clearElementId).value = ''
     }
 
+    function handleEnter(event) {
+        event.preventDefault()
+
+        document.getElementById('dashboardSubmitButton').click()
+    }
+
     function handleSubmit (event) {
         event.preventDefault()
         setDisabled(true)
@@ -327,14 +333,14 @@ export default function Dashboard() {
                         <p>Match Field</p>
 
                         <select id='fieldName'>
-                            <option key='select' value='' selected>Select a field to match...</option>
+                            <option key='select' value=''>Select a field to match...</option>
                             {fields.map((fieldName) => <option key={fieldName} value={fieldName}>{fieldName}</option>)}
                         </select>
                         <button className='clearButton' onClick={(event) => handleClear(event, 'fieldName')}>
                             <img src={closeIcon} alt='Clear' />
                         </button>
 
-                        <input id='queryText' type='text' placeholder='Enter a query...' />
+                        <input id='queryText' type='text' placeholder='Enter a query...' onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }} />
                         <button className='clearButton' onClick={(event) => handleClear(event, 'queryText')}>
                             <img src={closeIcon} alt='Clear' />
                         </button>
@@ -343,18 +349,18 @@ export default function Dashboard() {
                         <p>Date</p>
 
                         <label>From</label>
-                        <input id='minDate' type='date' />
+                        <input id='minDate' type='date' onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }} />
                         <button className='clearButton' onClick={(event) => handleClear(event, 'minDate')}>
                             <img src={closeIcon} alt='Clear' />
                         </button>
 
                         <label>To</label>
-                        <input id='maxDate' type='date' />
+                        <input id='maxDate' type='date' onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }} />
                         <button className='clearButton' onClick={(event) => handleClear(event, 'maxDate')}>
                             <img src={closeIcon} alt='Clear' />
                         </button>
                     </div>
-                    <input type='submit' value='Search' />
+                    <input id='dashboardSubmitButton' type='submit' value='Search' />
                 </fieldset>
             </div>
 

@@ -272,13 +272,13 @@ export default function Dashboard() {
     // Number of records to query per page
     const per_page = 25
 
-    let pageMax = results?.pagination?.totalPages ? results?.pagination?.totalPages : 1
+    let pageMax = results?.pagination?.totalPages ? results?.pagination?.totalPages : 0
     let currentPage = results?.pagination?.currentPage ?? 1
 
     const pageRecords = results?.data?.length ?? 0
     const totalRecords = results?.pagination?.totalDocuments ?? 0
     const records = `Showing ${pageRecords.toLocaleString('en-US')} of ${totalRecords.toLocaleString('en-US')} records`
-    const pages = `Page ${page.toLocaleString('en-US')} of ${pageMax.toLocaleString('en-US')}`
+    const pages = `Page ${currentPage.toLocaleString('en-US')} of ${pageMax.toLocaleString('en-US')}`
 
     function handleClear(event, clearElementId) {
         event.preventDefault()
@@ -312,9 +312,9 @@ export default function Dashboard() {
         axios.get(queryUrl.toString()).then((res) => {
             setResults(res.data)
 
-            pageMax = res.data?.pagination?.totalPages ? res.data?.pagination?.totalPages : 1
+            pageMax = res.data?.pagination?.totalPages ? res.data?.pagination?.totalPages : 0
             currentPage = res.data?.pagination?.currentPage ?? 1
-            setPage(Math.min(pageMax, currentPage))
+            setPage(currentPage)
             
             setDisabled(false)
         }).catch((error) => {
@@ -386,10 +386,11 @@ export default function Dashboard() {
                             type='number'
                             value={page}
                             min={1}
-                            max={pageMax}
+                            max={pageMax + 1}
                             onChange={(event) => setPage(parseInt(event.target.value))}
+                            onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }}
                         />
-                        <button className='pageIncrementButton' onClick={() => setPage(Math.min(pageMax, page + 1))}>
+                        <button className='pageIncrementButton' onClick={() => setPage(Math.min(pageMax < 1 ? 1 : pageMax, page + 1))}>
                             <img src={chevronRightIcon} alt='Next' />
                         </button>
                     </div>

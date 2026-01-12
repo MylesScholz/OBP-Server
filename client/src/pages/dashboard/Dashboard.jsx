@@ -295,6 +295,11 @@ export default function Dashboard() {
 
         params.set('page', page.toString())
         params.set('per_page', per_page.toString())
+
+        if (event.target.fieldName.value) {
+            params.set(event.target.fieldName.value, event.target.queryText.value)
+        }
+
         if (event.target.minDate.value) params.set('start_date', event.target.minDate.value)
         if (event.target.maxDate.value) params.set('end_date', event.target.maxDate.value)
 
@@ -322,8 +327,13 @@ export default function Dashboard() {
                         <p>Match Field</p>
 
                         <select id='fieldName'>
+                            <option key='select' value='' selected>Select a field to match...</option>
                             {fields.map((fieldName) => <option key={fieldName} value={fieldName}>{fieldName}</option>)}
                         </select>
+                        <button className='clearButton' onClick={(event) => handleClear(event, 'fieldName')}>
+                            <img src={closeIcon} alt='Clear' />
+                        </button>
+
                         <input id='queryText' type='text' placeholder='Enter a query...' />
                         <button className='clearButton' onClick={(event) => handleClear(event, 'queryText')}>
                             <img src={closeIcon} alt='Clear' />

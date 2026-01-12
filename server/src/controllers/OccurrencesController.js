@@ -2,6 +2,7 @@ import path from 'path'
 
 import { OccurrenceService } from '../../shared/lib/services/index.js'
 import FileManager from '../../shared/lib/utils/FileManager.js'
+import { fieldNames } from '../../shared/lib/utils/constants.js'
 
 export default class OccurrencesController {
     static async getOccurrencesPage(req, res, next) {
@@ -42,6 +43,11 @@ export default class OccurrencesController {
         if (endDate.toString() !== 'Invalid Date') {
             if (!filter.date) filter.date = {}
             filter.date.$lte = endDate
+        }
+
+        const queryFields = Object.keys(fieldNames).filter((fieldName) => !!req.query[fieldName] || req.query[fieldName] === '')
+        for (const queryField of queryFields) {
+            filter[queryField] = req.query[queryField]
         }
 
         // TODO: sorting query parameters

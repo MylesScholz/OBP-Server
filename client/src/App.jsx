@@ -9,7 +9,7 @@ const AppContainer = styled.div`
     flex-direction: column;
     align-items: stretch;
 
-    min-width: 1080px;
+    min-width: 1440px;
 
     header {
         display: flex;

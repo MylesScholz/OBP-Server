@@ -4,6 +4,7 @@ import styled from '@emotion/styled'
 import axios from 'axios'
 
 import arrowForwardIcon from '/src/assets/arrow_forward.svg'
+import closeIcon from '/src/assets/close.svg'
 import { OccurrencesPanel } from '../../components/OccurrencesPanel'
 
 const DashboardContainer = styled.form`
@@ -24,10 +25,28 @@ const DashboardContainer = styled.form`
 
         padding: 15px;
 
+        .clearButton {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            padding: 0px;
+
+            width: 25px;
+            height: 25px;
+
+            img {
+                width: 20px;
+                height: 20px;
+            }
+        }
+
         #searchFilters {
             display: flex;
             flex-direction: column;
             gap: 10px;
+
+            margin: 0px;
 
             h3 {
                 margin: 0px;
@@ -47,37 +66,50 @@ const DashboardContainer = styled.form`
 
             #matchFieldFilter {
                 display: grid;
-                grid-template-columns: 1fr 7fr;
+                grid-template-columns: 1fr 25px;
+                grid-column-gap: 5px;
                 grid-row-gap: 5px;
 
-                padding: 0px 5px;
+                padding: 0px 0px 0px 10px;
 
                 p {
                     grid-column: 1 / 3;
                 }
 
                 select, input {
+                    grid-column: 1 / 2;
+
+                    margin-left: 10px;
+                }
+
+                .clearButton {
                     grid-column: 2 / 3;
                 }
             }
 
             #dateFilter {
                 display: grid;
-                grid-template-columns: 1fr 2fr 5fr;
+                grid-template-columns: 1fr 5fr 25px;
                 grid-column-gap: 5px;
                 grid-row-gap: 5px;
 
-                padding: 0px 5px;
+                padding: 0px 0px 0px 10px;
 
                 p {
                     grid-column: 1 / 4;
                 }
 
                 label {
-                    grid-column: 2 / 3;
+                    grid-column: 1 / 2;
+
+                    margin-left: 10px;
                 }
 
                 input {
+                    grid-column: 2 / 3;
+                }
+
+                .clearButton {
                     grid-column: 3 / 4;
                 }
             }
@@ -94,6 +126,8 @@ const DashboardContainer = styled.form`
         border: 1px solid #222;
 
         padding: 15px;
+
+        margin: 0px;
 
         white-space: nowrap;
 
@@ -130,6 +164,17 @@ const DashboardContainer = styled.form`
                 justify-content: center;
                 align-items: center;
                 gap: 5px;
+
+                input[type='number'] {
+                    text-align: center;
+
+                    width: 50px;
+
+                    -moz-appearance: textfield;
+                    &::-webkit-inner-spin-button, &::-webkit-outer-spin-button {
+                        -webkit-appearance: none;
+                    }
+                }
             }
         }
     }
@@ -140,50 +185,155 @@ const DashboardContainer = styled.form`
 `
 
 export default function Dashboard() {
+    const [ disabled, setDisabled ] = useState(false)
     const [ results, setResults ] = useState({})
+    const [ page, setPage ] = useState(1)
+
+    const fields = [
+        'errorFlags',
+        'dateLabelPrint',
+        'fieldNumber',
+        'catalogNumber',
+        'occurrenceID',
+        'userId',
+        'userLogin',
+        'firstName',
+        'firstNameInitial',
+        'lastName',
+        'recordedBy',
+        'sampleId',
+        'specimenId',
+        'day',
+        'month',
+        'year',
+        'day2',
+        'month2',
+        'year2',
+        'startDayofYear',
+        'endDayofYear',
+        'verbatimEventDate',
+        'country',
+        'stateProvince',
+        'county',
+        'locality',
+        'verbatimElevation',
+        'decimalLatitude',
+        'decimalLongitude',
+        'coordinateUncertaintyInMeters',
+        'samplingProtocol',
+        'relationshipOfResource',
+        'resourceID',
+        'relatedResourceID',
+        'relationshipRemarks',
+        'phylumPlant',
+        'orderPlant',
+        'familyPlant',
+        'genusPlant',
+        'speciesPlant',
+        'taxonRankPlant',
+        'url',
+        'phylum',
+        'class',
+        'order',
+        'family',
+        'genus',
+        'subgenus',
+        'specificEpithet',
+        'taxonomicNotes',
+        'scientificName',
+        'sex',
+        'caste',
+        'taxonRank',
+        'identifiedBy',
+        'familyVolDet',
+        'genusVolDet',
+        'speciesVolDet',
+        'sexVolDet',
+        'casteVolDet',
+    ]
 
     // The URL or IP address of the backend server
     const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
+    // Number of records to query per page
+    const per_page = 25
+
+    let pageMax = results?.pagination?.totalPages ? results?.pagination?.totalPages : 1
+    let currentPage = results?.pagination?.currentPage ?? 1
+
+    const pageRecords = results?.data?.length ?? 0
+    const totalRecords = results?.pagination?.totalDocuments ?? 0
+    const records = `Showing ${pageRecords.toLocaleString('en-US')} of ${totalRecords.toLocaleString('en-US')} records`
+    const pages = `Page ${page.toLocaleString('en-US')} of ${pageMax.toLocaleString('en-US')}`
+
+    function handleClear(event, clearElementId) {
+        event.preventDefault()
+
+        document.getElementById(clearElementId).value = ''
+    }
 
     function handleSubmit (event) {
         event.preventDefault()
+        setDisabled(true)
 
         const queryUrl = new URL(`http://${serverAddress}/api/occurrences`)
         const params = queryUrl.searchParams
 
-        params.set('per_page', '25')
+        params.set('page', page.toString())
+        params.set('per_page', per_page.toString())
+        if (event.target.minDate.value) params.set('start_date', event.target.minDate.value)
+        if (event.target.maxDate.value) params.set('end_date', event.target.maxDate.value)
 
         axios.get(queryUrl.toString()).then((res) => {
             setResults(res.data)
+
+            pageMax = res.data?.pagination?.totalPages ? res.data?.pagination?.totalPages : 1
+            currentPage = res.data?.pagination?.currentPage ?? 1
+            setPage(Math.min(pageMax, currentPage))
+            
+            setDisabled(false)
         }).catch((error) => {
             console.error(error)
+            setPage(1)
+            setDisabled(false)
         })
     }
 
     return (
         <DashboardContainer onSubmit={ handleSubmit }>
             <div id='toolBar'>
-                <div id='searchFilters'>
+                <fieldset id='searchFilters' disabled={disabled}>
                     <h3>Search Records</h3>
                     <div id='matchFieldFilter'>
                         <p>Match Field</p>
+
                         <select id='fieldName'>
-                            <option>fieldNumber</option>
+                            {fields.map((fieldName) => <option key={fieldName} value={fieldName}>{fieldName}</option>)}
                         </select>
-                        <input type='text' placeholder='Enter a query...' />
+                        <input id='queryText' type='text' placeholder='Enter a query...' />
+                        <button className='clearButton' onClick={(event) => handleClear(event, 'queryText')}>
+                            <img src={closeIcon} />
+                        </button>
                     </div>
                     <div id='dateFilter'>
                         <p>Date</p>
+
                         <label>From</label>
-                        <input type='date' />
+                        <input id='minDate' type='date' />
+                        <button className='clearButton' onClick={(event) => handleClear(event, 'minDate')}>
+                            <img src={closeIcon} />
+                        </button>
+
                         <label>To</label>
-                        <input type='date' />
+                        <input id='maxDate' type='date' />
+                        <button className='clearButton' onClick={(event) => handleClear(event, 'maxDate')}>
+                            <img src={closeIcon} />
+                        </button>
                     </div>
                     <input type='submit' value='Search' />
-                </div>
+                </fieldset>
             </div>
 
-            <div id='resultsHeader'>
+            <fieldset id='resultsHeader' disabled={disabled}>
                 <div id='sortDirContainer'>
                     <label htmlFor='sortDir'>Sort By:</label>
                     <select id='sortDir'>
@@ -194,14 +344,22 @@ export default function Dashboard() {
                     </select>
                 </div>
                 <div id='resultsPagination'>
-                    <p>Showing 25 of 206,254 records</p>
+                    <p>{records}</p>
+                    <p>{pages}</p>
                     <div id='resultsPageSelector'>
-                        <button>Prev</button>
-                        <input id='resultsPage' type='text' value='Page 1 of 8,252' />
-                        <button>Next</button>
+                        <button onClick={() => setPage(Math.max(1, page - 1))}>Prev</button>
+                        <input
+                            id='resultsPage'
+                            type='number'
+                            value={page}
+                            min={1}
+                            max={pageMax}
+                            onChange={(event) => setPage(parseInt(event.target.value))}
+                        />
+                        <button onClick={() => setPage(Math.min(pageMax, page + 1))}>Next</button>
                     </div>
                 </div>
-            </div>
+            </fieldset>
 
             <div id='resultsContainer'>
                 <OccurrencesPanel occurrences={results?.data ?? []} />

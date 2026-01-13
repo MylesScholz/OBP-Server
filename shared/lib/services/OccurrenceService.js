@@ -651,13 +651,13 @@ class OccurrenceService {
      * writeOccurrencesFromDatabase()
      * Writes all occurrences matching a given filter to a CSV file at the given file path
      */
-    async writeOccurrencesFromDatabase(filePath, filter = {}) {
+    async writeOccurrencesFromDatabase(filePath, filter = {}, projection = {}) {
         if (!filePath) return
 
         await FileManager.writeCSVFromDatabase(
             filePath,
             Object.keys(template),
-            async (page) => this.getOccurrencesPage({ page, filter })
+            async (page) => this.getOccurrencesPage({ page, filter, projection })
         )
     }
 

@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
 import styled from '@emotion/styled'
 import axios from 'axios'
 
@@ -7,6 +6,7 @@ import chevronLeftIcon from '/src/assets/chevron_left.svg'
 import chevronRightIcon from '/src/assets/chevron_right.svg'
 import closeIcon from '/src/assets/close.svg'
 import { OccurrencesPanel } from '../../components/OccurrencesPanel'
+import DownloadButton from './DownloadButton'
 
 const DashboardContainer = styled.form`
     display: grid;
@@ -59,10 +59,6 @@ const DashboardContainer = styled.form`
                 margin: 0px;
 
                 font-size: 12pt;
-            }
-
-            button {
-                font-size: 14pt;
             }
 
             #matchFieldFilter {
@@ -146,50 +142,64 @@ const DashboardContainer = styled.form`
             }
         }
 
-        #resultsPagination {
+        #resultsHeaderRight {
             display: flex;
             flex-direction: row;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
-            gap: 20px;
+            gap: 15px;
 
-            p {
-                margin: 0px;
-
-                font-size: 12pt;
-            }
-
-            #resultsPageSelector {
+            #resultsPagination {
                 display: flex;
                 flex-direction: row;
                 justify-content: center;
                 align-items: center;
-                gap: 5px;
+                gap: 20px;
 
-                input[type='number'] {
-                    text-align: center;
+                p {
+                    margin: 0px;
 
-                    width: 50px;
-
-                    appearance: textfield;
-                    -moz-appearance: textfield;
-                    &::-webkit-inner-spin-button, &::-webkit-outer-spin-button {
-                        -webkit-appearance: none;
-                    }
+                    font-size: 12pt;
                 }
 
-                .pageIncrementButton {
+                #resultsPageSelector {
                     display: flex;
+                    flex-direction: row;
                     justify-content: center;
                     align-items: center;
+                    gap: 5px;
 
-                    padding: 0px;
-                    
-                    img {
-                        width: 25px;
-                        height: 25px;
+                    input[type='number'] {
+                        text-align: center;
+
+                        width: 50px;
+
+                        appearance: textfield;
+                        -moz-appearance: textfield;
+                        &::-webkit-inner-spin-button, &::-webkit-outer-spin-button {
+                            -webkit-appearance: none;
+                        }
+                    }
+
+                    .pageIncrementButton {
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+
+                        padding: 0px;
+                        
+                        img {
+                            width: 25px;
+                            height: 25px;
+                        }
                     }
                 }
+            }
+
+            #downloadResults {
+                display: flex;
+                justify-content: center;
+                align-items: center;
             }
         }
     }
@@ -203,6 +213,7 @@ export default function Dashboard() {
     const [ disabled, setDisabled ] = useState(false)
     const [ results, setResults ] = useState({})
     const [ page, setPage ] = useState(1)
+    const [ queryUrl, setQueryUrl ] = useState()
 
     const fields = [
         'errorFlags',
@@ -296,8 +307,8 @@ export default function Dashboard() {
         event.preventDefault()
         setDisabled(true)
 
-        const queryUrl = new URL(`http://${serverAddress}/api/occurrences`)
-        const params = queryUrl.searchParams
+        const url = new URL(`http://${serverAddress}/api/occurrences`)
+        const params = url.searchParams
 
         params.set('page', page.toString())
         params.set('per_page', per_page.toString())
@@ -309,7 +320,7 @@ export default function Dashboard() {
         if (event.target.minDate.value) params.set('start_date', event.target.minDate.value)
         if (event.target.maxDate.value) params.set('end_date', event.target.maxDate.value)
 
-        axios.get(queryUrl.toString()).then((res) => {
+        axios.get(url.toString()).then((res) => {
             setResults(res.data)
 
             pageMax = res.data?.pagination?.totalPages ? res.data?.pagination?.totalPages : 0
@@ -322,6 +333,11 @@ export default function Dashboard() {
             setPage(1)
             setDisabled(false)
         })
+
+        // Remove pagination params before setting queryUrl variable (not relevant to data selection)
+        params.delete('page')
+        params.delete('per_page')
+        setQueryUrl(url.toString())
     }
 
     return (
@@ -360,7 +376,7 @@ export default function Dashboard() {
                             <img src={closeIcon} alt='Clear' />
                         </button>
                     </div>
-                    <input id='dashboardSubmitButton' type='submit' value='Search' />
+                    <button id='dashboardSubmitButton' type='submit' value='search'>Search</button>
                 </fieldset>
             </div>
 
@@ -374,25 +390,30 @@ export default function Dashboard() {
                         <option>verbatimEventDate (asc)</option>
                     </select>
                 </div>
-                <div id='resultsPagination'>
-                    <p>{records}</p>
-                    <p>{pages}</p>
-                    <div id='resultsPageSelector'>
-                        <button className='pageIncrementButton' onClick={() => setPage(Math.max(1, page - 1))}>
-                            <img src={chevronLeftIcon} alt='Prev' />
-                        </button>
-                        <input
-                            id='resultsPage'
-                            type='number'
-                            value={page}
-                            min={1}
-                            max={pageMax + 1}
-                            onChange={(event) => setPage(parseInt(event.target.value))}
-                            onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }}
-                        />
-                        <button className='pageIncrementButton' onClick={() => setPage(Math.min(pageMax < 1 ? 1 : pageMax, page + 1))}>
-                            <img src={chevronRightIcon} alt='Next' />
-                        </button>
+                <div id='resultsHeaderRight'>
+                    <div id='resultsPagination'>
+                        <p>{records}</p>
+                        <p>{pages}</p>
+                        <div id='resultsPageSelector'>
+                            <button className='pageIncrementButton' onClick={() => setPage(Math.max(1, page - 1))}>
+                                <img src={chevronLeftIcon} alt='Prev' />
+                            </button>
+                            <input
+                                id='resultsPage'
+                                type='number'
+                                value={page}
+                                min={1}
+                                max={pageMax + 1}
+                                onChange={(event) => setPage(parseInt(event.target.value))}
+                                onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }}
+                            />
+                            <button className='pageIncrementButton' onClick={() => setPage(Math.min(pageMax < 1 ? 1 : pageMax, page + 1))}>
+                                <img src={chevronRightIcon} alt='Next' />
+                            </button>
+                        </div>
+                    </div>
+                    <div id='downloadResults'>
+                        <DownloadButton queryUrl={queryUrl} />
                     </div>
                 </div>
             </fieldset>

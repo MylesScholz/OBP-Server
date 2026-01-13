@@ -21,6 +21,13 @@ occurrencesRouter.get('/', OccurrencesController.getOccurrencesPage)
 occurrencesRouter.post('/', uploadCSV.single('file'), OccurrencesController.uploadOccurrences)
 
 /*
+ * GET /api/occurrences/download
+ * Returns a file containing occurrences from the working dataset matching the given query parameters
+ * Authentication required for full functionality
+ */
+occurrencesRouter.get('/download', OccurrencesController.getOccurrencesDownload)
+
+/*
  * GET /api/occurrences/working
  * Returns the current working occurrence dataset file
  * Authentication required

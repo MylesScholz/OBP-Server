@@ -2,7 +2,7 @@ import amqp from 'amqplib'
 
 import { messageBroker } from '../shared/lib/config/environment.js'
 import { TaskService } from '../shared/lib/services/index.js'
-import { AddressesSubtaskHandler, EmailsSubtaskHandler, LabelsSubtaskHandler, ObservationsSubtaskHandler, OccurrencesSubtaskHandler, PivotsSubtaskHandler, PlantListSubtaskHandler, StewardshipReportSubtaskHandler } from './handlers/index.js'
+import { AddressesSubtaskHandler, DownloadSubtaskHandler, EmailsSubtaskHandler, LabelsSubtaskHandler, ObservationsSubtaskHandler, OccurrencesSubtaskHandler, PivotsSubtaskHandler, PlantListSubtaskHandler, StewardshipReportSubtaskHandler } from './handlers/index.js'
 
 class TaskConsumer {
     constructor() {
@@ -70,6 +70,7 @@ class TaskConsumer {
             const pivotsHandler = new PivotsSubtaskHandler()
             const plantListHandler = new PlantListSubtaskHandler()
             const stewardshipReportHandler = new StewardshipReportSubtaskHandler()
+            const downloadHandler = new DownloadSubtaskHandler()
 
             for (const subtask of task.subtasks) {
                 console.log(`\t${new Date().toLocaleTimeString('en-US')} Processing ${subtask.type} subtask...`)
@@ -90,6 +91,8 @@ class TaskConsumer {
                     await plantListHandler.handleTask(task._id)
                 } else if (subtask.type === 'stewardshipReport') {
                     await stewardshipReportHandler.handleTask(task._id)
+                } else if (subtask.type === 'download') {
+                    await downloadHandler.handleTask(task._id)
                 }
             }
 

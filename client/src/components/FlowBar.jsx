@@ -2,6 +2,7 @@ import styled from '@emotion/styled'
 
 import chevronRightIcon from '/src/assets/chevron_right.svg'
 import { NavLink } from 'react-router'
+import { useFlow } from '../FlowProvider'
 
 const FlowBarContainer = styled.div`
     display: flex;
@@ -49,14 +50,16 @@ const FlowBarContainer = styled.div`
 `
 
 export default function FlowBar() {
+    const { flowState, query } = useFlow()
+
     return (
         <FlowBarContainer>
             <NavLink className='flowStage' to='/dashboard'>
-                <h3>Stage 1</h3>
+                <h3>Dashboard ({query.totalDocuments.toLocaleString('en-US')} selected)</h3>
                 <img src={chevronRightIcon} alt='Next' />
             </NavLink>
             <NavLink className='flowStage' to='/tasks'>
-                <h3>Stage 2</h3>
+                <h3>Tasks</h3>
                 <img src={chevronRightIcon} alt='Next' />
             </NavLink>
         </FlowBarContainer>

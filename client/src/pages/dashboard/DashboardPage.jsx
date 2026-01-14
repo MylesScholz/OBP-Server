@@ -18,9 +18,14 @@ export default function DashboardPage() {
 
     return (
         <DashboardPageContainer>
-            { !loggedIn && <Navigate to='/' /> }
-            <FlowBar />
-            <Dashboard />
+            { loggedIn ? (
+                <>
+                    <FlowBar />
+                    <Dashboard />
+                </>
+            ) : (
+                <Navigate to='/' />
+            )}
         </DashboardPageContainer>
     )
 }

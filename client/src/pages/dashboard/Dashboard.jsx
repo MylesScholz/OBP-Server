@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import styled from '@emotion/styled'
 import axios from 'axios'
 
@@ -7,6 +7,7 @@ import chevronRightIcon from '/src/assets/chevron_right.svg'
 import closeIcon from '/src/assets/close.svg'
 import { OccurrencesPanel } from '../../components/OccurrencesPanel'
 import DownloadButton from './DownloadButton'
+import { useFlow } from '../../FlowProvider'
 
 const DashboardContainer = styled.form`
     display: grid;
@@ -23,6 +24,7 @@ const DashboardContainer = styled.form`
         gap: 15px;
 
         border: 1px solid #222;
+        border-radius: 5px;
 
         padding: 15px;
 
@@ -121,6 +123,7 @@ const DashboardContainer = styled.form`
         gap: 10px;
 
         border: 1px solid #222;
+        border-radius: 5px;
 
         padding: 15px;
 
@@ -212,10 +215,13 @@ const DashboardContainer = styled.form`
 export default function Dashboard() {
     const [ disabled, setDisabled ] = useState(false)
     const [ results, setResults ] = useState({})
-    const [ page, setPage ] = useState(1)
-    const [ queryUrl, setQueryUrl ] = useState()
-
-    const fields = [
+    const { query, setQuery } = useFlow()
+    const hasSubmitted = useRef(false)
+    
+    // The URL or IP address of the backend server
+    const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
+    // Occurrence field names
+    const fieldNames = [
         'errorFlags',
         'dateLabelPrint',
         'fieldNumber',
@@ -278,23 +284,25 @@ export default function Dashboard() {
         'casteVolDet',
     ]
 
-    // The URL or IP address of the backend server
-    const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
-    // Number of records to query per page
-    const per_page = 25
-
     let pageMax = results?.pagination?.totalPages ? results?.pagination?.totalPages : 0
     let currentPage = results?.pagination?.currentPage ?? 1
 
     const pageRecords = results?.data?.length ?? 0
     const totalRecords = results?.pagination?.totalDocuments ?? 0
-    const records = `Showing ${pageRecords.toLocaleString('en-US')} of ${totalRecords.toLocaleString('en-US')} records`
-    const pages = `Page ${currentPage.toLocaleString('en-US')} of ${pageMax.toLocaleString('en-US')}`
+    const recordsText = `Showing ${pageRecords.toLocaleString('en-US')} of ${totalRecords.toLocaleString('en-US')} records`
+    const pagesText = `Page ${currentPage.toLocaleString('en-US')} of ${pageMax.toLocaleString('en-US')}`
 
-    function handleClear(event, clearElementId) {
+    useEffect(() => {
+        if(hasSubmitted.current) return
+
+        handleSubmit()
+        hasSubmitted.current = true
+    }, [])
+
+    function handleClear(event, key) {
         event.preventDefault()
 
-        document.getElementById(clearElementId).value = ''
+        setQuery({ ...query, [key]: '' })
     }
 
     function handleEnter(event) {
@@ -304,40 +312,41 @@ export default function Dashboard() {
     }
 
     function handleSubmit (event) {
-        event.preventDefault()
+        event?.preventDefault()
         setDisabled(true)
 
         const url = new URL(`http://${serverAddress}/api/occurrences`)
         const params = url.searchParams
 
-        params.set('page', page.toString())
-        params.set('per_page', per_page.toString())
+        params.set('page', query.page.toString())
+        params.set('per_page', query.per_page.toString())
 
-        if (event.target.fieldName.value) {
-            params.set(event.target.fieldName.value, event.target.queryText.value)
+        if (query.fieldName) {
+            params.set(query.fieldName, query.queryText)
         }
 
-        if (event.target.minDate.value) params.set('start_date', event.target.minDate.value)
-        if (event.target.maxDate.value) params.set('end_date', event.target.maxDate.value)
+        if (query.minDate) params.set('start_date', query.minDate)
+        if (query.maxDate) params.set('end_date', query.maxDate)
 
         axios.get(url.toString()).then((res) => {
             setResults(res.data)
 
             pageMax = res.data?.pagination?.totalPages ? res.data?.pagination?.totalPages : 0
-            currentPage = res.data?.pagination?.currentPage ?? 1
-            setPage(currentPage)
+            const totalDocuments = res.data?.pagination?.totalDocuments ?? 0
+            setQuery(Object.assign(query, { totalDocuments: totalDocuments }))
             
             setDisabled(false)
         }).catch((error) => {
             console.error(error)
-            setPage(1)
-            setDisabled(false)
-        })
+            setQuery({ ...query, page: 1 })
 
-        // Remove pagination params before setting queryUrl variable (not relevant to data selection)
-        params.delete('page')
-        params.delete('per_page')
-        setQueryUrl(url.toString())
+            setDisabled(false)
+        }).finally(() => {
+            // Remove pagination params before setting query.url (not relevant to data selection)
+            params.delete('page')
+            params.delete('per_page')
+            setQuery({ ...query, url: url.toString() })
+        })
     }
 
     return (
@@ -348,15 +357,26 @@ export default function Dashboard() {
                     <div id='matchFieldFilter'>
                         <p>Match Field</p>
 
-                        <select id='fieldName'>
+                        <select
+                            id='fieldName'
+                            value={query.fieldName}
+                            onChange={(event) => setQuery({...query, fieldName: event.target.value})}
+                        >
                             <option key='select' value=''>Select a field to match...</option>
-                            {fields.map((fieldName) => <option key={fieldName} value={fieldName}>{fieldName}</option>)}
+                            {fieldNames.map((fieldName) => <option key={fieldName} value={fieldName}>{fieldName}</option>)}
                         </select>
                         <button className='clearButton' onClick={(event) => handleClear(event, 'fieldName')}>
                             <img src={closeIcon} alt='Clear' />
                         </button>
 
-                        <input id='queryText' type='text' placeholder='Enter a query...' onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }} />
+                        <input
+                            id='queryText'
+                            type='text'
+                            placeholder='Enter a query...'
+                            value={query.queryText}
+                            onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }}
+                            onChange={(event) => setQuery({ ...query, queryText: event.target.value })}
+                        />
                         <button className='clearButton' onClick={(event) => handleClear(event, 'queryText')}>
                             <img src={closeIcon} alt='Clear' />
                         </button>
@@ -365,13 +385,25 @@ export default function Dashboard() {
                         <p>Date</p>
 
                         <label>From</label>
-                        <input id='minDate' type='date' onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }} />
+                        <input
+                            id='minDate'
+                            type='date'
+                            value={query.minDate}
+                            onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }}
+                            onChange={(event) => setQuery({ ...query, minDate: event.target.value })}
+                        />
                         <button className='clearButton' onClick={(event) => handleClear(event, 'minDate')}>
                             <img src={closeIcon} alt='Clear' />
                         </button>
 
                         <label>To</label>
-                        <input id='maxDate' type='date' onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }} />
+                        <input
+                            id='maxDate'
+                            type='date'
+                            value={query.maxDate}
+                            onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }}
+                            onChange={(event) => setQuery({ ...query, maxDate: event.target.value })}
+                        />
                         <button className='clearButton' onClick={(event) => handleClear(event, 'maxDate')}>
                             <img src={closeIcon} alt='Clear' />
                         </button>
@@ -392,28 +424,28 @@ export default function Dashboard() {
                 </div>
                 <div id='resultsHeaderRight'>
                     <div id='resultsPagination'>
-                        <p>{records}</p>
-                        <p>{pages}</p>
+                        <p>{recordsText}</p>
+                        <p>{pagesText}</p>
                         <div id='resultsPageSelector'>
-                            <button className='pageIncrementButton' onClick={() => setPage(Math.max(1, page - 1))}>
+                            <button className='pageIncrementButton' onClick={() => setQuery({ ...query, page: Math.max(1, query.page - 1) })}>
                                 <img src={chevronLeftIcon} alt='Prev' />
                             </button>
                             <input
                                 id='resultsPage'
                                 type='number'
-                                value={page}
+                                value={query.page}
                                 min={1}
-                                max={pageMax + 1}
-                                onChange={(event) => setPage(parseInt(event.target.value))}
+                                max={Math.max(pageMax, 1)}
                                 onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }}
+                                onChange={(event) => setQuery({ ...query, page: parseInt(event.target.value) })}
                             />
-                            <button className='pageIncrementButton' onClick={() => setPage(Math.min(pageMax < 1 ? 1 : pageMax, page + 1))}>
+                            <button className='pageIncrementButton' onClick={() => setQuery({ ...query, page: Math.min(Math.max(pageMax, 1), query.page + 1) })}>
                                 <img src={chevronRightIcon} alt='Next' />
                             </button>
                         </div>
                     </div>
                     <div id='downloadResults'>
-                        <DownloadButton queryUrl={queryUrl} />
+                        <DownloadButton queryUrl={query.url} />
                     </div>
                 </div>
             </fieldset>

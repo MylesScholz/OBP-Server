@@ -3,6 +3,7 @@ import styled from '@emotion/styled'
 import CurrentUserButton from './components/CurrentUserButton.jsx'
 import { Outlet, useNavigate } from 'react-router'
 import { useAuth } from './AuthProvider.jsx'
+import { FlowProvider } from './FlowProvider.jsx'
 
 const AppContainer = styled.div`
     display: flex;
@@ -99,8 +100,9 @@ function App({ children }) {
                 { loggedIn && <CurrentUserButton /> }
             </header>
             <main>
-                { children || <Outlet /> }
-                {/* <AdminPanel loggedIn={loggedIn} setLoggedIn={setLoggedIn} /> */}
+                <FlowProvider>
+                    { children || <Outlet /> }
+                </FlowProvider>
             </main>
         </AppContainer>
     )

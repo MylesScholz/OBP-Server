@@ -13,15 +13,22 @@ export function FlowProvider({ children }) {
             maxDate: '',
             url: '',
             totalDocuments: 0
-        }
+        },
+        results: {}
     })
 
     const setQuery = (newQuery) => {
-        setFlowState({ ...flowState, query: newQuery })
+        setFlowState(prev => ({ ...prev, query: newQuery }))
+    }
+    
+    const setResults = (newResults) => {
+        setFlowState(prev => ({ ...prev, results: newResults }))
     }
 
     return (
-        <FlowContext.Provider value={{ flowState, setFlowState, query: flowState.query, setQuery }}>
+        <FlowContext.Provider value={
+            { flowState, setFlowState, query: flowState.query, setQuery, results: flowState.results, setResults }
+        }>
             { children }
         </FlowContext.Provider>
     )

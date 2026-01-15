@@ -50,12 +50,12 @@ const FlowBarContainer = styled.div`
 `
 
 export default function FlowBar() {
-    const { flowState, query } = useFlow()
+    const { results } = useFlow()
 
     return (
         <FlowBarContainer>
             <NavLink className='flowStage' to='/dashboard'>
-                <h3>Dashboard ({query.totalDocuments.toLocaleString('en-US')} selected)</h3>
+                <h3>Dashboard ({results?.pagination?.totalDocuments?.toLocaleString('en-US') ?? '0'} selected)</h3>
                 <img src={chevronRightIcon} alt='Next' />
             </NavLink>
             <NavLink className='flowStage' to='/tasks'>

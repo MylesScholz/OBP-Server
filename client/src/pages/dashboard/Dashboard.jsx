@@ -214,8 +214,7 @@ const DashboardContainer = styled.form`
 
 export default function Dashboard() {
     const [ disabled, setDisabled ] = useState(false)
-    const [ results, setResults ] = useState({})
-    const { query, setQuery } = useFlow()
+    const { query, setQuery, results, setResults } = useFlow()
     const hasSubmitted = useRef(false)
     
     // The URL or IP address of the backend server
@@ -286,18 +285,23 @@ export default function Dashboard() {
 
     let pageMax = results?.pagination?.totalPages ? results?.pagination?.totalPages : 0
     let currentPage = results?.pagination?.currentPage ?? 1
+    let pageLength = results?.data?.length ?? 0
+    let totalDocuments = results?.pagination?.totalDocuments ?? 0
 
-    const pageRecords = results?.data?.length ?? 0
-    const totalRecords = results?.pagination?.totalDocuments ?? 0
-    const recordsText = `Showing ${pageRecords.toLocaleString('en-US')} of ${totalRecords.toLocaleString('en-US')} records`
+    const recordsText = `Showing ${pageLength.toLocaleString('en-US')} of ${totalDocuments.toLocaleString('en-US')} records`
     const pagesText = `Page ${currentPage.toLocaleString('en-US')} of ${pageMax.toLocaleString('en-US')}`
 
     useEffect(() => {
         if(hasSubmitted.current) return
-
         handleSubmit()
         hasSubmitted.current = true
     }, [])
+
+    useEffect(() => {
+        if (currentPage > pageMax) {
+            setQuery({ ...query, page: 1 })
+        }
+    }, [results])
 
     function handleClear(event, key) {
         event.preventDefault()
@@ -330,16 +334,10 @@ export default function Dashboard() {
 
         axios.get(url.toString()).then((res) => {
             setResults(res.data)
-
-            pageMax = res.data?.pagination?.totalPages ? res.data?.pagination?.totalPages : 0
-            const totalDocuments = res.data?.pagination?.totalDocuments ?? 0
-            setQuery(Object.assign(query, { totalDocuments: totalDocuments }))
-            
             setDisabled(false)
         }).catch((error) => {
             console.error(error)
-            setQuery({ ...query, page: 1 })
-
+            setResults({ error })
             setDisabled(false)
         }).finally(() => {
             // Remove pagination params before setting query.url (not relevant to data selection)
@@ -424,8 +422,7 @@ export default function Dashboard() {
                 </div>
                 <div id='resultsHeaderRight'>
                     <div id='resultsPagination'>
-                        <p>{recordsText}</p>
-                        <p>{pagesText}</p>
+                        <p>{recordsText} ({pagesText})</p>
                         <div id='resultsPageSelector'>
                             <button className='pageIncrementButton' onClick={() => setQuery({ ...query, page: Math.max(1, query.page - 1) })}>
                                 <img src={chevronLeftIcon} alt='Prev' />
@@ -439,7 +436,7 @@ export default function Dashboard() {
                                 onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }}
                                 onChange={(event) => setQuery({ ...query, page: parseInt(event.target.value) })}
                             />
-                            <button className='pageIncrementButton' onClick={() => setQuery({ ...query, page: Math.min(Math.max(pageMax, 1), query.page + 1) })}>
+                            <button className='pageIncrementButton' onClick={() => setQuery({ ...query, page: Math.max(1, (query.page + 1) % Math.max(pageMax + 1, 1)) })}>
                                 <img src={chevronRightIcon} alt='Next' />
                             </button>
                         </div>

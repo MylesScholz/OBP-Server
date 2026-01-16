@@ -1,5 +1,6 @@
 import styled from '@emotion/styled'
 
+import { useAuth } from '../../AuthProvider'
 import FlowBar from '../../components/FlowBar'
 import TaskPanel from './TaskPanel'
 
@@ -12,10 +13,18 @@ const TasksPageContainer = styled.div`
 `
 
 export default function TasksPage() {
+    const { loggedIn } = useAuth()
+
     return (
         <TasksPageContainer>
-            <FlowBar />
-            <TaskPanel />
+            { loggedIn ? (
+                <>
+                    <FlowBar />
+                    <TaskPanel />
+                </>
+            ) : (
+                <Navigate to='/' />
+            )}
         </TasksPageContainer>
     )
 }

@@ -15,9 +15,6 @@ const SubtaskCardContainer = styled.div`
 
     padding: 10px;
 
-    max-width: 50%;
-    min-height: 425px;
-
     h2 {
         margin: 0px;
 
@@ -34,23 +31,22 @@ function capitalize(text) {
     return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
-export default function SubtaskCard({ type, subtaskSwitches, formVisible, setFile, handleRemove, hoveredFile, setHoveredFile, selectedTaskData, downloads }) {
-    const ordinal = subtaskSwitches.getSubtaskOrdinal(type)
+export default function SubtaskCard({ type, taskState, showForm, setUpload, hoveredFile, setHoveredFile, selectedTaskData, downloads }) {
+    const ordinal = taskState.getSubtaskOrdinal(type)
 
     return (
         <SubtaskCardContainer>
             <h2>{ordinal}. {capitalize(type)} Subtask</h2>
 
-            { formVisible &&
-                <SubtaskCardForm type={type} subtaskSwitches={subtaskSwitches} setFile={setFile} handleRemove={handleRemove} hoveredFile={hoveredFile} setHoveredFile={setHoveredFile} />
-            }
-            { !formVisible &&
+            { showForm ? (
+                <SubtaskCardForm type={type} taskState={taskState} setUpload={setUpload} hoveredFile={hoveredFile} setHoveredFile={setHoveredFile} />
+            ) : (
                 <SubtaskStatus
                     type={type}
                     selectedTaskData={selectedTaskData}
                     downloads={downloads}
                 />
-            }
+            )}
         </SubtaskCardContainer>
     )
 }

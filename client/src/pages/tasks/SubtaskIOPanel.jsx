@@ -81,10 +81,10 @@ function capitalize(text) {
     return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
-export default function SubtaskIOPanel({ type, subtaskSwitches, setFile, hoveredFile, setHoveredFile }) {
-    const io = subtaskSwitches.subtaskIO[type]
-    const inputOptions = subtaskSwitches.getInputOptions(type)
-    const subtaskIndex = (subtaskSwitches.getSubtaskOrdinal(type) - 1).toString()
+export default function SubtaskIOPanel({ type, taskState, setUpload, hoveredFile, setHoveredFile }) {
+    const io = taskState.subtaskIO[type]
+    const inputOptions = taskState.getInputOptions(type)
+    const subtaskIndex = (taskState.getSubtaskOrdinal(type) - 1).toString()
     const hoveredIndex = hoveredFile?.split('_')?.at(0) ?? ''
     const hoveredFileType = hoveredFile?.split('_')?.at(1) ?? ''
 
@@ -93,7 +93,7 @@ export default function SubtaskIOPanel({ type, subtaskSwitches, setFile, hovered
 
     return (
         <SubtaskIOPanelContainer>
-            { subtaskSwitches.getFirstSubtask() === type && setFile &&
+            { taskState.getFirstSubtask() === type && setUpload &&
                 <div className='fileUploadContainer'>
                     <label htmlFor='fileUpload'>Upload File:</label>
                     <input
@@ -101,11 +101,11 @@ export default function SubtaskIOPanel({ type, subtaskSwitches, setFile, hovered
                         accept='.csv'
                         id='fileUpload'
                         required
-                        onChange={ (event) => setFile(event.target.files[0]) }
+                        onChange={ (event) => setUpload(event.target.files[0]) }
                     />
                 </div>
             }
-            { subtaskSwitches.getFirstSubtask() !== type &&
+            { taskState.getFirstSubtask() !== type &&
                 <fieldset className={`inputFileFieldset`}>
                     <legend>Input File:</legend>
                     <div>

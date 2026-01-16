@@ -89,7 +89,7 @@ const SubtaskCardFormContainer = styled.div`
     }
 `
 
-export default function SubtaskCardForm({ type, subtaskSwitches, setFile, handleRemove, hoveredFile, setHoveredFile }) {
+export default function SubtaskCardForm({ type, taskState, setUpload, hoveredFile, setHoveredFile }) {
     const firstDay = new Date(new Date().getFullYear(), 0, 1)
     const firstDayFormatted = `${firstDay.getFullYear()}-${(firstDay.getMonth() + 1).toString().padStart(2, '0')}-${firstDay.getDate().toString().padStart(2, '0')}`
     const currentDate = new Date()
@@ -111,7 +111,7 @@ export default function SubtaskCardForm({ type, subtaskSwitches, setFile, handle
             <fieldset>
                 <p>{descriptions[type]}</p>
 
-                <SubtaskIOPanel type={type} subtaskSwitches={subtaskSwitches} setFile={setFile} hoveredFile={hoveredFile} setHoveredFile={setHoveredFile} />
+                <SubtaskIOPanel type={type} taskState={taskState} setUpload={setUpload} hoveredFile={hoveredFile} setHoveredFile={setHoveredFile} />
 
                 { type === 'observations' &&
                     <>
@@ -129,8 +129,6 @@ export default function SubtaskCardForm({ type, subtaskSwitches, setFile, handle
                     </>
                 }
             </fieldset>
-
-            <button type='button' id='removeSubtask' onClick={ (event) => handleRemove(type) }>Remove</button>
         </SubtaskCardFormContainer>
     )   
 }

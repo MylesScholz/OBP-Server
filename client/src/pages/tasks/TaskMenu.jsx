@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import styled from '@emotion/styled'
 
@@ -96,6 +96,8 @@ function capitalize(text) {
 }
 
 export default function TaskMenu({ taskState, setTaskState, selectedTaskId, setSelectedTaskId, selectedTaskQueryError, selectedTaskData }) {
+    const [ selectedValue, setSelectedValue ] = useState(selectedTaskId || 'blank')
+
     // The URL or IP address of the backend server
     const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
 
@@ -116,7 +118,7 @@ export default function TaskMenu({ taskState, setTaskState, selectedTaskId, setS
      * Fetches a list of all existing tasks from the server
      */
     const { error: tasksQueryError, data: tasks } = useQuery({
-        queryKey: ['tasks'],
+        queryKey: ['tasks', selectedTaskId],
         queryFn: async () => {
             const queryUrl = `http://${serverAddress}/api/tasks`
             const response = await fetch(queryUrl)
@@ -127,6 +129,14 @@ export default function TaskMenu({ taskState, setTaskState, selectedTaskId, setS
         refetchInterval: 10000,
         refetchOnMount: 'always',
     })
+
+    /* Effects */
+
+    useEffect(() => {
+        if (selectedTaskId) {
+            setSelectedValue(selectedTaskId)
+        }
+    }, [selectedTaskId])
 
     /* Handler Functions */
     
@@ -160,16 +170,18 @@ export default function TaskMenu({ taskState, setTaskState, selectedTaskId, setS
     function handleTaskSelect(event) {
         if (newTaskPresets[event.target.value]) {
             setSelectedTaskId(null)
+            setSelectedValue(event.target.value)
             setTaskState(new TaskState(newTaskPresets[event.target.value]))
         } else {
             setSelectedTaskId(event.target.value)
+            setSelectedValue(event.target.value)
         }
     }
 
     return (
         <TaskMenuContainer>
             <div id='taskSelectionContainer'>
-                <select>
+                <select value={selectedValue}>
                     <optgroup label='New task presets'>
                         { Object.keys(newTaskPresets).map((preset) => <option key={preset} value={preset} onClick={ handleTaskSelect }>New {preset} task</option>) }
                     </optgroup>

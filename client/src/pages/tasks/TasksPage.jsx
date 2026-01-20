@@ -1,4 +1,5 @@
 import styled from '@emotion/styled'
+import { Navigate } from 'react-router'
 
 import { useAuth } from '../../AuthProvider'
 import FlowBar from '../../components/FlowBar'

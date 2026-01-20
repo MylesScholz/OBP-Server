@@ -1,5 +1,7 @@
 import styled from '@emotion/styled'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+
+import { useFlow } from '../../FlowProvider'
 
 const SubtaskIOPanelContainer = styled.div`
     display: flex;
@@ -7,27 +9,10 @@ const SubtaskIOPanelContainer = styled.div`
     justify-content: space-between;
     align-items: stretch;
 
-    .fileUploadContainer {
-        display: flex;
-        flex-direction: row;
-        justify-content: start;
-        align-items: start;
-        gap: 10px;
-
-        padding: 0px;
-
-        white-space: nowrap;
-
-        label {
-            display: flex;
-            align-items: center;
-        }
-    }
-
     .inputFileFieldset {
         display: flex;
         flex-direction: column;
-        gap: 0px;
+        gap: 5px;
 
         legend {
             margin-bottom: 2px;
@@ -58,6 +43,11 @@ const SubtaskIOPanelContainer = styled.div`
                 gap: 5px;
             }
         }
+
+        .warningMessage {
+            color: firebrick;
+            font-weight: bold;
+        }
     }
 
     .tipContainer {
@@ -82,33 +72,60 @@ function capitalize(text) {
 }
 
 export default function SubtaskIOPanel({ type, taskState, setUpload, hoveredFile, setHoveredFile }) {
+    const { results } = useFlow()
+
     const io = taskState.subtaskIO[type]
     const inputOptions = taskState.getInputOptions(type)
     const subtaskIndex = (taskState.getSubtaskOrdinal(type) - 1).toString()
     const hoveredIndex = hoveredFile?.split('_')?.at(0) ?? ''
     const hoveredFileType = hoveredFile?.split('_')?.at(1) ?? ''
 
-    const defaultInputFile = inputOptions?.find((option) => !!option.default)?.key || 'upload'
+    const selectionAvailable = io?.inputs?.includes('occurrences') && results?.pagination?.totalDocuments > 0
+    const uploadAvailable = taskState.getFirstSubtask() === type
+    const defaultInputFile = inputOptions?.find((option) => !!option.default)?.key || (selectionAvailable && 'selection') || (uploadAvailable && 'upload')
     const [ selectedInputFile, setSelectedInputFile ] = useState(defaultInputFile)
+
+    useEffect(() => {
+        if (!inputOptions.includes(selectedInputFile)) {
+            setSelectedInputFile(defaultInputFile)
+        }
+    }, [inputOptions])
 
     return (
         <SubtaskIOPanelContainer>
-            { taskState.getFirstSubtask() === type && setUpload &&
-                <div className='fileUploadContainer'>
-                    <label htmlFor='fileUpload'>Upload File:</label>
-                    <input
-                        type='file'
-                        accept='.csv'
-                        id='fileUpload'
-                        required
-                        onChange={ (event) => setUpload(event.target.files[0]) }
-                    />
-                </div>
-            }
-            { taskState.getFirstSubtask() !== type &&
-                <fieldset className={`inputFileFieldset`}>
-                    <legend>Input File:</legend>
+            <fieldset className='inputFileFieldset'>
+                <legend>Input File:</legend>
+                { inputOptions?.map((option) =>
+                    <div onMouseEnter={() => setHoveredFile(option.key)} onMouseLeave={() => setHoveredFile(null)}>
+                        <input
+                            type='radio'
+                            id={`${type}Input-${option.key}`}
+                            name={`${type}Input`}
+                            value={option.key}
+                            checked={selectedInputFile === option.key}
+                            onChange={(event) => setSelectedInputFile(event.target.value)}
+                        />
+                        <label htmlFor={`${type}Input-${option.key}`}>
+                            {capitalize(option.subtask)} subtask ({option.subtaskIndex + 1}):
+                            <span className={`fileTip ${option.output}FileTip ${hoveredFile === option.key && 'hoveredFileTip'}`}>{option.output} file</span>
+                        </label>
+                    </div>
+                )}
+                { selectionAvailable &&
                     <div>
+                        <input
+                            type='radio'
+                            id={`${type}Input-selection`}
+                            name={`${type}Input`}
+                            value='selection'
+                            checked={selectedInputFile === 'selection'}
+                            onChange={(event) => setSelectedInputFile(event.target.value)}
+                        />
+                        <label htmlFor={`${type}Input-selection`}>Selection ({results?.pagination?.totalDocuments?.toLocaleString('en-US') ?? '0'} records)</label>
+                    </div>
+                }
+                { uploadAvailable &&
+                    <div onClick={() => setSelectedInputFile('upload')}>
                         <input
                             type='radio'
                             id={`${type}Input-upload`}
@@ -118,27 +135,22 @@ export default function SubtaskIOPanel({ type, taskState, setUpload, hoveredFile
                             onChange={(event) => setSelectedInputFile(event.target.value)}
                         />
                         <label htmlFor={`${type}Input-upload`}>Upload</label>
+                        <input
+                            type='file'
+                            accept='.csv'
+                            id='fileUpload'
+                            required={selectedInputFile === 'upload'}
+                            onChange={ (event) => setUpload(event.target.files[0]) }
+                        />
                     </div>
-                    {
-                        inputOptions?.map((option) =>
-                            <div onMouseEnter={(event) => setHoveredFile(option.key)} onMouseLeave={(event) => setHoveredFile(null)}>
-                                <input
-                                    type='radio'
-                                    id={`${type}Input-${option.key}`}
-                                    name={`${type}Input`}
-                                    value={option.key}
-                                    checked={selectedInputFile === option.key}
-                                    onChange={(event) => setSelectedInputFile(event.target.value)}
-                                />
-                                <label htmlFor={`${type}Input-${option.key}`}>
-                                    {capitalize(option.subtask)} subtask ({option.subtaskIndex + 1}):
-                                    <span className={`fileTip ${option.output}FileTip ${hoveredFile === option.key ? 'hoveredFileTip' : ''}`}>{option.output} file</span>
-                                </label>
-                            </div>
-                        )
-                    }
-                </fieldset>
-            }
+                }
+                { !defaultInputFile &&
+                    <div>
+                        <p className='warningMessage'>No valid input files</p>
+                    </div>
+                }
+            </fieldset>
+
             { io &&
                 <div className='tipContainer'>
                     <p>Output Files:</p>
@@ -148,8 +160,8 @@ export default function SubtaskIOPanel({ type, taskState, setUpload, hoveredFile
                                 io?.outputs?.map((output) =>
                                     <li
                                         className={`fileTip ${output}FileTip ${hoveredIndex === subtaskIndex && hoveredFileType === output ? 'hoveredFileTip' : ''}`}
-                                        onMouseEnter={(event) => setHoveredFile(`${subtaskIndex}_${output}`)}
-                                        onMouseLeave={(event) => setHoveredFile(null)}
+                                        onMouseEnter={() => setHoveredFile(`${subtaskIndex}_${output}`)}
+                                        onMouseLeave={() => setHoveredFile(null)}
                                     >{output} file</li>
                                 )
                             }

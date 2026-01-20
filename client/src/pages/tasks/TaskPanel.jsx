@@ -6,6 +6,7 @@ import axios from 'axios'
 import SubtaskPipeline from './SubtaskPipeline'
 import TaskMenu from './TaskMenu'
 import TaskState from './TaskState'
+import { useFlow } from '../../FlowProvider'
 
 const TaskPanelContainer = styled.form`
     display: grid;
@@ -23,6 +24,7 @@ export default function TaskPanel() {
     const [ taskState, setTaskState ] = useState(new TaskState())
     const [ selectedTaskId, setSelectedTaskId ] = useState()
     const [ postTaskResponse, setPostTaskResponse ] = useState()
+    const { query } = useFlow()
 
     // The URL or IP address of the backend server
     const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
@@ -41,7 +43,7 @@ export default function TaskPanel() {
             const selectedTaskResponse = await response.json()
 
             // Update taskState to match selected task's subtasks
-            let newTaskState = new TaskState()
+            let newTaskState = new TaskState({ id: selectedTaskId })
             for (const subtask of (selectedTaskResponse?.task?.subtasks || [])) {
                 newTaskState[subtask.type] = true
             }
@@ -66,24 +68,32 @@ export default function TaskPanel() {
         // If there are no subtasks, return without posting
         if (taskState.areAllDisabled()) return
 
+        // If there are subtasks with no valid input file post a warning
+        const enabledSubtasks = taskState.getEnabledSubtasks()
+        if (enabledSubtasks.some((type) => !event.target[`${type}Input`]?.value)) {
+            console.error('Some subtasks have no valid input')
+            window.alert('Some subtasks have no valid input')
+            return
+        }
+
         setPostTaskResponse(null)
 
         const formData = new FormData()
 
-        // Add the upload file
-        formData.append('file', taskState.upload)
+        // Add the upload file (if present)
+        if (taskState.upload) {
+            formData.append('file', taskState.upload)
+        }
 
         // Build the subtask pipeline
-        const enabledSubtasks = taskState.getEnabledSubtasks()
-        const subtaskPipeline = enabledSubtasks.map((type, i) => {
+        const subtaskPipeline = enabledSubtasks.map((type) => {
             const subtask = { type }
 
-            // The first subtask always accepts the upload file
-            // The rest are determined by the `${type}Input` element
-            if (i === 0) {
-                subtask.input = 'upload'
-            } else {
-                subtask.input = event.target[`${type}Input`]?.value ?? 'upload'
+            // Subtask inputs are determined by the `${type}Input` element
+            subtask.input = event.target[`${type}Input`]?.value
+
+            if (subtask.input === 'selection') {
+                subtask.query = query
             }
 
             // Add observations subtask settings
@@ -118,14 +128,11 @@ export default function TaskPanel() {
                 setSelectedTaskId={setSelectedTaskId}
                 selectedTaskQueryError={selectedTaskQueryError}
                 selectedTaskData={selectedTaskData}
-
             />
             <SubtaskPipeline
                 taskState={taskState}
                 setTaskState={setTaskState}
-                selectedTaskId={selectedTaskId}
-                setSelectedTaskId={setSelectedTaskId}
-                selectedTaskQueryError={selectedTaskQueryError}
+                selectedTaskId={taskState.id}
                 selectedTaskData={selectedTaskData}
             />
         </TaskPanelContainer>

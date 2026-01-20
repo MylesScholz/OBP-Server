@@ -100,7 +100,7 @@ class TaskService {
         const insertedId = await this.repository.create(task)
 
         // Publish task ID to RabbitMQ queue
-       await QueueManager.publishMessage(insertedId.toString())
+        await QueueManager.publishMessage(insertedId.toString())
 
         return {
             insertedId,

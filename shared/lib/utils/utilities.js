@@ -59,11 +59,11 @@ function parseQueryParameters(query) {
         filter: {},
         projection: {
             composite_sort: 0,
-            date: 0
+            date: 0,
+            new: 0,
+            scratch: 0
         }
     }
-
-    // TODO: check authentication and limit return fields
 
     // Parse query parameters
     const parsedPage = parseInt(query.page)
@@ -103,7 +103,13 @@ function parseQueryParameters(query) {
     // Parse field names directly included in the query object
     const queryFields = Object.keys(fieldNames).filter((fieldName) => !!query[fieldName] || query[fieldName] === '')
     for (const queryField of queryFields) {
-        params.filter[queryField] = query[queryField]
+        if (query[queryField] === '(non-empty)') {
+            // The query value '(non-empty)' is reserved for non-empty value queries
+            params.filter[queryField] = { $exists: true, $nin: [ null, '' ] }
+        } else {
+            // Comma-separated multi-value queries
+            params.filter[queryField] = { $in: query[queryField].split(',') }
+        }
     }
 
     // TODO: sorting query parameters

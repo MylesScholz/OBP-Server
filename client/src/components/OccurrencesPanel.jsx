@@ -1,4 +1,6 @@
 import styled from '@emotion/styled'
+import { useEffect } from 'react'
+import { useRef } from 'react'
 
 const OccurrencesPanelContainer = styled.div`
     position: relative;
@@ -40,6 +42,8 @@ const OccurrencesPanelContainer = styled.div`
 `
 
 export function OccurrencesPanel({ occurrences }) {
+    const scrollRef = useRef(null)
+
     occurrences ??= []
     const fields = [
         'errorFlags',
@@ -104,15 +108,37 @@ export function OccurrencesPanel({ occurrences }) {
         'casteVolDet',
     ]
 
-    let row = 1
+    // Convert vertical scrolling into horizontal scrolling
+    useEffect(() => {
+        const element = scrollRef.current
+        if (!element) return
+
+        const handleWheel = (event) => {
+            event.preventDefault()
+
+            const scrollAmount = event.deltaX !== 0 ? event.deltaX : event.deltaY
+
+            element.scrollBy({
+                left: scrollAmount * 4,
+                behavior: 'smooth'
+            })
+        }
+
+        element.addEventListener('wheel', handleWheel, { passive: false })
+
+        return () => {
+            element.removeEventListener('wheel', handleWheel)
+        }
+    }, [])
+
     return (
-        <OccurrencesPanelContainer>
+        <OccurrencesPanelContainer ref={scrollRef}>
             <p className='field'>#</p>
-            { fields.map((field) => <p className='field'>{field}</p>) }
-            { occurrences?.map((occurrence) => (
+            { fields.map((field) => <p className='field' key={field}>{field}</p>) }
+            { occurrences.map((occurrence, index) => (
                 <>
-                    <p>{row++}</p>
-                    {fields.map((field) => <p>{occurrence[field]}</p>)}
+                    <p key={`${occurrence._id},${index}`}>{index + 1}</p>
+                    { fields.map((field) => <p key={`${occurrence._id},${field}`}>{occurrence[field]}</p>) }
                 </>
             ))}
         </OccurrencesPanelContainer>

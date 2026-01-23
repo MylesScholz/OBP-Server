@@ -35,6 +35,21 @@ occurrencesRouter.get('/download', OccurrencesController.getOccurrencesDownload)
 occurrencesRouter.get('/working', requireAuthentication, OccurrencesController.getWorkingFile)
 
 /*
+ * POST /api/occurrences/working/read
+ * Read the current working occurrences dataset file into the database
+ * Authentication required
+ */
+occurrencesRouter.post('/working/read', requireAuthentication, OccurrencesController.readWorkingFile)
+
+/*
+ * POST /api/occurrences/working/write
+ * Write the database into the current working occurrences dataset file
+ * Authentication required
+ */
+occurrencesRouter.post('/working/write', requireAuthentication, OccurrencesController.writeWorkingFile)
+
+
+/*
  * GET /api/occurrences/backup
  * Returns the current backup occurrence dataset file
  * Authentication required

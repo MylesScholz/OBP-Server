@@ -121,9 +121,11 @@ class DeterminationsService {
         try {
             const response = await this.repository.updateById(determination._id, { $set: determination }, { upsert: true })
 
-            results.modifiedCount = response.modifiedCount
-            results.upsertedCount = response.upsertedCount
-            results.upsertedIds.push(response.upsertedId)
+            if (response) {
+                results.modifiedCount = response.modifiedCount
+                results.upsertedCount = response.upsertedCount
+                results.upsertedIds.push(response.upsertedId)
+            }
         } catch (error) {
             console.error('Error while upserting determination:', document)
             console.error(error)

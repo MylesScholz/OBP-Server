@@ -418,9 +418,11 @@ class OccurrenceService {
         try {
             const response = await this.repository.updateById(occurrence._id, occurrence, { upsert: true })
 
-            results.modifiedCount = response.modifiedCount
-            results.upsertedCount = response.upsertedCount
-            results.upsertedIds.push(response.upsertedId)
+            if (response) {
+                results.modifiedCount = response.modifiedCount
+                results.upsertedCount = response.upsertedCount
+                results.upsertedIds.push(response.upsertedId)
+            }
         } catch (error) {
             console.error('Error while upserting occurrence:', document)
             console.error(error)

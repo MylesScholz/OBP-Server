@@ -305,9 +305,11 @@ export default class OccurrenceRepository extends BaseRepository {
     }
 
     // Update
-    async updateById(id, updateDocument = {}) {
+    async updateById(id, updateDocument = {}, options = {}) {
         // Find the existing document and assign the update values to it
         const document = await this.findById(id)
+        if (!document) return
+        
         let processedDocument = Object.assign(document, updateDocument)
 
         // Set meta fields
@@ -315,7 +317,7 @@ export default class OccurrenceRepository extends BaseRepository {
         processedDocument = this.setDateField(processedDocument)
 
         // Update the document
-        return await super.updateById(id, { $set: processedDocument })
+        return await super.updateById(id, { $set: processedDocument }, options)
     }
 
     async updateMany(filter = {}, updateDocument = {}) {
@@ -332,8 +334,8 @@ export default class OccurrenceRepository extends BaseRepository {
                 processedDocument = this.setSortField(processedDocument, this.sortConfig)
                 processedDocument = this.setDateField(processedDocument)
 
-                const result = await super.updateById(processedDocument._id, { $set: processedDocument })
-                modifiedCount += result.modifiedCount
+                const response = await super.updateById(processedDocument._id, { $set: processedDocument })
+                modifiedCount += response?.modifiedCount ?? 0
             }
 
             page = await this.paginate({ page: ++pageNumber, filter })

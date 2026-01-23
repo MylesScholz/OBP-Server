@@ -160,7 +160,7 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
 
         await TaskService.logTaskStep(taskId, 'Formatting and uploading provided dataset')
 
-        // Delete old occurrences (from previous tasks)
+        // Delete old scratch space occurrences (from previous tasks)
         await OccurrenceService.deleteOccurrences({ scratch: true })
 
         if (subtask.input !== 'selection') {

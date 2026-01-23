@@ -47,7 +47,6 @@ export default class AddressesSubtaskHandler extends BaseSubtaskHandler {
         // Fetch the task, subtask, and previous outputs
         const task = await TaskService.getTaskById(taskId)
         const subtask = task.subtasks.find((subtask) => subtask.type === 'addresses')
-        const previousSubtaskOutputs = task.result?.subtaskOutputs ?? []
 
         // Input and output file names
 
@@ -72,7 +71,7 @@ export default class AddressesSubtaskHandler extends BaseSubtaskHandler {
 
         await TaskService.logTaskStep(taskId, 'Formatting and uploading provided dataset')
         
-        // Delete old occurrences (from previous tasks)
+        // Delete old scratch space occurrences (from previous tasks)
         await OccurrenceService.deleteOccurrences({ scratch: true })
 
         if (subtask.input !== 'selection') {

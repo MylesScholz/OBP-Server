@@ -107,11 +107,11 @@ export default function Dropdown({ options, onChange }) {
                     </div>
                 )}
             </div>
-            <ul id='dropdownOptions' className={showOptions && 'show'}>
+            <ul id='dropdownOptions' className={showOptions ? 'show' : ''}>
                 { options.map((option) =>
                     <li
                         key={option.key}
-                        className={selectedValue === option.value && 'selected'}
+                        className={selectedValue === option.value ? 'selected' : ''}
                         onClick={(event) => {
                             setSelectedValue(option.value)
                             onChange(option.value, setSelectedValue)

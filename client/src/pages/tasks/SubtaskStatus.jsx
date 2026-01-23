@@ -18,8 +18,6 @@ const SubtaskStatusContainer = styled.div`
 `
 
 export default function SubtaskStatus({ type, selectedTaskData, downloads }) {
-    const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
-
     return (
         <SubtaskStatusContainer>
             { selectedTaskData?.error &&

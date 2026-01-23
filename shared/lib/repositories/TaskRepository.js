@@ -40,10 +40,18 @@ export default class TaskRepository extends BaseRepository {
         })
     }
 
-    async updateResultById(id, result) {
+    async updateSubtaskOutputsById(id, subtaskType, outputs) {
+        const task = await this.findById(id)
+        if (!task) return
+
+        const subtaskIndex = task.subtasks.findIndex((subtask) => subtask.type === subtaskType)
+        if (subtaskIndex === -1) return
+
+        task.subtasks[subtaskIndex].outputs = outputs
+
         return await this.updateById(id, {
             $set: {
-                result,
+                subtasks: task.subtasks
             },
             $unset: {
                 progress: ''

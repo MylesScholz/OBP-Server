@@ -329,8 +329,8 @@ export default function Dashboard() {
             params.set(query.fieldName, query.queryText)
         }
 
-        if (query.minDate) params.set('start_date', query.minDate)
-        if (query.maxDate) params.set('end_date', query.maxDate)
+        if (query.start_date) params.set('start_date', query.start_date)
+        if (query.end_date) params.set('end_date', query.end_date)
 
         axios.get(url.toString()).then((res) => {
             setResults(res.data)
@@ -386,11 +386,11 @@ export default function Dashboard() {
                         <input
                             id='minDate'
                             type='date'
-                            value={query.minDate}
+                            value={query.start_date}
                             onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }}
-                            onChange={(event) => setQuery({ ...query, minDate: event.target.value })}
+                            onChange={(event) => setQuery({ ...query, start_date: event.target.value })}
                         />
-                        <button className='clearButton' onClick={(event) => handleClear(event, 'minDate')}>
+                        <button className='clearButton' onClick={(event) => handleClear(event, 'start_date')}>
                             <img src={closeIcon} alt='Clear' />
                         </button>
 
@@ -398,11 +398,11 @@ export default function Dashboard() {
                         <input
                             id='maxDate'
                             type='date'
-                            value={query.maxDate}
+                            value={query.end_date}
                             onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }}
-                            onChange={(event) => setQuery({ ...query, maxDate: event.target.value })}
+                            onChange={(event) => setQuery({ ...query, end_date: event.target.value })}
                         />
-                        <button className='clearButton' onClick={(event) => handleClear(event, 'maxDate')}>
+                        <button className='clearButton' onClick={(event) => handleClear(event, 'end_date')}>
                             <img src={closeIcon} alt='Clear' />
                         </button>
                     </div>

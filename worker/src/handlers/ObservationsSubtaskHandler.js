@@ -39,7 +39,7 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
         let observationsPage = await ObservationService.getUnmatchedObservationsPage({ page: pageNumber, pageSize: 10000 })
         while (pageNumber <= observationsPage.pagination.totalPages) {
             for (const observation of observationsPage.data) {
-                const occurrence = OccurrenceService.createOccurrenceFromObservation(observation, elevations)
+                const occurrence = OccurrenceService.createOccurrenceFromObservation(observation, elevations, true)
                 await updateProgress(100 * (++observationIndex) / observationsPage.pagination.totalDocuments)
 
                 // specimenId is initially set to the number of bees collected
@@ -56,7 +56,7 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
 
                 // Limit the number of occurrences created at once to avoid memory limitations (and to create smoother task progression)
                 if (occurrencesChunk.length >= createOccurrencesChunkSize || observationIndex >= observationsPage.pagination.totalDocuments) {
-                    const chunkResults = await OccurrenceService.createOccurrences(occurrencesChunk)
+                    const chunkResults = await OccurrenceService.createOccurrences(occurrencesChunk, { scratch: true })
 
                     // Append chunk results
                     createOccurrencesResults.insertedCount += chunkResults.insertedCount
@@ -106,7 +106,7 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
      */
     async #indexOccurrences(year) {
         // Query the highest field number from the occurrence database
-        const maxFieldNumber = await OccurrenceService.getMaxFieldNumber()
+        const maxFieldNumber = await OccurrenceService.getMaxFieldNumber({ scratch: true })
 
         // Create a default field number from the given year
         const yearPrefix = year.toString().slice(2)
@@ -117,7 +117,7 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
         // Query occurrences page-by-page to avoid memory constraints
         const updates = []
         let pageNumber = 1
-        let results = await OccurrenceService.getUnindexedOccurrencesPage({ page: pageNumber })
+        let results = await OccurrenceService.getUnindexedOccurrencesPage({ page: pageNumber, scratch: true })
         while (pageNumber <= results.pagination.totalPages) {
             for (const occurrence of results.data) {
                 // Set field number, and if stateProvince is 'OR', set occurrenceId and resourceId
@@ -135,7 +135,7 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
             }
 
             // Query the next page
-            results = await OccurrenceService.getUnindexedOccurrencesPage({ page: ++pageNumber })
+            results = await OccurrenceService.getUnindexedOccurrencesPage({ page: ++pageNumber, scratch: true })
         }
 
         for (const update of updates) {
@@ -155,20 +155,19 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
         // Fetch the task, subtask, and previous outputs
         const task = await TaskService.getTaskById(taskId)
         const subtask = task.subtasks.find((subtask) => subtask.type === 'observations')
-        const previousSubtaskOutputs = task.result?.subtaskOutputs ?? []
 
         // Input and output file names
         
         // Set the default input file to the file upload
         let inputFilePath = task.upload?.filePath ?? ''
-        // If not using the upload file, try to find the specified input file in the previous subtask outputs
-        if (subtask.input !== 'upload') {
+        // If not using the upload file or selection, try to find the specified input file in the previous subtask outputs
+        if (subtask.input !== 'upload' && subtask.input !== 'selection') {
             const subtaskInputSplit = subtask.input?.split('_') ?? []
             const subtaskInputIndex = parseInt(subtaskInputSplit[0])
             const subtaskInputFileType = subtaskInputSplit[1]
             
             // Get the output file list from the given subtask index
-            const outputs = previousSubtaskOutputs[subtaskInputIndex]?.outputs
+            const outputs = task.subtasks[subtaskInputIndex]?.outputs
             // Get the output file matching the given input file type
             const outputFile = outputs?.find((output) => output.type === subtaskInputFileType)
 
@@ -191,11 +190,16 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
 
         await TaskService.logTaskStep(taskId, 'Formatting and uploading provided dataset')
 
-        // Delete old occurrences (from previous tasks)
-        await OccurrenceService.deleteOccurrences()
+        // Delete old scratch space occurrences (from previous tasks)
+        await OccurrenceService.deleteOccurrences({ scratch: true })
 
-        // Read data from the input occurrence file and insert it into the occurrences database table
-        await OccurrenceService.createOccurrencesFromFile(inputFilePath)
+        if (subtask.input !== 'selection') {
+            // Upsert data from the input occurrence file into scratch space (existing records will be moved to scratch space)
+            await OccurrenceService.upsertOccurrencesFromFile(inputFilePath, { scratch: true })
+        } else {    // subtask.input === 'selection'
+            // Move occurrences matching the query parameters into scratch space
+            await OccurrenceService.updateOccurrences(subtask.params?.filter ?? {}, { scratch: true })
+        }
 
         // Pull new iNaturalist observations and insert them
         await TaskService.logTaskStep(taskId, 'Querying new observations from iNaturalist')
@@ -243,18 +247,23 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
         await this.#indexOccurrences(currentYear)
 
         await TaskService.logTaskStep(taskId, 'Writing output files')
+        await TaskService.updateProgressPercentageById(taskId, 0)
 
         // Write unflagged occurrences to the occurrences output file
         const occurrencesFilter = {
+            scratch: true,
             $or: [
                 { [fieldNames.errorFlags]: { $exists: false } },
                 { [fieldNames.errorFlags]: { $in: [ null, '' ] } }
             ]
         }
         await OccurrenceService.writeOccurrencesFromDatabase(occurrencesFilePath, occurrencesFilter)
+
+        await TaskService.updateProgressPercentageById(taskId, 100 / 3)
         
         // Write unprinted, flagged occurrences to the flags output file
         const flagsFilter = {
+            scratch: true,
             [fieldNames.errorFlags]: { $exists: true, $nin: [ null, '' ] },
             $or: [
                 { [fieldNames.dateLabelPrint]: { $exists: false } },
@@ -263,15 +272,20 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
         }
         await OccurrenceService.writeOccurrencesFromDatabase(flagsFilePath, flagsFilter)
 
+        await TaskService.updateProgressPercentageById(taskId, 100 * 2 / 3)
+
         // Write new unflagged occurrences to the pulls output file
         const pullsFilter = {
+            scratch: true,
+            new: true,
             $or: [
                 { [fieldNames.errorFlags]: { $exists: false } },
                 { [fieldNames.errorFlags]: { $in: [ null, '' ] } }
-            ],
-            new: true
+            ]
         }
         await OccurrenceService.writeOccurrencesFromDatabase(pullsFilePath, pullsFilter)
+
+        await TaskService.updateProgressPercentageById(taskId, 100)
 
         // Update the task result with the output files
         const outputs = [
@@ -279,14 +293,17 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
             { uri: `/api/pulls/${pullsFileName}`, fileName: pullsFileName, type: 'pulls' },
             { uri: `/api/flags/${flagsFileName}`, fileName: flagsFileName, type: 'flags' }
         ]
-        previousSubtaskOutputs.push({ type: subtask.type, outputs })
-        await TaskService.updateResultById(taskId, {
-            subtaskOutputs: previousSubtaskOutputs
-        })
+        await TaskService.updateSubtaskOutputsById(taskId, 'observations', outputs)
 
         // Archive excess output files
         FileManager.limitFilesInDirectory('./shared/data/occurrences', fileLimits.maxOccurrences)
         FileManager.limitFilesInDirectory('./shared/data/pulls', fileLimits.maxPulls)
         FileManager.limitFilesInDirectory('./shared/data/flags', fileLimits.maxFlags)
+
+        // Move scratch space occurrences matching the occurrences filter (or having a defined fieldNumber) back to non-scratch space
+        occurrencesFilter.$or.push({ [fieldNames.fieldNumber]: { $exists: true, $nin: [ null, '' ] } })
+        await OccurrenceService.updateOccurrences(occurrencesFilter, { scratch: false })
+        // Discard remaining scratch space occurrences
+        await OccurrenceService.deleteOccurrences({ scratch: true })
     }
 }

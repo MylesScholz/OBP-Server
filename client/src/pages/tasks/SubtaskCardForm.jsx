@@ -29,8 +29,9 @@ const SubtaskCardFormContainer = styled.div`
             margin: 0px;
         }
 
-        div {
+        .subtaskSetting {
             display: flex;
+            align-items: center;
             gap: 10px;
 
             white-space: nowrap;
@@ -38,6 +39,13 @@ const SubtaskCardFormContainer = styled.div`
             label {
                 display: flex;
                 align-items: center;
+            }
+
+            input[type='checkbox'] {
+                margin: 0px;
+
+                width: 15px;
+                height: 15px;
             }
         }
 
@@ -89,7 +97,7 @@ const SubtaskCardFormContainer = styled.div`
     }
 `
 
-export default function SubtaskCardForm({ type, taskState, setUpload, hoveredFile, setHoveredFile }) {
+export default function SubtaskCardForm({ type, taskState, pipelineState, setPipelineState }) {
     const firstDay = new Date(new Date().getFullYear(), 0, 1)
     const firstDayFormatted = `${firstDay.getFullYear()}-${(firstDay.getMonth() + 1).toString().padStart(2, '0')}-${firstDay.getDate().toString().padStart(2, '0')}`
     const currentDate = new Date()
@@ -111,22 +119,38 @@ export default function SubtaskCardForm({ type, taskState, setUpload, hoveredFil
             <fieldset>
                 <p>{descriptions[type]}</p>
 
-                <SubtaskIOPanel type={type} taskState={taskState} setUpload={setUpload} hoveredFile={hoveredFile} setHoveredFile={setHoveredFile} />
+                <SubtaskIOPanel
+                    type={type}
+                    taskState={taskState}
+                    pipelineState={pipelineState}
+                    setPipelineState={setPipelineState}
+                />
 
                 { type === 'observations' &&
                     <>
                         <ProjectSelection />
                         
-                        <div>
+                        <div className='subtaskSetting'>
                             <label htmlFor='minDate'>Minimum Date:</label>
-                            <input type='date' id='minDate' value={minDate} onChange={(e) => setMinDate(e.target.value)} required />
+                            <input id='minDate' type='date' value={minDate} onChange={(e) => setMinDate(e.target.value)} required />
                         </div>
-
-                        <div>
+                        <div className='subtaskSetting'>
                             <label htmlFor='maxDate'>Maximum Date:</label>
-                            <input type='date' id='maxDate' value={maxDate} onChange={(e) => setMaxDate(e.target.value)} required />
+                            <input id='maxDate' type='date' value={maxDate} onChange={(e) => setMaxDate(e.target.value)} required />
                         </div>
                     </>
+                }
+                { (type === 'labels' || type === 'addresses') &&
+                    <div className='subtaskSetting'>
+                        <label>Ignore dateLabelPrint field:</label>
+                        <input
+                            id={`${type}IgnoreDateLabelPrint`}
+                            type='checkbox'
+                            autoComplete='off'
+                            checked={pipelineState.ignoreDateLabelPrint}
+                            onChange={(event) => setPipelineState({ ...pipelineState, ignoreDateLabelPrint: event.target.checked })}
+                        />
+                    </div>
                 }
             </fieldset>
         </SubtaskCardFormContainer>

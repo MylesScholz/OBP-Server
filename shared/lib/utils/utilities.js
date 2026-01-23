@@ -1,3 +1,5 @@
+import { fieldNames } from './constants.js'
+
 /*
  * includesStreetSuffix()
  * A boolean function that returns whether a given string contains a street suffix (Road, Rd, Street, St, etc.)
@@ -50,4 +52,63 @@ function getOFV(ofvs, fieldName) {
     return ofv?.value ?? ''
 }
 
-export { includesStreetSuffix, getDayOfYear, delay, getOFV }
+function parseQueryParameters(query) {
+    const params = {
+        page: 1,
+        pageSize: 50,
+        filter: {},
+        projection: {
+            composite_sort: 0,
+            date: 0
+        }
+    }
+
+    // TODO: check authentication and limit return fields
+
+    // Parse query parameters
+    const parsedPage = parseInt(query.page)
+    if (query.page && !isNaN(parsedPage)) {
+        params.page = parsedPage
+    }
+
+    const parsedPerPage = parseInt(query.per_page)
+    if (query.per_page && !isNaN(parsedPerPage)) {
+        params.pageSize = parsedPerPage
+    }
+
+    const startDate = new Date(query.start_date ?? '')
+    const endDate = new Date(query.end_date ?? '')
+    if (startDate > endDate) {
+        params.error = {
+            status: 400,
+            message: 'start_date must be before end_date'
+        }
+        return params
+    }
+    if (startDate.toString() !== 'Invalid Date') {
+        if (!params.filter.date) params.filter.date = {}
+        
+        // Set time to noon UTC to avoid location-based date variance
+        startDate.setHours(12, 0, 0, 0)
+        params.filter.date.$gte = startDate
+    }        
+    if (endDate.toString() !== 'Invalid Date') {
+        if (!params.filter.date) params.filter.date = {}
+
+        // Set time to noon UTC to avoid location-based date variance
+        endDate.setHours(12, 0, 0, 0)
+        params.filter.date.$lte = endDate
+    }
+
+    // Parse field names directly included in the query object
+    const queryFields = Object.keys(fieldNames).filter((fieldName) => !!query[fieldName] || query[fieldName] === '')
+    for (const queryField of queryFields) {
+        params.filter[queryField] = query[queryField]
+    }
+
+    // TODO: sorting query parameters
+
+    return params
+}
+
+export { includesStreetSuffix, getDayOfYear, delay, getOFV, parseQueryParameters }

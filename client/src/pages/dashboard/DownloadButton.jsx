@@ -8,6 +8,7 @@ import downloadIcon from '/src/assets/download.svg'
 import downloadingIcon from '/src/assets/downloading.svg'
 import csvIcon from '/src/assets/csv.svg'
 import { useEffect } from 'react'
+import { useAuth } from '../../AuthProvider'
 
 const DownloadButtonContainer = styled.div`
     display: flex;
@@ -56,6 +57,7 @@ const DownloadButtonContainer = styled.div`
 `
 
 export default function DownloadButton({ queryUrl }) {
+    const { loggedIn } = useAuth()
     const [ selectedTaskId, setSelectedTaskId ] = useState()
 
     // The URL or IP address of the backend server
@@ -79,22 +81,20 @@ export default function DownloadButton({ queryUrl }) {
         enabled: !!selectedTaskId
     })
 
-    // On remount, update result based on the selected task data
-    let result = selectedTaskData?.task?.result
+    // On remount, update subtasks based on the selected task data
+    let subtasks = selectedTaskData?.task?.subtasks ?? []
 
     /*
      * Downloads Query
      * Generates download links for each output file in the currently selected task
      */
     const { data: downloads } = useQuery({
-        queryKey: ['downloads', result],
+        queryKey: ['downloads', subtasks, loggedIn],
         queryFn: async () => {
             const downloads = []
 
-            const subtaskOutputs = result?.subtaskOutputs || []
-            for (const subtaskOutput of subtaskOutputs) {
-
-                const outputs = subtaskOutput.outputs || []
+            for (const subtask of subtasks) {
+                const outputs = subtask.outputs ?? []
                 for (const output of outputs) {
                     const queryUrl = `http://${serverAddress}${output.uri}`
                     const response = await axios.get(queryUrl, { responseType: 'blob' }).catch((error) => {
@@ -105,7 +105,7 @@ export default function DownloadButton({ queryUrl }) {
                         fileName: output.fileName,
                         type: output.type,
                         subtype: output.subtype,
-                        subtask: subtaskOutput.type,
+                        subtask: subtask.type,
                         responseStatus: response.status
                     }
                     if (response.status === 200) {
@@ -118,7 +118,7 @@ export default function DownloadButton({ queryUrl }) {
             return downloads
         },
         refetchOnMount: 'always',
-        enabled: !!result
+        enabled: subtasks.some((subtask) => !!subtask.outputs)
     })
 
     // Reset selectedTaskId when queryUrl changes
@@ -155,7 +155,7 @@ export default function DownloadButton({ queryUrl }) {
                     <img src={csvIcon} alt='CSV' />
                 </a>
             ) : (
-                <button className={ `${!queryUrl && 'noDownload'} ${selectedTaskId && !downloads && 'pendingDownload'}` } onClick={handleClick}>
+                <button className={ `${!queryUrl ? 'noDownload' : ''} ${selectedTaskId && !downloads ? 'pendingDownload' : ''}` } onClick={handleClick}>
                     { !queryUrl && <img src={downloadOffIcon} alt='No download' /> }
                     { queryUrl && !selectedTaskId && <img src={downloadIcon} alt='Download' /> }
                     { selectedTaskId && !downloads && <img src={downloadingIcon} alt='Downloading...' /> }

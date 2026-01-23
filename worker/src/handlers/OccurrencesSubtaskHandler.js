@@ -32,6 +32,7 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
         let pageNumber = 1
         let occurrenceIndex = 0
         const occurrencesFilter = {
+            scratch: true,
             [fieldNames.iNaturalistUrl]: { $exists: true, $nin: [ null, '' ] }
         }
         const observationQueryOptions = {
@@ -102,7 +103,7 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
             await updateProgress(100 * (++i) / observations.length)
         }
 
-        return await OccurrenceService.createOccurrences(occurrences)
+        return await OccurrenceService.createOccurrences(occurrences, { scratch: true })
     }
 
     /*
@@ -136,7 +137,7 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
      */
     async #indexOccurrences(year) {
         // Query the highest field number from the occurrence database
-        const maxFieldNumber = await OccurrenceService.getMaxFieldNumber()
+        const maxFieldNumber = await OccurrenceService.getMaxFieldNumber({ scratch: true })
 
         // Create a default field number from the given year
         const yearPrefix = year.toString().slice(2)
@@ -147,7 +148,7 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
         // Query occurrences page-by-page to avoid memory constraints
         const updates = []
         let pageNumber = 1
-        let results = await OccurrenceService.getUnindexedOccurrencesPage({ page: pageNumber })
+        let results = await OccurrenceService.getUnindexedOccurrencesPage({ page: pageNumber, scratch: true })
         while (pageNumber < results.pagination.totalPages + 1) {
             for (const occurrence of results.data) {
                 // Set field number, and if stateProvince is 'OR', set occurrenceId and resourceId
@@ -165,7 +166,7 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
             }
 
             // Query the next page
-            results = await OccurrenceService.getUnindexedOccurrencesPage({ page: ++pageNumber })
+            results = await OccurrenceService.getUnindexedOccurrencesPage({ page: ++pageNumber, scratch: true })
         }
 
         for (const update of updates) {
@@ -185,6 +186,7 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
         let pageNumber = 1
         let occurrenceIndex = 0
         const occurrencesFilter = {
+            scratch: true,
             [fieldNames.fieldNumber]: { $exists: true, $nin: [ null, '' ] }
         }
         let occurrencesResults = await OccurrenceService.getOccurrencesPage({ page: pageNumber, filter: occurrencesFilter })
@@ -227,23 +229,27 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
         const uploadFilePath = task.upload?.filePath ?? ''
         const occurrencesFileName = `occurrences_${task.tag}.csv`
         const occurrencesFilePath = './shared/data/occurrences/' + occurrencesFileName
-        const duplicatesFileName = `duplicates_${task.tag}.csv`
-        const duplicatesFilePath = './shared/data/duplicates/' + duplicatesFileName
 
         await TaskService.logTaskStep(taskId, 'Formatting and uploading provided dataset')
 
-        // Delete old occurrences (from previous tasks)
-        await OccurrenceService.deleteOccurrences()
+        // Delete old scratch space occurrences (from previous tasks)
+        await OccurrenceService.deleteOccurrences({ scratch: true })
 
-        // Read data from the input occurrence file and insert it into the occurrences database table
-        const { duplicates: duplicateOccurrences } = await OccurrenceService.createOccurrencesFromFile(uploadFilePath)
+        if (subtask.input === 'download') {
+            // Upsert data from the uploaded occurrence file into scratch space (existing records will be moved to scratch space)
+            await OccurrenceService.upsertOccurrencesFromFile(uploadFilePath, { scratch: true })
+        } else if (subtask.input === 'selection') {
+            // Move occurrences matching the query parameters into scratch space
+            await OccurrenceService.updateOccurrences(subtask.params?.filter ?? {}, { scratch: true })
+        }
 
         await TaskService.logTaskStep(taskId, 'Querying corresponding iNaturalist observations from provided dataset')
 
         // Query all distinct URLs from the occurrences database table and extract the observation IDs
-        const distinctUrls = await OccurrenceService.getDistinctUrls()
-        const observationIds = distinctUrls.map((url) => url.split('/').pop())
-                                        .filter((id) => id && !isNaN(id))
+        const distinctUrls = await OccurrenceService.getDistinctUrls({ scratch: true })
+        const observationIds = distinctUrls
+            .map((url) => url.split('/').pop())
+            .filter((id) => id && !isNaN(id))
         // Fetch the observations corresponding to the uploaded occurrences and insert them into the observations database table
         let matchingObservations = await ApiService.fetchObservationsByIds(observationIds, this.#createUpdateProgressFn(taskId))
         // Set a custom field indicating that this observation has a matching occurrence
@@ -267,7 +273,7 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
         await TaxaService.updateTaxaFromObservations(observations, this.#createUpdateProgressFn(taskId))
 
         // Query all distinct coordinates from the occurrences database table
-        let coordinates = await OccurrenceService.getDistinctCoordinates()
+        let coordinates = await OccurrenceService.getDistinctCoordinates({ scratch: true })
         // Query all distinct coordinates from the observations database table and append them (deduplicating with a Set)
         coordinates = [...(new Set(coordinates.concat(await ObservationService.getDistinctCoordinates())))]
 
@@ -298,24 +304,23 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
         await this.#updateOccurrencesFromDeterminations(this.#createUpdateProgressFn(taskId))
 
         await TaskService.logTaskStep(taskId, 'Writing output files')
+        await TaskService.updateProgressPercentageById(taskId, 0)
 
-        await OccurrenceService.writeOccurrencesFromDatabase(occurrencesFilePath)
+        // Write scratch space occurrences to output file
+        await OccurrenceService.writeOccurrencesFromDatabase(occurrencesFilePath, { scratch: true })
 
-        // Write duplicate occurrences from the input file into the duplicates output file
-        OccurrenceService.writeOccurrencesFile(duplicatesFilePath, duplicateOccurrences)
+        await TaskService.updateProgressPercentageById(taskId, 100)
 
-        // Update the task result with the output files
-        // Overwrite previous outputs so that occurrences subtasks are always at the start of the subtask pipelne
+        // Update the subtask with the output files
         const outputs = [
             { uri: `/api/occurrences/${occurrencesFileName}`, fileName: occurrencesFileName, type: 'occurrences' },
-            { uri: `/api/duplicates/${duplicatesFileName}`, fileName: duplicatesFileName, type: 'duplicates' }
         ]
-        await TaskService.updateResultById(taskId, {
-            subtaskOutputs: [ { type: subtask.type, outputs } ]
-        })
+        await TaskService.updateSubtaskOutputsById(taskId, 'occurrences', outputs)
 
         // Archive excess output files
         FileManager.limitFilesInDirectory('./shared/data/occurrences', fileLimits.maxOccurrences)
-        FileManager.limitFilesInDirectory('./shared/data/duplicates', fileLimits.maxDuplicates)
+
+        // Move all scratch space occurrences back to non-scratch space
+        await OccurrenceService.updateOccurrences({ scratch: true }, { scratch: false })
     }
 }

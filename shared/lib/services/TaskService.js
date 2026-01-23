@@ -2,6 +2,7 @@ import fs from 'fs'
 
 import { TaskRepository } from '../repositories/index.js'
 import { InvalidArgumentError, ValidationError } from '../utils/errors.js'
+import { parseQueryParameters } from '../utils/utilities.js'
 import QueueManager from '../messaging/QueueManager.js'
 
 class TaskService {
@@ -23,6 +24,14 @@ class TaskService {
             for (let i = 0; i < subtasks.length; i++) {
                 const subtask = subtasks[i]
                 if (!subtaskTypes.includes(subtask.type)) { throw new ValidationError(`Invalid subtask type '${subtask.type}'`) }
+
+                if (subtask.query) {
+                    const params = parseQueryParameters(subtask.query)
+
+                    if (params.error) { throw new ValidationError('Invalid query parameters') }
+
+                    subtasks[i].params = params
+                }
                 
                 if (subtask.type === 'observations') {
                     if (!subtask.sources || !subtask.minDate || !subtask.maxDate) {
@@ -192,11 +201,11 @@ class TaskService {
     }
 
     /*
-     * updateResultById()
-     * Updates the result field of a task selected by ID; sets the status to 'Completed'
+     * updateSubtaskOutputsById()
+     * Updates the output field of a given subtask in a task selected by ID; unsets the task's progress field
      */
-    async updateResultById(id, result) {
-        return await this.repository.updateResultById(id, result)
+    async updateSubtaskOutputsById(id, subtaskType, outputs) {
+        return await this.repository.updateSubtaskOutputsById(id, subtaskType, outputs)
     }
 
     /*

@@ -33,7 +33,6 @@ export default class TaskState {
                 outputs: [ 'pivots' ]
             }
         }
-        this.upload = !!taskState?.upload
         this.id = !!taskState?.id
     }
 

@@ -4,7 +4,7 @@ import { PageSizes, PDFDocument, degrees } from 'pdf-lib'
 import { datamatrixrectangularextension } from 'bwip-js/node'
 
 import BaseSubtaskHandler from './BaseSubtaskHandler.js'
-import { abbreviations, fieldNames, fileLimits, requiredFields, template } from '../../shared/lib/utils/constants.js'
+import { abbreviations, fieldNames, fileLimits, template } from '../../shared/lib/utils/constants.js'
 import { TaskService, OccurrenceService } from '../../shared/lib/services/index.js'
 import FileManager from '../../shared/lib/utils/FileManager.js'
 
@@ -513,20 +513,19 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         // Fetch the task, subtask, and previous outputs
         const task = await TaskService.getTaskById(taskId)
         const subtask = task.subtasks.find((subtask) => subtask.type === 'labels')
-        const previousSubtaskOutputs = task.result?.subtaskOutputs ?? []
 
         // Input and output file names
 
         // Set the default input file to the file upload
         let inputFilePath = task.upload?.filePath ?? ''
-        // If not using the upload file, try to find the specified input file in the previous subtask outputs
-        if (subtask.input !== 'upload') {
+        // If not using the upload file or selection, try to find the specified input file in the previous subtask outputs
+        if (subtask.input !== 'upload' && subtask.input !== 'selection') {
             const subtaskInputSplit = subtask.input?.split('_') ?? []
             const subtaskInputIndex = parseInt(subtaskInputSplit[0])
             const subtaskInputFileType = subtaskInputSplit[1]
             
             // Get the output file list from the given subtask index
-            const outputs = previousSubtaskOutputs[subtaskInputIndex]?.outputs
+            const outputs = task.subtasks[subtaskInputIndex]?.outputs
             // Get the output file matching the given input file type
             const outputFile = outputs?.find((output) => output.type === subtaskInputFileType)
 
@@ -543,19 +542,23 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         await TaskService.logTaskStep(taskId, 'Formatting and uploading provided dataset')
 
         // Delete old occurrences (from previous tasks)
-        await OccurrenceService.deleteOccurrences()
+        await OccurrenceService.deleteOccurrences({ scratch: true })
 
-        // Read data from the input occurrence file and insert it into the occurrences database table
-        const { duplicates: duplicateOccurrences } = await OccurrenceService.createOccurrencesFromFile(inputFilePath)
+        if (subtask.input !== 'selection') {
+            // Upsert data from the input occurrence file into scratch space (existing records will be moved to scratch space)
+            await OccurrenceService.upsertOccurrencesFromFile(inputFilePath, { scratch: true })
+        } else {    // subtask.input === 'selection'
+            // Move occurrences matching the query parameters into scratch space
+            await OccurrenceService.updateOccurrences(subtask.params?.filter ?? {}, { scratch: true })
+        }
 
         // Find the set of printable occurrences
-        const printableOccurrences = await OccurrenceService.getPrintableOccurrences(requiredFields)
+        const printableOccurrences = await OccurrenceService.getPrintableOccurrences({ scratch: true, ignoreDateLabelPrint: subtask.ignoreDateLabelPrint })
 
         // Calculate the number of unprintable occurrences that were filtered out and add a warning message
-        const numFilteredOut = await OccurrenceService.count() - printableOccurrences.length
+        const numFilteredOut = await OccurrenceService.count({ scratch: true }) - printableOccurrences.length
 
         const warnings = [
-            `Filtered out ${duplicateOccurrences.length} duplicate occurrences.`,
             `Filtered out ${numFilteredOut} occurrences that were already printed or had faulty data.`
         ]
 
@@ -595,24 +598,32 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         }
 
         // Write the flags file
-        const flags = await OccurrenceService.getUnprintableOccurrences(requiredFields)
+        const flags = await OccurrenceService.getUnprintableOccurrences({ scratch: true, ignoreDateLabelPrint: true })
         FileManager.writeCSV(flagsFilePath, flags, Object.keys(template))
 
         // Update the task result with the output files
         const outputs = [
-            { uri: `/api/labels/${labelsFileName}`, fileName: labelsFileName, type: 'labels' }
+            { uri: `/api/labels/${labelsFileName}`, fileName: labelsFileName, type: 'labels' },
+            { uri: `/api/flags/${flagsFileName}`, fileName: flagsFileName, type: 'flags', subtype: 'unprintable' }
         ]
         if (warningLabels.length > 0) {
             outputs.push({ uri: `/api/labels/${warningLabelsFileName}`, fileName: warningLabelsFileName, type: 'labels', subtype: 'warnings' })
         }
-        outputs.push({ uri: `/api/flags/${flagsFileName}`, fileName: flagsFileName, type: 'flags', subtype: 'unprintable' })
-        previousSubtaskOutputs.push({ type: subtask.type, outputs })
-        await TaskService.updateResultById(taskId, {
-            subtaskOutputs: previousSubtaskOutputs
-        })
+        await TaskService.updateSubtaskOutputsById(taskId, 'labels', outputs)
 
         // Archive excess output files
         FileManager.limitFilesInDirectory('./shared/data/labels', fileLimits.maxLabels)
         FileManager.limitFilesInDirectory('./shared/data/occurrences', fileLimits.maxOccurrences)
+
+        // Move scratch space occurrences with fieldNumbers or no errorFlags back to non-scratch space
+        const occurrencesFilter = {
+            scratch: true,
+            $or: [
+                { [fieldNames.fieldNumber]: { $exists: true, $nin: [ null, '' ] } },
+                { [fieldNames.errorFlags]: { $exists: false } },
+                { [fieldNames.errorFlags]: { $in: [ null, '' ] } }
+            ]
+        }
+        await OccurrenceService.updateOccurrences(occurrencesFilter, { scratch: false })
     }
 }

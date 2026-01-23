@@ -1,7 +1,7 @@
 import Crypto from 'node:crypto'
 
 import { OccurrenceRepository } from '../repositories/index.js'
-import { fieldNames, template, nonEmptyFields, ofvs, abbreviations, determinations } from '../utils/constants.js'
+import { fieldNames, template, nonEmptyFields, ofvs, abbreviations, determinations, requiredFields } from '../utils/constants.js'
 import { includesStreetSuffix, getDayOfYear, getOFV } from '../utils/utilities.js'
 import PlacesService from './PlacesService.js'
 import TaxaService from './TaxaService.js'
@@ -148,7 +148,12 @@ class OccurrenceService {
      * createOccurrence
      * Inserts a single occurrence into the database with optional formatting
      */
-    async createOccurrence(document, skipFormatting = false) {
+    async createOccurrence(document, options = { skipFormatting: false, scratch: false }) {
+        const {
+            skipFormatting = false,
+            scratch = false
+        } = options
+
         // Return object containing information about inserted and duplicate occurrences
         const results = {
             insertedCount: 0,
@@ -156,8 +161,14 @@ class OccurrenceService {
             duplicates: []
         }
 
-        // Apply formatting
+        // Apply formatting (unless skipped)
         const occurrence = skipFormatting ? document : this.formatOccurrence(document)
+
+        // Return if no document was provided
+        if (!occurrence) return results
+
+        // Set scratch space flag
+        occurrence.scratch = scratch
 
         // Check if a occurrence with the same _id already exists; insert the occurrence if not
         const existing = await this.repository.findById(occurrence._id)
@@ -176,7 +187,12 @@ class OccurrenceService {
      * createOccurrences()
      * Inserts multiple occurrences into the database with optional formatting
      */
-    async createOccurrences(documents, skipFormatting = false) {
+    async createOccurrences(documents, options = { skipFormatting: false, scratch: false }) {
+        const {
+            skipFormatting = false,
+            scratch = false
+        } = options
+
         // Return object containing information about inserted and duplicate occurrences
         const results = {
             insertedCount: 0,
@@ -189,6 +205,11 @@ class OccurrenceService {
 
         // Return if no documents were provided
         if (!occurrences || occurrences.length === 0) return results
+
+        // Set scratch space flags
+        for (const occurrence of occurrences) {
+            occurrence.scratch = scratch
+        }
 
         try {
             const response = await this.repository.createMany(occurrences)
@@ -223,7 +244,12 @@ class OccurrenceService {
      * createOccurrencesFromFile()
      * Reads a given occurrences file chunk-by-chunk and inserts formatted occurrences for each entry
      */
-    async createOccurrencesFromFile(filePath) {
+    async createOccurrencesFromFile(filePath, options = { skipFormatting: false, scratch: false }) {
+        const {
+            skipFormatting = false,
+            scratch = false
+        } = options
+
         const chunkSize = 5000
         // Return object containing information about inserted and duplicate occurrences
         const results = {
@@ -233,7 +259,7 @@ class OccurrenceService {
         }
 
         for await (const chunk of FileManager.readCSVChunks(filePath, chunkSize)) {
-            const chunkResults = await this.createOccurrences(chunk)
+            const chunkResults = await this.createOccurrences(chunk, { skipFormatting, scratch })
             
             // Add the results for this chunk to the running total
             results.insertedCount += chunkResults.insertedCount
@@ -248,7 +274,7 @@ class OccurrenceService {
      * createOccurrenceFromObservation()
      * Creates a formatted occurrence from an iNaturalist observation (and place, taxonomy, elevation, and user data); does not insert the occurrence
      */
-    createOccurrenceFromObservation(observation, elevations) {
+    createOccurrenceFromObservation(observation, elevations, scratch = false) {
         // Return if no observation is provided
         if (!observation) return
 
@@ -257,6 +283,8 @@ class OccurrenceService {
 
         // Tag this occurrence as new
         occurrence.new = true
+        // Set scratch space flag
+        occurrence.scratch = scratch
 
         /* Constants */
 
@@ -366,7 +394,12 @@ class OccurrenceService {
      * upsertOccurrence()
      * Inserts or updates an occurrence
      */
-    async upsertOccurrence(document, skipFormatting = false) {
+    async upsertOccurrence(document, options = { skipFormatting: false, scratch: false }) {
+        const {
+            skipFormatting = false,
+            scratch = false
+        } = options
+
         // Return object containing information about updated and inserted occurrences
         const results = {
             modifiedCount: 0,
@@ -376,8 +409,14 @@ class OccurrenceService {
 
         const occurrence = skipFormatting ? document : this.formatOccurrence(document)
 
+        // Return if no document was provided
+        if (!occurrence) return results
+
+        // Set scratch space flag
+        occurrence.scratch = scratch
+
         try {
-            const response = await this.repository.updateById(occurrence._id, { $set: occurrence }, { upsert: true })
+            const response = await this.repository.updateById(occurrence._id, occurrence, { upsert: true })
 
             results.modifiedCount = response.modifiedCount
             results.upsertedCount = response.upsertedCount
@@ -394,7 +433,12 @@ class OccurrenceService {
      * upsertOccurrences()
      * Inserts or updates multiple occurrences
      */
-    async upsertOccurrences(documents) {
+    async upsertOccurrences(documents, options = { skipFormatting: false, scratch: false }) {
+        const {
+            skipFormatting = false,
+            scratch = false
+        } = options
+
         // Return object containing information about updated and inserted occurrences
         const results = {
             modifiedCount: 0,
@@ -402,13 +446,14 @@ class OccurrenceService {
             upsertedIds: []
         }
 
-        const occurrences = documents?.map((doc) => this.formatOccurrence(doc))
+        // Apply formatting (unless skipped)
+        const occurrences = skipFormatting ? documents : documents?.map((doc) => this.formatOccurrence(doc))
 
         // Return if no documents were provided
         if (!occurrences || occurrences.length === 0) return results
 
         for (const occurrence of occurrences) {
-            const occurrenceResults = await this.upsertOccurrence(occurrence, true)
+            const occurrenceResults = await this.upsertOccurrence(occurrence, { skipFormatting: true, scratch })
 
             results.modifiedCount += occurrenceResults.modifiedCount
             results.upsertedCount += occurrenceResults.upsertedCount
@@ -422,7 +467,12 @@ class OccurrenceService {
      * upsertOccurrencesFromFile()
      * Inserts or updates occurrences data from a given file path into the database
      */
-    async upsertOccurrencesFromFile(filePath) {
+    async upsertOccurrencesFromFile(filePath, options = { skipFormatting: false, scratch: false }) {
+        const {
+            skipFormatting = false,
+            scratch = false
+        } = options
+
         const chunkSize = 5000
         // Return object containing information about updated and inserted occurrences
         const results = {
@@ -432,7 +482,7 @@ class OccurrenceService {
         }
 
         for await (const chunk of FileManager.readCSVChunks(filePath, chunkSize)) {
-            const chunkResults = await this.upsertOccurrences(chunk, format)
+            const chunkResults = await this.upsertOccurrences(chunk, { skipFormatting, scratch })
 
             results.modifiedCount += chunkResults.modifiedCount
             results.upsertedCount += chunkResults.upsertedCount
@@ -451,9 +501,18 @@ class OccurrenceService {
         return await this.repository.paginate({ ...options, sortConfig })
     }
 
+    /*
+     * getUnindexedOccurrencesPage()
+     * Returns a page of occurrences with empty errorFlags and fieldNumber fields
+     */
     async getUnindexedOccurrencesPage(options = {}) {
+        const {
+            scratch = false
+        } = options
+
         // Query occurrences with empty errorFlags and fieldNumber
         const filter = {
+            scratch: scratch,
             [fieldNames.errorFlags]: { $exists: true, $in: [ null, '' ] },
             [fieldNames.fieldNumber]: { $exists: true, $in: [ null, '' ] }
         }
@@ -463,25 +522,37 @@ class OccurrenceService {
 
     /*
      * getPrintableOccurrences()
-     * Returns occurrences that have not been printed and do not have error flags on a given list of required fields; optional filtering by a list of userLogins
+     * Returns occurrences that do not have error flags on the constant list of required fields; optional filtering by a list of userLogins, scratch space, and dateLabelPrint
      */
-    async getPrintableOccurrences(requiredFields, userLogins) {
-        // First, query occurrences with an empty dateLabelPrint field
+    async getPrintableOccurrences(options = { userLogins: [], scratch: false, ignoreDateLabelPrint: false }) {
+        const {
+            userLogins = [],
+            scratch = false,
+            ignoreDateLabelPrint = false
+        } = options
+
+        // At minimum, query occurrences with the given scratch value
         const filter = {
-            $or: [
+            scratch: scratch
+        }
+        // If dateLabelPrint should not be ignored, query for unprinted
+        if (!ignoreDateLabelPrint) {
+            filter.$or = [
                 { [fieldNames.dateLabelPrint]: { $exists: false } },
                 { [fieldNames.dateLabelPrint]: { $in: [ null, '' ] } }
             ]
         }
         // If userLogins are given, filter by them
-        if (userLogins) filter[fieldNames.iNaturalistAlias] = { $in: userLogins }
+        if (userLogins.length > 0) filter[fieldNames.iNaturalistAlias] = { $in: userLogins }
+        
+        console.log(filter)
 
         // Filter by occurrences with all required fields
-        requiredFields?.forEach((field) => filter[field] = { $exists: true, $nin: [ null, '' ] })
-        const unprintedAndComplete = await this.repository.findMany(filter, {}, { [fieldNames.recordedBy]: 1, [fieldNames.fieldNumber]: 1 })
+        requiredFields.forEach((field) => filter[field] = { $exists: true, $nin: [ null, '' ] })
+        const occurrences = await this.repository.findMany(filter, {}, { [fieldNames.recordedBy]: 1, [fieldNames.fieldNumber]: 1 })
 
         // Filter out occurrences where any of the required fields show up in errorFlags
-        return unprintedAndComplete.filter(
+        return occurrences.filter(
             (occurrence) => !requiredFields.some(
                 (field) => occurrence[fieldNames.errorFlags]?.split(';')?.includes(field) ?? false
             )
@@ -490,39 +561,69 @@ class OccurrenceService {
 
     /*
      * getUnprintableOccurrences()
-     * Returns occurrences that have either already been printed or that have error flags on a given list of required fields
+     * Returns occurrences that have error flags on the constant list of required fields; optional filtering by dateLabelPrint
      */
-    async getUnprintableOccurrences(requiredFields) {
+    async getUnprintableOccurrences(options = { scratch: false, ignoreDateLabelPrint: false }) {
+        const {
+            scratch = false,
+            ignoreDateLabelPrint = false
+        } = options
+
+        // Query occurrences with the given scratch value and a nonempty errorFlags field
+        // If a requiredField is missing, it will show up as a flag in errorFlags
         const filter = {
-            $or: [
-                { [fieldNames.errorFlags]: { $exists: true, $nin: [ null, '' ] } },
-                { [fieldNames.dateLabelPrint]: { $exists: true, $nin: [ null, '' ] } }
+            scratch: scratch,
+            [fieldNames.errorFlags]: { $exists: true, $nin: [ null, '' ] }
+        }
+        // If dateLabelPrint should not be ignored, query for unprinted
+        if (!ignoreDateLabelPrint) {
+            filter.$or = [
+                { [fieldNames.dateLabelPrint]: { $exists: false } },
+                { [fieldNames.dateLabelPrint]: { $in: [ null, '' ] } }
             ]
         }
+        const occurrences = await this.repository.findMany(filter)
 
-        const printedOrIncomplete = await this.repository.findMany(filter)
-
-        return printedOrIncomplete.filter(
+        // Filter all erroneous occurrences down to only those with error flags on the constant list of required fields
+        return occurrences.filter(
             (occurrence) => requiredFields.some(
                 (field) => occurrence[fieldNames.errorFlags]?.split(';')?.includes(field) ?? false
             )
         )
     }
 
-    async getErrorFlagsByUserLogins(userLogins) {
-        // Query occurrences with iNaturalistAliases in the given list of user logins and errorFlags
-        // Limit the result fields to the iNaturalistAlias and errorFlags
+    /*
+     * getErrorFlagsByUserLogins()
+     * Returns a list of errorFlags values from the occurrences grouped by userLogin and filtered to a given list of userLogins
+     */
+    async getErrorFlagsByUserLogins(userLogins, options = { scratch: false }) {
+        const {
+            scratch = false
+        } = options
+
+        // Query occurrences with errorFlags and iNaturalistAliases in the given list of user logins
+        // Group by iNaturalistAlias
         return await this.repository.aggregate([
             {
                 $match: {
+                    scratch: scratch,
                     [fieldNames.iNaturalistAlias]: { $in: userLogins },
                     [fieldNames.errorFlags]: { $exists: true, $nin: [ null, '' ] }
                 }
             },
             {
+                $group: {
+                    _id: `$${fieldNames.iNaturalistAlias}`,
+                    errorFlagsList: {
+                        $push: `$${fieldNames.errorFlags}`
+                    }
+                }
+            },
+            {
                 $project: {
-                    [fieldNames.iNaturalistAlias]: 1,
-                    [fieldNames.errorFlags]: 1
+                    _id: 0,
+                    'userLogin': '$_id',
+                    'errorFlagsList': 1
                 }
             }
         ])
@@ -536,8 +637,8 @@ class OccurrenceService {
         return await this.repository.distinct(fieldNames.iNaturalistUrl, filter)
     }
 
-    async getMaxFieldNumber() {
-        return await this.repository.maxFieldNumber()
+    async getMaxFieldNumber(filter = {}) {
+        return await this.repository.maxFieldNumber(filter)
     }
 
     async getStateCollectorBeeCounts(filter = {}) {
@@ -558,6 +659,10 @@ class OccurrenceService {
 
     async updateOccurrenceById(id, updateDocument) {
         return await this.repository.updateById(id, updateDocument)
+    }
+
+    async updateOccurrences(filter = {}, updateDocument) {
+        return await this.repository.updateMany(filter, updateDocument)
     }
 
     /*

@@ -50,12 +50,12 @@ export default class OccurrenceRepository extends BaseRepository {
         year = isNaN(year) ? 2100 : year    // Sort blank years at end; hopefully 2100 is far enough in the future
 
         let monthIndex = parseInt(processedDocument[fieldNames.month] ?? '') - 1
-        monthIndex = isNaN(monthIndex) ? 11 : monthIndex   // Sort blank years at end of year
+        monthIndex = isNaN(monthIndex) ? 11 : monthIndex   // Sort blank months at end of year
 
         let day = parseInt(processedDocument[fieldNames.day] ?? '')
-        day = isNaN(day) ? new Date(year, monthIndex + 1, 0).getDate() : day    // Sort date at end of month; day 0 of the following month is the last day of the current month
+        day = isNaN(day) ? new Date(year, monthIndex + 1, 0).getDate() : day    // Sort blank days at end of month; day 0 of the following month is the last day of the current month
 
-        processedDocument.date = new Date(year, monthIndex, day, 12, 0, 0, 0)    // Set time to noon to avoid timezone issues
+        processedDocument.date = new Date(year, monthIndex, day, 12, 0, 0, 0)    // Set time to noon UTC to avoid timezone issues
 
         return processedDocument
     }
@@ -128,10 +128,11 @@ export default class OccurrenceRepository extends BaseRepository {
         return formattedCoordinates
     }
 
-    async maxFieldNumber() {
+    async maxFieldNumber(filter = {}) {
         const response = await this.aggregate([
             {
                 $match: {
+                    ...filter,
                     [fieldNames.fieldNumber]: { $exists: true, $nin: [ null, '' ] }
                 }
             },
@@ -305,22 +306,39 @@ export default class OccurrenceRepository extends BaseRepository {
 
     // Update
     async updateById(id, updateDocument = {}) {
-        // Require that the update document has all of the sort fields
-        // const keys = Object.keys(updateDocument)
-        // if (!this.sortConfig.every(({ field }) => keys.includes(field))) return 0
+        // Find the existing document and assign the update values to it
+        const document = await this.findById(id)
+        let processedDocument = Object.assign(document, updateDocument)
 
-        let processedDocument = this.setSortField(updateDocument, this.sortConfig)
+        // Set meta fields
+        processedDocument = this.setSortField(updateDocument, this.sortConfig)
         processedDocument = this.setDateField(processedDocument)
+
+        // Update the document
         return await super.updateById(id, { $set: processedDocument })
     }
 
     async updateMany(filter = {}, updateDocument = {}) {
-        // Require that the update document has all of the sort fields
-        // const keys = Object.keys(updateDocument)
-        // if (!this.sortConfig.every(({ field }) => keys.includes(field))) return 0
+        // Page through matching documents and assign update values and meta fields
+        let pageNumber = 1
+        let page = await this.paginate({ page: pageNumber, filter })
+        let modifiedCount = 0
+        while (pageNumber <= page.pagination.totalPages) {
+            for (const document of page.data) {
+                // Assign update values
+                let processedDocument = Object.assign(document, updateDocument)
 
-        let processedDocument = this.setSortField(updateDocument, this.sortConfig)
-        processedDocument = this.setDateField(processedDocument)
-        return await super.updateMany(filter, { $set: processedDocument })
+                // Set meta fields
+                processedDocument = this.setSortField(processedDocument, this.sortConfig)
+                processedDocument = this.setDateField(processedDocument)
+
+                const result = await super.updateById(processedDocument._id, { $set: processedDocument })
+                modifiedCount += result.modifiedCount
+            }
+
+            page = await this.paginate({ page: ++pageNumber, filter })
+        }
+
+        return modifiedCount
     }
 }

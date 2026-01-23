@@ -8,6 +8,9 @@ const SubtaskIOPanelContainer = styled.div`
     flex-direction: row;
     justify-content: space-between;
     align-items: stretch;
+    gap: 10px;
+
+    white-space: nowrap;
 
     .inputFileFieldset {
         display: flex;
@@ -71,14 +74,14 @@ function capitalize(text) {
     return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
-export default function SubtaskIOPanel({ type, taskState, setUpload, hoveredFile, setHoveredFile }) {
+export default function SubtaskIOPanel({ type, taskState, pipelineState, setPipelineState }) {
     const { results } = useFlow()
 
     const io = taskState.subtaskIO[type]
     const inputOptions = taskState.getInputOptions(type)
     const subtaskIndex = (taskState.getSubtaskOrdinal(type) - 1).toString()
-    const hoveredIndex = hoveredFile?.split('_')?.at(0) ?? ''
-    const hoveredFileType = hoveredFile?.split('_')?.at(1) ?? ''
+    const hoveredIndex = pipelineState.hoveredFile.split('_').at(0) ?? ''
+    const hoveredFileType = pipelineState.hoveredFile.split('_').at(1) ?? ''
 
     const selectionAvailable = io?.inputs?.includes('occurrences') && results?.pagination?.totalDocuments > 0
     const uploadAvailable = taskState.getFirstSubtask() === type
@@ -86,7 +89,7 @@ export default function SubtaskIOPanel({ type, taskState, setUpload, hoveredFile
     const [ selectedInputFile, setSelectedInputFile ] = useState(defaultInputFile)
 
     useEffect(() => {
-        if (!inputOptions.includes(selectedInputFile)) {
+        if (!inputOptions.includes(selectedInputFile) && selectedInputFile !== 'selection' && selectedInputFile !== 'upload') {
             setSelectedInputFile(defaultInputFile)
         }
     }, [inputOptions])
@@ -96,7 +99,10 @@ export default function SubtaskIOPanel({ type, taskState, setUpload, hoveredFile
             <fieldset className='inputFileFieldset'>
                 <legend>Input File:</legend>
                 { inputOptions?.map((option) =>
-                    <div onMouseEnter={() => setHoveredFile(option.key)} onMouseLeave={() => setHoveredFile(null)}>
+                    <div
+                        onMouseEnter={() => setPipelineState({ ...pipelineState, hoveredFile: option.key })}
+                        onMouseLeave={() => setPipelineState({ ...pipelineState, hoveredFile: '' })}
+                    >
                         <input
                             type='radio'
                             id={`${type}Input-${option.key}`}
@@ -107,7 +113,7 @@ export default function SubtaskIOPanel({ type, taskState, setUpload, hoveredFile
                         />
                         <label htmlFor={`${type}Input-${option.key}`}>
                             {capitalize(option.subtask)} subtask ({option.subtaskIndex + 1}):
-                            <span className={`fileTip ${option.output}FileTip ${hoveredFile === option.key && 'hoveredFileTip'}`}>{option.output} file</span>
+                            <span className={`fileTip ${option.output}FileTip ${pipelineState.hoveredFile === option.key ? 'hoveredFileTip' : ''}`}>{option.output} file</span>
                         </label>
                     </div>
                 )}
@@ -121,7 +127,7 @@ export default function SubtaskIOPanel({ type, taskState, setUpload, hoveredFile
                             checked={selectedInputFile === 'selection'}
                             onChange={(event) => setSelectedInputFile(event.target.value)}
                         />
-                        <label htmlFor={`${type}Input-selection`}>Selection ({results?.pagination?.totalDocuments?.toLocaleString('en-US') ?? '0'} records)</label>
+                        <label htmlFor={`${type}Input-selection`}>Selection ({results?.pagination?.totalDocuments?.toLocaleString('en-US') ?? '0'} occurrences)</label>
                     </div>
                 }
                 { uploadAvailable &&
@@ -140,7 +146,6 @@ export default function SubtaskIOPanel({ type, taskState, setUpload, hoveredFile
                             accept='.csv'
                             id='fileUpload'
                             required={selectedInputFile === 'upload'}
-                            onChange={ (event) => setUpload(event.target.files[0]) }
                         />
                     </div>
                 }
@@ -160,8 +165,9 @@ export default function SubtaskIOPanel({ type, taskState, setUpload, hoveredFile
                                 io?.outputs?.map((output) =>
                                     <li
                                         className={`fileTip ${output}FileTip ${hoveredIndex === subtaskIndex && hoveredFileType === output ? 'hoveredFileTip' : ''}`}
-                                        onMouseEnter={() => setHoveredFile(`${subtaskIndex}_${output}`)}
-                                        onMouseLeave={() => setHoveredFile(null)}
+                                        key={output}
+                                        onMouseEnter={() => setPipelineState({ ...pipelineState, hoveredFile: `${subtaskIndex}_${output}` })}
+                                        onMouseLeave={() => setPipelineState({ ...pipelineState, hoveredFile: '' })}
                                     >{output} file</li>
                                 )
                             }

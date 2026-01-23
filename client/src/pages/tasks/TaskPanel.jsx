@@ -7,6 +7,7 @@ import SubtaskPipeline from './SubtaskPipeline'
 import TaskMenu from './TaskMenu'
 import TaskState from './TaskState'
 import { useFlow } from '../../FlowProvider'
+import { useAuth } from '../../AuthProvider'
 
 const TaskPanelContainer = styled.form`
     display: grid;
@@ -25,6 +26,7 @@ export default function TaskPanel() {
     const [ selectedTaskId, setSelectedTaskId ] = useState()
     const [ postTaskResponse, setPostTaskResponse ] = useState()
     const { query } = useFlow()
+    const { loggedIn } = useAuth()
 
     // The URL or IP address of the backend server
     const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
@@ -56,6 +58,46 @@ export default function TaskPanel() {
         enabled: !!selectedTaskId
     })
 
+    // On remount, update subtasks based on the selected task data
+    let subtasks = selectedTaskData?.task?.subtasks ?? []
+
+    /*
+     * Downloads Query
+     * Generates download links for each output file in the currently selected task
+     */
+    const { data: downloads } = useQuery({
+        queryKey: ['downloads', subtasks, loggedIn],
+        queryFn: async () => {
+            const downloads = []
+
+            for (const subtask of subtasks) {
+                const outputs = subtask.outputs ?? []
+                for (const output of outputs) {
+                    const queryUrl = `http://${serverAddress}${output.uri}`
+                    const response = await axios.get(queryUrl, { responseType: 'blob' }).catch((error) => {
+                        return { status: error.status }
+                    })
+
+                    const download = {
+                        fileName: output.fileName,
+                        type: output.type,
+                        subtype: output.subtype,
+                        subtask: subtask.type,
+                        responseStatus: response.status
+                    }
+                    if (response.status === 200) {
+                        download.url = URL.createObjectURL(response.data)
+                    }
+                    downloads.push(download)
+                }
+            }
+            
+            return downloads
+        },
+        refetchOnMount: 'always',
+        enabled: subtasks.some((subtask) => !!subtask.outputs)
+    })
+
     /* Handler Functions */
 
     /*
@@ -81,8 +123,8 @@ export default function TaskPanel() {
         const formData = new FormData()
 
         // Add the upload file (if present)
-        if (taskState.upload) {
-            formData.append('file', taskState.upload)
+        if (event.target.fileUpload.files.length > 0) {
+            formData.append('file', event.target.fileUpload.files[0])
         }
 
         // Build the subtask pipeline
@@ -93,7 +135,16 @@ export default function TaskPanel() {
             subtask.input = event.target[`${type}Input`]?.value
 
             if (subtask.input === 'selection') {
-                subtask.query = query
+                const subtaskQuery = {
+                    page: query.page,
+                    per_page: query.per_page,
+                    start_date: query.start_date,
+                    end_date: query.end_date
+                }
+                if (query.fieldName) {
+                    subtaskQuery[query.fieldName] = query.queryText ?? ''
+                }
+                subtask.query = subtaskQuery
             }
 
             // Add observations subtask settings
@@ -101,6 +152,16 @@ export default function TaskPanel() {
                 subtask.sources = event.target.sources.value
                 subtask.minDate = event.target.minDate.value
                 subtask.maxDate = event.target.maxDate.value
+            }
+
+            // Add labels subtask settings
+            if (type === 'labels') {
+                subtask.ignoreDateLabelPrint = event.target.labelsIgnoreDateLabelPrint.checked
+            }
+
+            // Add addresses subtask settings
+            if (type === 'addresses') {
+                subtask.ignoreDateLabelPrint = event.target.addressesIgnoreDateLabelPrint.checked
             }
 
             return subtask
@@ -131,9 +192,8 @@ export default function TaskPanel() {
             />
             <SubtaskPipeline
                 taskState={taskState}
-                setTaskState={setTaskState}
-                selectedTaskId={taskState.id}
                 selectedTaskData={selectedTaskData}
+                downloads={downloads}
             />
         </TaskPanelContainer>
     )

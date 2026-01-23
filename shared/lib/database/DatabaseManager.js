@@ -83,6 +83,9 @@ class DatabaseManager {
                     'date': 1
                 },
                 {
+                    'scratch': 1
+                },
+                {
                     [fieldNames.iNaturalistUrl]: 1
                 },
                 {

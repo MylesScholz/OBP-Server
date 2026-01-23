@@ -53,14 +53,14 @@ export default class AddressesSubtaskHandler extends BaseSubtaskHandler {
 
         // Set the default input file to the file upload
         let inputFilePath = task.upload?.filePath ?? ''
-        // If not using the upload file, try to find the specified input file in the previous subtask outputs
-        if (subtask.input !== 'upload') {
+        // If not using the upload file or selection, try to find the specified input file in the previous subtask outputs
+        if (subtask.input !== 'upload' && subtask.input !== 'selection') {
             const subtaskInputSplit = subtask.input?.split('_') ?? []
             const subtaskInputIndex = parseInt(subtaskInputSplit[0])
             const subtaskInputFileType = subtaskInputSplit[1]
             
             // Get the output file list from the given subtask index
-            const outputs = previousSubtaskOutputs[subtaskInputIndex]?.outputs
+            const outputs = task.subtasks[subtaskInputIndex]?.outputs
             // Get the output file matching the given input file type
             const outputFile = outputs?.find((output) => output.type === subtaskInputFileType)
 
@@ -73,10 +73,15 @@ export default class AddressesSubtaskHandler extends BaseSubtaskHandler {
         await TaskService.logTaskStep(taskId, 'Formatting and uploading provided dataset')
         
         // Delete old occurrences (from previous tasks)
-        await OccurrenceService.deleteOccurrences()
+        await OccurrenceService.deleteOccurrences({ scratch: true })
 
-        // Read data from the input occurrence file and insert it into the occurrences database table
-        await OccurrenceService.createOccurrencesFromFile(inputFilePath)
+        if (subtask.input !== 'selection') {
+            // Upsert data from the input occurrence file into scratch space (existing records will be moved to scratch space)
+            await OccurrenceService.upsertOccurrencesFromFile(inputFilePath, { scratch: true })
+        } else {    // subtask.input === 'selection'
+            // Move occurrences matching the query parameters into scratch space
+            await OccurrenceService.updateOccurrences(subtask.params?.filter ?? {}, { scratch: true })
+        }
 
         await TaskService.logTaskStep(taskId, 'Compiling user mailing addresses')
 
@@ -86,7 +91,7 @@ export default class AddressesSubtaskHandler extends BaseSubtaskHandler {
                                 .filter((userLogin) => !!userLogin)
 
         // Get printable occurrences with known user data; extract iNaturalist aliases (userLogins)
-        const printableOccurrences = await OccurrenceService.getPrintableOccurrences(requiredFields, userLogins)
+        const printableOccurrences = await OccurrenceService.getPrintableOccurrences({ userLogins: userLogins, scratch: true, ignoreDateLabelPrint: subtask.ignoreDateLabelPrint })
         const aliases = printableOccurrences.map((occurrence) => occurrence[fieldNames.iNaturalistAlias])
                                             .filter((alias) => !!alias)
         
@@ -100,12 +105,20 @@ export default class AddressesSubtaskHandler extends BaseSubtaskHandler {
         const outputs = [
             { uri: `/api/addresses/${addressesFileName}`, fileName: addressesFileName, type: 'addresses' }
         ]
-        previousSubtaskOutputs.push({ type: subtask.type, outputs })
-        await TaskService.updateResultById(taskId, {
-            subtaskOutputs: previousSubtaskOutputs
-        })
+        await TaskService.updateSubtaskOutputsById(taskId, 'addresses', outputs)
 
         // Archive excess output files
         FileManager.limitFilesInDirectory('./shared/data/addresses', fileLimits.maxAddresses)
+
+        // Move scratch space occurrences with fieldNumbers or no errorFlags back to non-scratch space
+        const occurrencesFilter = {
+            scratch: true,
+            $or: [
+                { [fieldNames.fieldNumber]: { $exists: true, $nin: [ null, '' ] } },
+                { [fieldNames.errorFlags]: { $exists: false } },
+                { [fieldNames.errorFlags]: { $in: [ null, '' ] } }
+            ]
+        }
+        await OccurrenceService.updateOccurrences(occurrencesFilter, { scratch: false })
     }
 }

@@ -9,8 +9,8 @@ export function FlowProvider({ children }) {
             per_page: 25,
             fieldName: '',
             queryText: '',
-            minDate: '',
-            maxDate: '',
+            start_date: '',
+            end_date: '',
             url: '',
             totalDocuments: 0
         },

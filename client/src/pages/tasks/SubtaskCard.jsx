@@ -31,15 +31,20 @@ function capitalize(text) {
     return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
-export default function SubtaskCard({ type, taskState, showForm, setUpload, hoveredFile, setHoveredFile, selectedTaskData, downloads }) {
+export default function SubtaskCard({ type, taskState, pipelineState, setPipelineState, selectedTaskData, downloads }) {
     const ordinal = taskState.getSubtaskOrdinal(type)
 
     return (
         <SubtaskCardContainer>
             <h2>{ordinal}. {capitalize(type)} Subtask</h2>
 
-            { showForm ? (
-                <SubtaskCardForm type={type} taskState={taskState} setUpload={setUpload} hoveredFile={hoveredFile} setHoveredFile={setHoveredFile} />
+            { !taskState.id ? (
+                <SubtaskCardForm
+                    type={type}
+                    taskState={taskState}
+                    pipelineState={pipelineState}
+                    setPipelineState={setPipelineState}
+                />
             ) : (
                 <SubtaskStatus
                     type={type}

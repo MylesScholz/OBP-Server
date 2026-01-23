@@ -21,7 +21,6 @@ export default class DownloadSubtaskHandler extends BaseSubtaskHandler {
         // Fetch the task and subtask
         const task = await TaskService.getTaskById(taskId)
         const subtask = task.subtasks.find((subtask) => subtask.type === 'download')
-        const previousSubtaskOutputs = task.result?.subtaskOutputs ?? []
 
         // Input and output file names
         const occurrencesFileName = `occurrences_${task.tag}.csv`
@@ -35,10 +34,7 @@ export default class DownloadSubtaskHandler extends BaseSubtaskHandler {
         const outputs = [
             { uri: `/api/occurrences/${occurrencesFileName}`, fileName: occurrencesFileName, type: 'occurrences' },
         ]
-        previousSubtaskOutputs.push({ type: subtask.type, outputs })
-        await TaskService.updateResultById(taskId, {
-            subtaskOutputs: [ { type: subtask.type, outputs } ]
-        })
+        await TaskService.updateSubtaskOutputsById(taskId, 'download', outputs)
 
         // Archive excess output files
         FileManager.limitFilesInDirectory('./shared/data/occurrences', fileLimits.maxOccurrences)

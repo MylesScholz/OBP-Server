@@ -328,8 +328,8 @@ const constants = {
         },
         // OFV names
         ofvs: {
-            sampleId: 'Sample ID.',
-            beesCollected: 'Number of bees collected'
+            sampleId: 'sampleId',
+            beesCollected: 'numberOfSpecimens'
         }
     },
     labels: {

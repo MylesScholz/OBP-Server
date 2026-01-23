@@ -15,12 +15,12 @@ const SPECIMEN_ID = 'specimenId'
 const DAY = 'day'
 const MONTH = 'month'
 const YEAR = 'year'
+const VERBATIM_DATE = 'verbatimEventDate'
 const DAY2 = 'day2'
 const MONTH2 = 'month2'
 const YEAR2 = 'year2'
 const START_DAY_OF_YEAR = 'startDayofYear'
 const END_DAY_OF_YEAR = 'endDayofYear'
-const VERBATIM_DATE = 'verbatimEventDate'
 const COUNTRY = 'country'
 const STATE_PROVINCE = 'stateProvince'
 const COUNTY = 'county'
@@ -145,12 +145,12 @@ const constants = {
             day: DAY,
             month: MONTH,
             year: YEAR,
+            verbatimDate: VERBATIM_DATE,
             day2: DAY2,
             month2: MONTH2,
             year2: YEAR2,
             startDayOfYear: START_DAY_OF_YEAR,
             endDayOfYear: END_DAY_OF_YEAR,
-            verbatimDate: VERBATIM_DATE,
             country: COUNTRY,
             stateProvince: STATE_PROVINCE,
             county: COUNTY,

@@ -109,8 +109,8 @@ export default class AddressesSubtaskHandler extends BaseSubtaskHandler {
         // Archive excess output files
         FileManager.limitFilesInDirectory('./shared/data/addresses', fileLimits.maxAddresses)
 
-        // Move scratch space occurrences with fieldNumbers or no errorFlags back to non-scratch space
-        const occurrencesFilter = {
+        // Move occurrences with a fieldNumber or no errorFlags back to non-scratch space
+        const unscratchFilter = {
             scratch: true,
             $or: [
                 { [fieldNames.fieldNumber]: { $exists: true, $nin: [ null, '' ] } },
@@ -118,6 +118,8 @@ export default class AddressesSubtaskHandler extends BaseSubtaskHandler {
                 { [fieldNames.errorFlags]: { $in: [ null, '' ] } }
             ]
         }
-        await OccurrenceService.updateOccurrences(occurrencesFilter, { scratch: false })
+        await OccurrenceService.updateOccurrences(unscratchFilter, { scratch: false })
+        // Discard remaining scratch space occurrences
+        await OccurrenceService.deleteOccurrences({ scratch: true })
     }
 }

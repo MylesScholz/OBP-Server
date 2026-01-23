@@ -546,8 +546,6 @@ class OccurrenceService {
         }
         // If userLogins are given, filter by them
         if (userLogins.length > 0) filter[fieldNames.iNaturalistAlias] = { $in: userLogins }
-        
-        console.log(filter)
 
         // Filter by occurrences with all required fields
         requiredFields.forEach((field) => filter[field] = { $exists: true, $nin: [ null, '' ] })

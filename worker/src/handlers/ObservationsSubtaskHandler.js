@@ -300,9 +300,16 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
         FileManager.limitFilesInDirectory('./shared/data/pulls', fileLimits.maxPulls)
         FileManager.limitFilesInDirectory('./shared/data/flags', fileLimits.maxFlags)
 
-        // Move scratch space occurrences matching the occurrences filter (or having a defined fieldNumber) back to non-scratch space
-        occurrencesFilter.$or.push({ [fieldNames.fieldNumber]: { $exists: true, $nin: [ null, '' ] } })
-        await OccurrenceService.updateOccurrences(occurrencesFilter, { scratch: false })
+        // Move occurrences with a fieldNumber or no errorFlags back to non-scratch space
+        const unscratchFilter = {
+            scratch: true,
+            $or: [
+                { [fieldNames.fieldNumber]: { $exists: true, $nin: [ null, '' ] } },
+                { [fieldNames.errorFlags]: { $exists: false } },
+                { [fieldNames.errorFlags]: { $in: [ null, '' ] } }
+            ]
+        }
+        await OccurrenceService.updateOccurrences(unscratchFilter, { scratch: false })
         // Discard remaining scratch space occurrences
         await OccurrenceService.deleteOccurrences({ scratch: true })
     }

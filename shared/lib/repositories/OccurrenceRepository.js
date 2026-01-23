@@ -325,6 +325,7 @@ export default class OccurrenceRepository extends BaseRepository {
         let pageNumber = 1
         let page = await this.paginate({ page: pageNumber, filter })
         let modifiedCount = 0
+        const initialTotalDocuments = page.pagination.totalDocuments
         while (pageNumber <= page.pagination.totalPages) {
             for (const document of page.data) {
                 // Assign update values
@@ -339,6 +340,15 @@ export default class OccurrenceRepository extends BaseRepository {
             }
 
             page = await this.paginate({ page: ++pageNumber, filter })
+
+            // Handle changes to the number of queried documents between pages
+            if (page.pagination.totalDocuments > initialTotalDocuments) {
+                throw new Error('Infinite update loop')
+            } else if (page.pagination.totalDocuments < initialTotalDocuments) {
+                // Reset page if the update reduced the number of queried documents to avoid stepping over documents
+                pageNumber = 1
+                page = await this.paginate({ page: pageNumber, filter })
+            }
         }
 
         return modifiedCount

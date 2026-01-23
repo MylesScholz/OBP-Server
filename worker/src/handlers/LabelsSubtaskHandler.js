@@ -615,8 +615,8 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         FileManager.limitFilesInDirectory('./shared/data/labels', fileLimits.maxLabels)
         FileManager.limitFilesInDirectory('./shared/data/occurrences', fileLimits.maxOccurrences)
 
-        // Move scratch space occurrences with fieldNumbers or no errorFlags back to non-scratch space
-        const occurrencesFilter = {
+        // Move occurrences with a fieldNumber or no errorFlags back to non-scratch space
+        const unscratchFilter = {
             scratch: true,
             $or: [
                 { [fieldNames.fieldNumber]: { $exists: true, $nin: [ null, '' ] } },
@@ -624,6 +624,8 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
                 { [fieldNames.errorFlags]: { $in: [ null, '' ] } }
             ]
         }
-        await OccurrenceService.updateOccurrences(occurrencesFilter, { scratch: false })
+        await OccurrenceService.updateOccurrences(unscratchFilter, { scratch: false })
+        // Discard remaining scratch space occurrences
+        await OccurrenceService.deleteOccurrences({ scratch: true })
     }
 }

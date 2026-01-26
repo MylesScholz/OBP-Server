@@ -41,7 +41,7 @@ const OccurrencesPanelContainer = styled.div`
     }
 `
 
-export function OccurrencesPanel({ occurrences }) {
+export default function OccurrencesPanel({ occurrences }) {
     const scrollRef = useRef(null)
 
     occurrences ??= []

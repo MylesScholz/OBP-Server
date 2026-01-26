@@ -5,7 +5,7 @@ import axios from 'axios'
 import chevronLeftIcon from '/src/assets/chevron_left.svg'
 import chevronRightIcon from '/src/assets/chevron_right.svg'
 import closeIcon from '/src/assets/close.svg'
-import { OccurrencesPanel } from '../../components/OccurrencesPanel'
+import OccurrencesPanel from '../../components/OccurrencesPanel'
 import DownloadButton from './DownloadButton'
 import { useFlow } from '../../FlowProvider'
 
@@ -384,7 +384,7 @@ export default function Dashboard() {
 
                         <label>From</label>
                         <input
-                            id='minDate'
+                            id='start_date'
                             type='date'
                             value={query.start_date}
                             onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }}
@@ -396,7 +396,7 @@ export default function Dashboard() {
 
                         <label>To</label>
                         <input
-                            id='maxDate'
+                            id='end_date'
                             type='date'
                             value={query.end_date}
                             onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }}

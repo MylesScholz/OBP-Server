@@ -81,6 +81,7 @@ services:
             - MONGO_HOST=mongo
             - RABBITMQ_HOST=rabbitmq
         volumes:
+            - ./server/src:/app/src
             - ./shared:/app/shared
     
     worker:
@@ -99,6 +100,7 @@ services:
             - MONGO_HOST=mongo
             - RABBITMQ_HOST=rabbitmq
         volumes:
+            - ./worker/src:/app/src
             - ./shared:/app/shared
 
     client-build:

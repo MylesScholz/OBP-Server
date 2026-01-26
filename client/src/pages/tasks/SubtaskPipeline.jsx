@@ -21,7 +21,8 @@ const SubtaskPipelineContainer = styled.div`
 export default function SubtaskPipeline({ taskState, selectedTaskData, downloads }) {
     const [ pipelineState, setPipelineState ] = useState({
         hoveredFile: '',
-        ignoreDateLabelPrint: false
+        ignoreDateLabelPrint: false,
+        uploadSelected: false
     })
     const scrollRef = useRef(null)
 

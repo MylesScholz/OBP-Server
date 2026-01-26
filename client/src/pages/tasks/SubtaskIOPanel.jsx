@@ -84,9 +84,17 @@ export default function SubtaskIOPanel({ type, taskState, pipelineState, setPipe
     const hoveredFileType = pipelineState.hoveredFile.split('_').at(1) ?? ''
 
     const selectionAvailable = io?.inputs?.includes('occurrences') && results?.pagination?.totalDocuments > 0
-    const uploadAvailable = taskState.getFirstSubtask() === type
-    const defaultInputFile = inputOptions?.find((option) => !!option.default)?.key || (selectionAvailable && 'selection') || (uploadAvailable && 'upload')
+    const isFirstSubtask = taskState.getFirstSubtask() === type
+    const defaultInputFile = inputOptions?.find((option) => !!option.default)?.key || (selectionAvailable && 'selection') || (isFirstSubtask && 'upload')
     const [ selectedInputFile, setSelectedInputFile ] = useState(defaultInputFile)
+
+    useEffect(() => {
+        if (selectedInputFile === 'upload') {
+            setPipelineState({ ...pipelineState, uploadSelected: true })
+        } else {
+            setPipelineState({ ...pipelineState, uploadSelected: false })
+        }
+    }, [selectedInputFile])
 
     useEffect(() => {
         if (!inputOptions.includes(selectedInputFile) && selectedInputFile !== 'selection' && selectedInputFile !== 'upload') {
@@ -130,22 +138,26 @@ export default function SubtaskIOPanel({ type, taskState, pipelineState, setPipe
                         <label htmlFor={`${type}Input-selection`}>Selection ({results?.pagination?.totalDocuments?.toLocaleString('en-US') ?? '0'} occurrences)</label>
                     </div>
                 }
-                { uploadAvailable &&
-                    <div onClick={() => setSelectedInputFile('upload')}>
-                        <input
-                            type='radio'
-                            id={`${type}Input-upload`}
-                            name={`${type}Input`}
-                            value='upload'
-                            checked={selectedInputFile === 'upload'}
-                            onChange={(event) => setSelectedInputFile(event.target.value)}
-                        />
-                        <label htmlFor={`${type}Input-upload`}>Upload</label>
+                <div>
+                    <input
+                        type='radio'
+                        id={`${type}Input-upload`}
+                        name={`${type}Input`}
+                        value='upload'
+                        checked={selectedInputFile === 'upload'}
+                        onChange={(event) => setSelectedInputFile(event.target.value)}
+                    />
+                    <label htmlFor={`${type}Input-upload`}>Upload</label>
+                </div>
+                { isFirstSubtask &&
+                    <div>
+                        <label htmlFor={`${type}Input-uploadFile`}>Upload File:</label>
                         <input
                             type='file'
                             accept='.csv'
                             id='fileUpload'
-                            required={selectedInputFile === 'upload'}
+                            required={pipelineState.uploadSelected}
+                            onChange={() => setSelectedInputFile('upload')}
                         />
                     </div>
                 }

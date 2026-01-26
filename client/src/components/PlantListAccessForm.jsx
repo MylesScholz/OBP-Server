@@ -87,8 +87,6 @@ export default function PlantListAccessForm() {
     const [ queryResponse, setQueryResponse ] = useState()
     const [ selectedTaskId, setSelectedTaskId ] = useState()
 
-    const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
-
     /* Queries */
 
     /*
@@ -98,8 +96,7 @@ export default function PlantListAccessForm() {
     const { error: selectedTaskQueryError, data: selectedTaskData } = useQuery({
         queryKey: ['selectedTask', selectedTaskId],
         queryFn: async () => {
-            const queryURL = `http://${serverAddress}/api/tasks/${selectedTaskId}`
-            const response = await fetch(queryURL)
+            const response = await fetch(`/api/tasks/${selectedTaskId}`)
             const selectedTaskResponse = await response.json()
 
             return { ...selectedTaskResponse, status: response.status, statusText: response.statusText }
@@ -126,8 +123,7 @@ export default function PlantListAccessForm() {
 
                 const outputs = subtaskOutput.outputs || []
                 for (const output of outputs) {
-                    const queryUrl = `http://${serverAddress}${output.uri}`
-                    const response = await axios.get(queryUrl, { responseType: 'blob' }).catch((error) => {
+                    const response = await axios.get(`${output.uri}`, { responseType: 'blob' }).catch((error) => {
                         return { status: error.status }
                     })
 
@@ -164,11 +160,8 @@ export default function PlantListAccessForm() {
         setQueryResponse(null)
         setSelectedTaskId(null)
 
-        const plantListQueryUrl = `http://${serverAddress}/api/plantList`
-        const plantListTaskUrl = `http://${serverAddress}/api/tasks`
-
         if (queryType === 'get') {
-            axios.get(plantListQueryUrl, { responseType: 'blob' }).then((res) => {
+            axios.get('/api/plantList', { responseType: 'blob' }).then((res) => {
                 setFormDisabled(false)
                 setQueryResponse({ status: res.status, data: URL.createObjectURL(res.data) })
             }).catch((err) => {
@@ -179,7 +172,7 @@ export default function PlantListAccessForm() {
             const formData = new FormData()
             formData.append('file', file)
 
-            axios.postForm(plantListQueryUrl, formData).then((res) => {
+            axios.postForm('/api/plantList', formData).then((res) => {
                 setFormDisabled(false)
                 setQueryResponse({ status: res.status, data: res.data })
             }).catch((err) => {
@@ -193,7 +186,7 @@ export default function PlantListAccessForm() {
             const subtasks = [ { type: 'plantList', url } ]
             formData.append('subtasks', JSON.stringify(subtasks))
 
-            axios.postForm(plantListTaskUrl, formData).then((res) => {
+            axios.postForm('/api/tasks', formData).then((res) => {
                 setFormDisabled(false)
                 setQueryResponse({ status: res.status, data: res.data })
 

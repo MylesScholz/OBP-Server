@@ -86,13 +86,10 @@ export default function AdminManagementForm() {
     const [ formDisabled, setFormDisabled ] = useState()
     const [ queryResponse, setQueryResponse ] = useState()
 
-    const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
-
     const { error: adminsError, data: adminsData } = useQuery({
         queryKey: ['adminsQuery', queryResponse],
         queryFn: async () => {
-            const queryURL = `http://${serverAddress}/api/admins`
-            const res = await fetch(queryURL)
+            const res = await fetch('/api/admins')
             const resJSON = await res.json()
 
             return resJSON
@@ -111,8 +108,7 @@ export default function AdminManagementForm() {
             }
             event.target.reset()
 
-            const queryURL = `http://${serverAddress}/api/admins`
-            axios.post(queryURL, credentials).then((res) => {
+            axios.post('/api/admins', credentials).then((res) => {
                 setFormDisabled(false)
                 setQueryResponse({ status: res.status, data: res.data })
             }).catch((err) => {
@@ -120,10 +116,10 @@ export default function AdminManagementForm() {
                 setQueryResponse({ status: err.response?.status, error: err.response?.data?.error ?? err.message })
             })
         } else if (queryType === 'delete') {
-            const queryURL = `http://${serverAddress}/api/admins/${selectedAdminId}`
+            const queryUrl = `/api/admins/${selectedAdminId}`
             setSelectedAdminId(undefined)
 
-            axios.delete(queryURL).then((res) => {
+            axios.delete(queryUrl).then((res) => {
                 setFormDisabled(false)
                 setQueryResponse({ status: res.status, data: res.data })
             }).catch((err) => {

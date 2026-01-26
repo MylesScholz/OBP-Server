@@ -36,15 +36,12 @@ const ArchiveBrowserContainer = styled.div`
 
 export default function ArchiveBrowser() {
     const [ selectedFileType, setSelectedFileType ] = useState()
-    const [ selectedFileURI, setSelectedFileURI ] = useState()
-
-    const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
+    const [ selectedFileUri, setSelectedFileUri ] = useState()
 
     const { error: archiveQueryError, data: archiveData } = useQuery({
         queryKey: ['archiveData', selectedFileType],
         queryFn: async () => {
-            const queryURL = `http://${serverAddress}/api/archive/${selectedFileType}`
-            const res = await fetch(queryURL)
+            const res = await fetch(`/api/archive/${selectedFileType}`)
             const resJSON = await res.json()
 
             return resJSON
@@ -55,14 +52,13 @@ export default function ArchiveBrowser() {
     })
 
     let { data: downloadURL } = useQuery({
-        queryKey: ['archiveFile', selectedFileURI],
+        queryKey: ['archiveFile', selectedFileUri],
         queryFn: async () => {
-            const queryURL = `http://${serverAddress}${selectedFileURI}`
-            const res = await axios.get(queryURL, { responseType: 'blob' })
+            const res = await axios.get(`${selectedFileUri}`, { responseType: 'blob' })
             return URL.createObjectURL(res.data)
         },
         refetchOnMount: 'always',
-        enabled: !!selectedFileURI
+        enabled: !!selectedFileUri
     })
 
     return (
@@ -73,7 +69,7 @@ export default function ArchiveBrowser() {
                 <label htmlFor='archiveFileTypeSelect'>File Type:</label>
                 <select id='archiveFileTypeSelect' onChange={ (event) => {
                     setSelectedFileType(event.target.value)
-                    setSelectedFileURI(undefined)
+                    setSelectedFileUri(undefined)
                 } }>
                     <option value='' disabled selected={!selectedFileType}>Select an archive file type...</option>
                     <option value='addresses'>Addresses</option>
@@ -94,17 +90,17 @@ export default function ArchiveBrowser() {
                 <div>
                     <label htmlFor='archiveFileSelect'>File:</label>
                     <select id='archiveFileSelect' onChange={ (event) => {
-                        setSelectedFileURI(event.target.value)
+                        setSelectedFileUri(event.target.value)
                         downloadURL = undefined
                     } }>
-                        <option value='' disabled selected={!selectedFileURI}>Select an archive file...</option>
-                        {archiveData?.files && archiveData.files.map((f) => <option value={f.uri} key={f.fileName} selected={f.uri === selectedFileURI}>{f.fileName}</option>)}
+                        <option value='' disabled selected={!selectedFileUri}>Select an archive file...</option>
+                        {archiveData?.files && archiveData.files.map((f) => <option value={f.uri} key={f.fileName} selected={f.uri === selectedFileUri}>{f.fileName}</option>)}
                     </select>
                 </div>
             }
 
             { downloadURL &&
-                <a href={downloadURL} download={selectedFileURI.substring(selectedFileURI.lastIndexOf('/') + 1)}>Download File</a>
+                <a href={downloadURL} download={selectedFileUri.substring(selectedFileUri.lastIndexOf('/') + 1)}>Download File</a>
             }
         </ArchiveBrowserContainer>
     )

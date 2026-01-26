@@ -56,12 +56,9 @@ const DownloadButtonContainer = styled.div`
     }
 `
 
-export default function DownloadButton({ queryUrl }) {
+export default function DownloadButton({ searchParams }) {
     const { loggedIn } = useAuth()
     const [ selectedTaskId, setSelectedTaskId ] = useState()
-
-    // The URL or IP address of the backend server
-    const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
 
     /*
      * Selected Task Query
@@ -70,8 +67,7 @@ export default function DownloadButton({ queryUrl }) {
     const { error: selectedTaskQueryError, data: selectedTaskData } = useQuery({
         queryKey: ['selectedTask', selectedTaskId],
         queryFn: async () => {
-            const queryURL = `http://${serverAddress}/api/tasks/${selectedTaskId}`
-            const response = await fetch(queryURL)
+            const response = await fetch(`/api/tasks/${selectedTaskId}`)
             const selectedTaskResponse = await response.json()
 
             return { ...selectedTaskResponse, status: response.status, statusText: response.statusText }
@@ -96,8 +92,7 @@ export default function DownloadButton({ queryUrl }) {
             for (const subtask of subtasks) {
                 const outputs = subtask.outputs ?? []
                 for (const output of outputs) {
-                    const queryUrl = `http://${serverAddress}${output.uri}`
-                    const response = await axios.get(queryUrl, { responseType: 'blob' }).catch((error) => {
+                    const response = await axios.get(output.uri, { responseType: 'blob' }).catch((error) => {
                         return { status: error.status }
                     })
 
@@ -121,23 +116,20 @@ export default function DownloadButton({ queryUrl }) {
         enabled: subtasks.some((subtask) => !!subtask.outputs)
     })
 
-    // Reset selectedTaskId when queryUrl changes
+    // Reset selectedTaskId when searchParams changes
     useEffect(() => {
         setSelectedTaskId(null)
-    }, [queryUrl])
+    }, [searchParams])
 
     function handleClick(event) {
         event.preventDefault()
 
-        // No button behavior if there is no queryUrl
-        if (!queryUrl) return
+        // No button behavior if there are no searchParams
+        if (!searchParams) return
 
-        // Query URL exists, but no task (or downloads)
-        if (queryUrl && !selectedTaskId) {
-            const url = new URL(queryUrl)
-            url.pathname = '/api/occurrences/download'
-
-            axios.get(url.toString()).then((res) => {
+        // Search params exist, but no task (or downloads)
+        if (searchParams && !selectedTaskId) {
+            axios.get(`/api/occurrences/download${searchParams}`).then((res) => {
                 // TODO: store res status and data for display
                 const postedTaskId = res.data?.uri?.replace('/api/tasks/', '')
                 setSelectedTaskId(postedTaskId)
@@ -155,9 +147,9 @@ export default function DownloadButton({ queryUrl }) {
                     <img src={csvIcon} alt='CSV' />
                 </a>
             ) : (
-                <button className={ `${!queryUrl ? 'noDownload' : ''} ${selectedTaskId && !downloads ? 'pendingDownload' : ''}` } onClick={handleClick}>
-                    { !queryUrl && <img src={downloadOffIcon} alt='No download' /> }
-                    { queryUrl && !selectedTaskId && <img src={downloadIcon} alt='Download' /> }
+                <button className={ `${!searchParams ? 'noDownload' : ''} ${selectedTaskId && !downloads ? 'pendingDownload' : ''}` } onClick={handleClick}>
+                    { !searchParams && <img src={downloadOffIcon} alt='No download' /> }
+                    { searchParams && !selectedTaskId && <img src={downloadIcon} alt='Download' /> }
                     { selectedTaskId && !downloads && <img src={downloadingIcon} alt='Downloading...' /> }
                 </button>
             )}

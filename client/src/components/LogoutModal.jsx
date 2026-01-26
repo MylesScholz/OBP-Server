@@ -42,15 +42,12 @@ export default function LogoutModal({ setAccountModalOpen }) {
     const { loggedIn, setLoggedIn } = useAuth()
     const [ formDisabled, setFormDisabled ] = useState(false)
 
-    const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
-
     function handleSubmit(event) {
         event.preventDefault()
         setFormDisabled(true)
         setAccountModalOpen(false)
 
-        const queryURL = `http://${serverAddress}/api/admins/logout`
-        axios.post(queryURL).then((res) => {
+        axios.post('/api/admins/logout').then((res) => {
             setFormDisabled(false)
             if (res.status === 200) {
                 setLoggedIn(undefined)

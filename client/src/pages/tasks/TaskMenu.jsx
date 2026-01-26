@@ -98,9 +98,6 @@ function capitalize(text) {
 export default function TaskMenu({ taskState, setTaskState, selectedTaskId, setSelectedTaskId, selectedTaskQueryError, selectedTaskData }) {
     const [ selectedValue, setSelectedValue ] = useState(selectedTaskId || 'blank')
 
-    // The URL or IP address of the backend server
-    const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
-
     // Subtask pipeline presets for creating new tasks
     const newTaskPresets = {
         'blank': {},
@@ -120,8 +117,7 @@ export default function TaskMenu({ taskState, setTaskState, selectedTaskId, setS
     const { error: tasksQueryError, data: tasks } = useQuery({
         queryKey: ['tasks', selectedTaskId],
         queryFn: async () => {
-            const queryUrl = `http://${serverAddress}/api/tasks`
-            const response = await fetch(queryUrl)
+            const response = await fetch('/api/tasks')
             const parsedResponse = await response.json()
 
             return parsedResponse.tasks

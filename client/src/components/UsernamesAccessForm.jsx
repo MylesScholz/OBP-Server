@@ -85,18 +85,14 @@ export default function UsernamesAccessForm() {
     const [ formDisabled, setFormDisabled ] = useState(false)
     const [ queryResponse, setQueryResponse ] = useState()
 
-    const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
-
     function handleSubmit(event) {
         event.preventDefault()
 
         setFormDisabled(true)
         setQueryResponse(undefined)
 
-        const queryURL = `http://${serverAddress}/api/usernames`
-
         if (queryType === 'get') {
-            axios.get(queryURL, { responseType: 'blob' }).then((res) => {
+            axios.get('/api/usernames', { responseType: 'blob' }).then((res) => {
                 setFormDisabled(false)
                 setQueryResponse({ status: res.status, data: URL.createObjectURL(res.data) })
             }).catch((err) => {
@@ -107,7 +103,7 @@ export default function UsernamesAccessForm() {
             const formData = new FormData()
             formData.append('file', file)
 
-            axios.postForm(queryURL, formData).then((res) => {
+            axios.postForm('/api/usernames', formData).then((res) => {
                 setFormDisabled(false)
                 setQueryResponse({ status: res.status, data: res.data })
             }).catch((err) => {

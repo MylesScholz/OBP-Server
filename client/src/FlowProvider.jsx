@@ -11,7 +11,7 @@ export function FlowProvider({ children }) {
             queryText: '',
             start_date: '',
             end_date: '',
-            url: '',
+            searchParams: '',
             totalDocuments: 0
         },
         results: {}

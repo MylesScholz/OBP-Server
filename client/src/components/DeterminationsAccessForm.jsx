@@ -86,18 +86,14 @@ export default function DeterminationsAccessForm() {
     const [ formDisabled, setFormDisabled ] = useState(false)
     const [ queryResponse, setQueryResponse ] = useState()
 
-    const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
-
     function handleSubmit(event) {
         event.preventDefault()
 
         setFormDisabled(true)
         setQueryResponse(undefined)
 
-        const queryURL = `http://${serverAddress}/api/determinations`
-
         if (queryType === 'get') {
-            axios.get(queryURL, { responseType: 'blob' }).then((res) => {
+            axios.get('/api/determinations', { responseType: 'blob' }).then((res) => {
                 setFormDisabled(false)
                 setQueryResponse({ status: res.status, data: URL.createObjectURL(res.data) })
             }).catch((err) => {
@@ -109,7 +105,7 @@ export default function DeterminationsAccessForm() {
             formData.append('file', file)
             formData.append('format', uploadFormat)
 
-            axios.postForm(queryURL, formData).then((res) => {
+            axios.postForm('/api/determinations', formData).then((res) => {
                 setFormDisabled(false)
                 setQueryResponse({ status: res.status, data: res.data })
             }).catch((err) => {

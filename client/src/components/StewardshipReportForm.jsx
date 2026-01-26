@@ -86,8 +86,6 @@ export default function StewardshipReportForm() {
     const [ queryResponse, setQueryResponse ] = useState()
     const [ selectedTaskId, setSelectedTaskId ] = useState()
 
-    const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
-
     /* Queries */
 
     /*
@@ -97,8 +95,7 @@ export default function StewardshipReportForm() {
     const { error: selectedTaskQueryError, data: selectedTaskData } = useQuery({
         queryKey: ['selectedTask', selectedTaskId],
         queryFn: async () => {
-            const queryURL = `http://${serverAddress}/api/tasks/${selectedTaskId}`
-            const response = await fetch(queryURL)
+            const response = await fetch(`/api/tasks/${selectedTaskId}`)
             const selectedTaskResponse = await response.json()
 
             return { ...selectedTaskResponse, status: response.status, statusText: response.statusText }
@@ -125,8 +122,7 @@ export default function StewardshipReportForm() {
 
                 const outputs = subtaskOutput.outputs || []
                 for (const output of outputs) {
-                    const queryUrl = `http://${serverAddress}${output.uri}`
-                    const response = await axios.get(queryUrl, { responseType: 'blob' }).catch((error) => {
+                    const response = await axios.get(output.uri, { responseType: 'blob' }).catch((error) => {
                         return { status: error.status }
                     })
 
@@ -163,8 +159,6 @@ export default function StewardshipReportForm() {
         setQueryResponse(null)
         setSelectedTaskId(null)
 
-        const taskUrl = `http://${serverAddress}/api/tasks`
-
         const formData = new FormData()
 
         formData.append('file', file)
@@ -173,7 +167,7 @@ export default function StewardshipReportForm() {
         const subtasks = [ { type: 'stewardshipReport', input: 'upload', url } ]
         formData.append('subtasks', JSON.stringify(subtasks))
 
-        axios.postForm(taskUrl, formData).then((res) => {
+        axios.postForm('/api/tasks', formData).then((res) => {
             setFormDisabled(false)
             setQueryResponse({ status: res.status, data: res.data })
 

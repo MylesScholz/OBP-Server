@@ -217,8 +217,6 @@ export default function Dashboard() {
     const { query, setQuery, results, setResults } = useFlow()
     const hasSubmitted = useRef(false)
     
-    // The URL or IP address of the backend server
-    const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
     // Occurrence field names
     const fieldNames = [
         'errorFlags',
@@ -319,7 +317,7 @@ export default function Dashboard() {
         event?.preventDefault()
         setDisabled(true)
 
-        const url = new URL(`http://${serverAddress}/api/occurrences`)
+        const url = new URL(`http://server/api/occurrences`)
         const params = url.searchParams
 
         params.set('page', query.page.toString())
@@ -332,7 +330,7 @@ export default function Dashboard() {
         if (query.start_date) params.set('start_date', query.start_date)
         if (query.end_date) params.set('end_date', query.end_date)
 
-        axios.get(url.toString()).then((res) => {
+        axios.get(url.pathname + url.search).then((res) => {
             setResults(res.data)
             setDisabled(false)
         }).catch((error) => {
@@ -340,10 +338,10 @@ export default function Dashboard() {
             setResults({ error })
             setDisabled(false)
         }).finally(() => {
-            // Remove pagination params before setting query.url (not relevant to data selection)
+            // Remove pagination params before setting query.searchParams (not relevant to data selection)
             params.delete('page')
             params.delete('per_page')
-            setQuery({ ...query, url: url.toString() })
+            setQuery({ ...query, searchParams: url.search })
         })
     }
 
@@ -442,7 +440,7 @@ export default function Dashboard() {
                         </div>
                     </div>
                     <div id='downloadResults'>
-                        <DownloadButton queryUrl={query.url} />
+                        <DownloadButton searchParams={query.searchParams} />
                     </div>
                 </div>
             </fieldset>

@@ -112,8 +112,6 @@ export default function AdminLoginForm() {
     const [ formDisabled, setFormDisabled ] = useState(false)
     const navigate = useNavigate()
 
-    const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
-
     function handleSubmit(event) {
         event.preventDefault()
         setFormDisabled(true)
@@ -124,8 +122,7 @@ export default function AdminLoginForm() {
         }
         event.target.reset()
 
-        const queryURL = `http://${serverAddress}/api/admins/login`
-        axios.post(queryURL, credentials).then((res) => {
+        axios.post('/api/admins/login', credentials).then((res) => {
             setFormDisabled(false)
             if (res.status === 200) {
                 setLoggedIn(credentials.username)

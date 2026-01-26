@@ -28,9 +28,6 @@ export default function TaskPanel() {
     const { query } = useFlow()
     const { loggedIn } = useAuth()
 
-    // The URL or IP address of the backend server
-    const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
-
     /* Queries */
 
     /*
@@ -40,8 +37,7 @@ export default function TaskPanel() {
     const { error: selectedTaskQueryError, data: selectedTaskData } = useQuery({
         queryKey: ['selectedTask', selectedTaskId],
         queryFn: async () => {
-            const queryUrl = `http://${serverAddress}/api/tasks/${selectedTaskId}`
-            const response = await fetch(queryUrl)
+            const response = await fetch(`/api/tasks/${selectedTaskId}`)
             const selectedTaskResponse = await response.json()
 
             // Update taskState to match selected task's subtasks
@@ -73,8 +69,7 @@ export default function TaskPanel() {
             for (const subtask of subtasks) {
                 const outputs = subtask.outputs ?? []
                 for (const output of outputs) {
-                    const queryUrl = `http://${serverAddress}${output.uri}`
-                    const response = await axios.get(queryUrl, { responseType: 'blob' }).catch((error) => {
+                    const response = await axios.get(output.uri, { responseType: 'blob' }).catch((error) => {
                         return { status: error.status }
                     })
 
@@ -169,8 +164,7 @@ export default function TaskPanel() {
         formData.append('subtasks', JSON.stringify(subtaskPipeline))
 
         // Post the task
-        const requestUrl = `http://${serverAddress}/api/tasks`
-        axios.postForm(requestUrl, formData).then((res) => {
+        axios.postForm('/api/tasks', formData).then((res) => {
             setPostTaskResponse({ status: res.status, data: res.data })
 
             const postedTaskId = res.data?.uri?.replace('/api/tasks/', '')

@@ -79,8 +79,7 @@ export default function ProjectSelection() {
     async function handleAdd() {
         const trimmedQuery = newProjectQuery.trim()
         if (trimmedQuery) {
-            const queryURL = `https://api.inaturalist.org/v1/projects/autocomplete?q=${trimmedQuery}`
-            const res = await axios.get(queryURL)
+            const res = await axios.get(`https://api.inaturalist.org/v1/projects/autocomplete?q=${trimmedQuery}`)
             const topResult = res?.data?.results?.at(0)
 
             if (topResult && projects.every((p) => p.id != topResult.id)) {

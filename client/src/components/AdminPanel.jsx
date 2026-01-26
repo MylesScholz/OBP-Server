@@ -25,13 +25,10 @@ const AdminPanelContainer = styled.div`
 export default function AdminPanel({ loggedIn, setLoggedIn }) {
     const [ selectedTool, setSelectedTool ] = useState('plantList')
 
-    const serverAddress = `${import.meta.env.VITE_SERVER_HOST || 'localhost'}`
-
     useQuery({
         queryKey: ['loggedInQuery'],
         queryFn: async () => {
-            const queryURL = `http://${serverAddress}/api/admins/login`
-            axios.get(queryURL).then((res) => {
+            axios.get('/api/admins/login').then((res) => {
                 if (res.status === 200) {
                     setLoggedIn(res.data.username)
                 } else {

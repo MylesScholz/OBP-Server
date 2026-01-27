@@ -7,10 +7,9 @@ export function FlowProvider({ children }) {
         query: {
             page: 1,
             per_page: 25,
-            fieldName: '',
-            queryText: '',
             start_date: '',
             end_date: '',
+            valueQueries: {},
             searchParams: '',
             totalDocuments: 0
         },

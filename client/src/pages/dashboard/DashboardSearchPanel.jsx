@@ -1,0 +1,350 @@
+import { useState } from 'react'
+import { useRef } from 'react'
+import styled from '@emotion/styled'
+
+import closeIcon from '/src/assets/close.svg'
+import addIcon from '/src/assets/add.svg'
+import { useFlow } from '../../FlowProvider'
+
+const DashboardSearchPanelFieldset = styled.fieldset`
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    margin: 0px;
+
+    padding: 5px 10px 10px 10px;
+
+    h3 {
+        margin: 0px;
+
+        font-size: 14pt;
+    }
+
+    p {
+        margin: 0px;
+
+        font-size: 12pt;
+    }
+
+    .iconButton {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        padding: 0px;
+
+        width: 25px;
+        height: 25px;
+
+        img {
+            width: 20px;
+            height: 20px;
+        }
+    }
+
+    #dateFilters {
+        display: grid;
+        grid-template-columns: 1fr 5fr 25px;
+        grid-column-gap: 5px;
+        grid-row-gap: 5px;
+
+        padding: 0px;
+
+        p {
+            grid-column: 1 / 4;
+        }
+
+        label {
+            grid-column: 1 / 2;
+
+            margin-left: 15px;
+        }
+
+        input {
+            grid-column: 2 / 3;
+        }
+
+        .iconButton {
+            grid-column: 3 / 4;
+        }
+    }
+
+    #fieldValueFilters {
+        display: grid;
+        grid-template-columns: 1fr 1fr 25px;
+        grid-column-gap: 5px;
+        grid-row-gap: 5px;
+
+        padding: 0px;
+
+        p {
+            grid-column: 1 / 3;
+        }
+
+        #fieldNameSelection {
+            grid-column: 1 / 2;
+
+            width: 100px;
+        }
+
+        #queryText {
+            grid-column: 2 / 3;
+        }
+
+        .iconButton {
+            grid-column: 3 / 4;
+        }
+    }
+
+    #activeFilters {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: start;
+        align-items: center;
+        column-gap: 10px;
+        row-gap: 5px;
+
+        .filterPill {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+
+            border: 1px solid #222;
+            border-radius: 5px;
+
+            padding: 2px 5px;
+
+            background-color: white;
+
+            &:hover {
+                background-color: #efefef;
+            }
+            
+            p {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                
+                margin: 0px;
+
+                font-size: 10pt;
+            }
+
+            img {
+                height: 12px;
+                width: 12px;
+            }
+        }
+    }
+`
+
+export default function DashboardSearchPanel({ disabled }) {
+    const [ selectedFieldName, setSelectedFieldName ] = useState('')
+    const [ queryText, setQueryText ] = useState('')
+    const { query, setQuery } = useFlow()
+    const submitRef = useRef()
+
+    // Occurrence field names
+    const fieldNames = [
+        'errorFlags',
+        'dateLabelPrint',
+        'fieldNumber',
+        'catalogNumber',
+        'occurrenceID',
+        'userId',
+        'userLogin',
+        'firstName',
+        'firstNameInitial',
+        'lastName',
+        'recordedBy',
+        'sampleId',
+        'specimenId',
+        'day',
+        'month',
+        'year',
+        'verbatimEventDate',
+        'day2',
+        'month2',
+        'year2',
+        'startDayofYear',
+        'endDayofYear',
+        'country',
+        'stateProvince',
+        'county',
+        'locality',
+        'verbatimElevation',
+        'decimalLatitude',
+        'decimalLongitude',
+        'coordinateUncertaintyInMeters',
+        'samplingProtocol',
+        'relationshipOfResource',
+        'resourceID',
+        'relatedResourceID',
+        'relationshipRemarks',
+        'phylumPlant',
+        'orderPlant',
+        'familyPlant',
+        'genusPlant',
+        'speciesPlant',
+        'taxonRankPlant',
+        'url',
+        'phylum',
+        'class',
+        'order',
+        'family',
+        'genus',
+        'subgenus',
+        'specificEpithet',
+        'taxonomicNotes',
+        'scientificName',
+        'sex',
+        'caste',
+        'taxonRank',
+        'identifiedBy',
+        'familyVolDet',
+        'genusVolDet',
+        'speciesVolDet',
+        'sexVolDet',
+        'casteVolDet',
+    ]
+
+    function handleEnter(event) {
+        event.preventDefault()
+
+        const element = submitRef.current
+        if (!element) return
+
+        element.click()
+    }
+
+    function handleClear(event, key) {
+        event.preventDefault()
+
+        setQuery({ ...query, [key]: '' })
+    }
+
+    function handleAdd(event) {
+        event.preventDefault()
+
+        // Don't query by blank field names
+        if (!selectedFieldName) return
+
+        const values = query.valueQueries[selectedFieldName]?.split(',') ?? []
+        const queryTextValues = queryText.split(',').map((value) => value.trim())
+        const newValues = values.concat(queryTextValues).join(',')
+
+        setQuery({ ...query, valueQueries: { ...query.valueQueries, [selectedFieldName]: newValues } })
+        setSelectedFieldName('')
+        setQueryText('')
+    }
+
+    function handleRemove(event, fieldName, removeValue) {
+        event.preventDefault()
+
+        if (Object.keys(query.valueQueries).includes(fieldName)) {
+            const values = query.valueQueries[fieldName]?.split(',') ?? []
+            const valueRemoved = values.filter((value) => value !== removeValue)
+
+            if (valueRemoved.length > 0) {
+                setQuery({ ...query, valueQueries: { ...query.valueQueries, [fieldName]: valueRemoved.join(',') } })
+            } else {
+                // Remove fieldName from the query.valueQueries object using destructuring
+                const { [fieldName]: _, ...newValueQueries } = query.valueQueries
+                setQuery({ ...query, valueQueries: newValueQueries })
+            }
+        }
+    }
+
+    return (
+        <DashboardSearchPanelFieldset disabled={disabled}>
+            <h3>Search Records</h3>
+
+            <div id='dateFilters'>
+                <p>Date</p>
+
+                <label>From</label>
+                <input
+                    id='minDate'
+                    type='date'
+                    value={query.start_date}
+                    onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }}
+                    onChange={(event) => setQuery({ ...query, start_date: event.target.value })}
+                />
+                <button className='iconButton' onClick={(event) => handleClear(event, 'start_date')}>
+                    <img src={closeIcon} alt='Clear' />
+                </button>
+
+                <label>To</label>
+                <input
+                    id='maxDate'
+                    type='date'
+                    value={query.end_date}
+                    onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }}
+                    onChange={(event) => setQuery({ ...query, end_date: event.target.value })}
+                />
+                <button className='iconButton' onClick={(event) => handleClear(event, 'end_date')}>
+                    <img src={closeIcon} alt='Clear' />
+                </button>
+            </div>
+
+            <div id='fieldValueFilters'>
+                <p>Field Values</p>
+
+                <select
+                    id='fieldNameSelection'
+                    value={selectedFieldName}
+                    onChange={(event) => setSelectedFieldName(event.target.value)}
+                >
+                    <option key='select' value=''>Field...</option>
+                    {fieldNames.map((fieldName) => <option key={fieldName} value={fieldName}>{fieldName}</option>)}
+                </select>
+                <input
+                    id='queryText'
+                    type='text'
+                    placeholder='Enter a query value...'
+                    value={queryText}
+                    onKeyDown={(event) => { if (event.key === 'Enter') handleAdd(event) }}
+                    onChange={(event) => setQueryText(event.target.value)}
+                />
+                <button className='iconButton' onClick={(event) => handleAdd(event)}>
+                    <img src={addIcon} alt='Add' />
+                </button>
+            </div>
+
+            <div id='activeFilters'>
+                { query.start_date &&
+                    <button className='filterPill' onClick={(event) => handleClear(event, 'start_date')}>
+                        <p>Date &gt; {query.start_date}</p>
+                        <img src={closeIcon} alt='Clear' />
+                    </button>
+                }
+                { query.end_date &&
+                    <button className='filterPill' onClick={(event) => handleClear(event, 'end_date')}>
+                        <p>Date &lt; {query.end_date}</p>
+                        <img src={closeIcon} alt='Clear' />
+                    </button>
+                }
+                { Object.entries(query.valueQueries).map(([ fieldName, values ]) => values?.split(',')?.map((value) =>
+                    <button
+                        key={value}
+                        className='filterPill'
+                        onClick={(event) => handleRemove(event, fieldName, value)}
+                    >
+                        <p>{fieldName}: {value === '' ? '(empty)' : value}</p>
+                        <img src={closeIcon} alt='Clear' />
+                    </button>)
+                )}
+            </div>
+
+            <button
+                id='dashboardSubmitButton'
+                type='submit'
+                value='search'
+                ref={submitRef}
+            >Search</button>
+        </DashboardSearchPanelFieldset>
+    )
+}

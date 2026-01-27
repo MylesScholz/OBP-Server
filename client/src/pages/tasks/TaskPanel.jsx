@@ -136,9 +136,11 @@ export default function TaskPanel() {
                     start_date: query.start_date,
                     end_date: query.end_date
                 }
-                if (query.fieldName) {
-                    subtaskQuery[query.fieldName] = query.queryText ?? ''
+
+                for (const [ fieldName, values ] of Object.entries(query.valueQueries)) {
+                    subtaskQuery[fieldName] = values ?? ''
                 }
+
                 subtask.query = subtaskQuery
             }
 

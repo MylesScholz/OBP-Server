@@ -4,8 +4,8 @@ import axios from 'axios'
 
 import chevronLeftIcon from '/src/assets/chevron_left.svg'
 import chevronRightIcon from '/src/assets/chevron_right.svg'
-import closeIcon from '/src/assets/close.svg'
 import OccurrencesPanel from '../../components/OccurrencesPanel'
+import DashboardSearchPanel from './DashboardSearchPanel'
 import DownloadButton from './DownloadButton'
 import { useFlow } from '../../FlowProvider'
 
@@ -27,92 +27,6 @@ const DashboardContainer = styled.form`
         border-radius: 5px;
 
         padding: 15px;
-
-        .clearButton {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-
-            padding: 0px;
-
-            width: 25px;
-            height: 25px;
-
-            img {
-                width: 20px;
-                height: 20px;
-            }
-        }
-
-        #searchFilters {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-
-            margin: 0px;
-
-            h3 {
-                margin: 0px;
-
-                font-size: 14pt;
-            }
-
-            p {
-                margin: 0px;
-
-                font-size: 12pt;
-            }
-
-            #matchFieldFilter {
-                display: grid;
-                grid-template-columns: 1fr 25px;
-                grid-column-gap: 5px;
-                grid-row-gap: 5px;
-
-                padding: 0px 0px 0px 10px;
-
-                p {
-                    grid-column: 1 / 3;
-                }
-
-                select, input {
-                    grid-column: 1 / 2;
-
-                    margin-left: 10px;
-                }
-
-                .clearButton {
-                    grid-column: 2 / 3;
-                }
-            }
-
-            #dateFilter {
-                display: grid;
-                grid-template-columns: 1fr 5fr 25px;
-                grid-column-gap: 5px;
-                grid-row-gap: 5px;
-
-                padding: 0px 0px 0px 10px;
-
-                p {
-                    grid-column: 1 / 4;
-                }
-
-                label {
-                    grid-column: 1 / 2;
-
-                    margin-left: 10px;
-                }
-
-                input {
-                    grid-column: 2 / 3;
-                }
-
-                .clearButton {
-                    grid-column: 3 / 4;
-                }
-            }
-        }
     }
 
     #resultsHeader {
@@ -216,70 +130,6 @@ export default function Dashboard() {
     const [ disabled, setDisabled ] = useState(false)
     const { query, setQuery, results, setResults } = useFlow()
     const hasSubmitted = useRef(false)
-    
-    // Occurrence field names
-    const fieldNames = [
-        'errorFlags',
-        'dateLabelPrint',
-        'fieldNumber',
-        'catalogNumber',
-        'occurrenceID',
-        'userId',
-        'userLogin',
-        'firstName',
-        'firstNameInitial',
-        'lastName',
-        'recordedBy',
-        'sampleId',
-        'specimenId',
-        'day',
-        'month',
-        'year',
-        'day2',
-        'month2',
-        'year2',
-        'startDayofYear',
-        'endDayofYear',
-        'verbatimEventDate',
-        'country',
-        'stateProvince',
-        'county',
-        'locality',
-        'verbatimElevation',
-        'decimalLatitude',
-        'decimalLongitude',
-        'coordinateUncertaintyInMeters',
-        'samplingProtocol',
-        'relationshipOfResource',
-        'resourceID',
-        'relatedResourceID',
-        'relationshipRemarks',
-        'phylumPlant',
-        'orderPlant',
-        'familyPlant',
-        'genusPlant',
-        'speciesPlant',
-        'taxonRankPlant',
-        'url',
-        'phylum',
-        'class',
-        'order',
-        'family',
-        'genus',
-        'subgenus',
-        'specificEpithet',
-        'taxonomicNotes',
-        'scientificName',
-        'sex',
-        'caste',
-        'taxonRank',
-        'identifiedBy',
-        'familyVolDet',
-        'genusVolDet',
-        'speciesVolDet',
-        'sexVolDet',
-        'casteVolDet',
-    ]
 
     let pageMax = results?.pagination?.totalPages ? results?.pagination?.totalPages : 0
     let currentPage = results?.pagination?.currentPage ?? 1
@@ -301,12 +151,6 @@ export default function Dashboard() {
         }
     }, [results])
 
-    function handleClear(event, key) {
-        event.preventDefault()
-
-        setQuery({ ...query, [key]: '' })
-    }
-
     function handleEnter(event) {
         event.preventDefault()
 
@@ -323,8 +167,8 @@ export default function Dashboard() {
         params.set('page', query.page.toString())
         params.set('per_page', query.per_page.toString())
 
-        if (query.fieldName) {
-            params.set(query.fieldName, query.queryText)
+        for (const [ fieldName, values ] of Object.entries(query.valueQueries)) {
+            params.set(fieldName, values)
         }
 
         if (query.start_date) params.set('start_date', query.start_date)
@@ -348,64 +192,7 @@ export default function Dashboard() {
     return (
         <DashboardContainer onSubmit={ handleSubmit }>
             <div id='toolBar'>
-                <fieldset id='searchFilters' disabled={disabled}>
-                    <h3>Search Records</h3>
-                    <div id='matchFieldFilter'>
-                        <p>Match Field</p>
-
-                        <select
-                            id='fieldName'
-                            value={query.fieldName}
-                            onChange={(event) => setQuery({...query, fieldName: event.target.value})}
-                        >
-                            <option key='select' value=''>Select a field to match...</option>
-                            {fieldNames.map((fieldName) => <option key={fieldName} value={fieldName}>{fieldName}</option>)}
-                        </select>
-                        <button className='clearButton' onClick={(event) => handleClear(event, 'fieldName')}>
-                            <img src={closeIcon} alt='Clear' />
-                        </button>
-
-                        <input
-                            id='queryText'
-                            type='text'
-                            placeholder='Enter a query...'
-                            value={query.queryText}
-                            onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }}
-                            onChange={(event) => setQuery({ ...query, queryText: event.target.value })}
-                        />
-                        <button className='clearButton' onClick={(event) => handleClear(event, 'queryText')}>
-                            <img src={closeIcon} alt='Clear' />
-                        </button>
-                    </div>
-                    <div id='dateFilter'>
-                        <p>Date</p>
-
-                        <label>From</label>
-                        <input
-                            id='start_date'
-                            type='date'
-                            value={query.start_date}
-                            onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }}
-                            onChange={(event) => setQuery({ ...query, start_date: event.target.value })}
-                        />
-                        <button className='clearButton' onClick={(event) => handleClear(event, 'start_date')}>
-                            <img src={closeIcon} alt='Clear' />
-                        </button>
-
-                        <label>To</label>
-                        <input
-                            id='end_date'
-                            type='date'
-                            value={query.end_date}
-                            onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }}
-                            onChange={(event) => setQuery({ ...query, end_date: event.target.value })}
-                        />
-                        <button className='clearButton' onClick={(event) => handleClear(event, 'end_date')}>
-                            <img src={closeIcon} alt='Clear' />
-                        </button>
-                    </div>
-                    <button id='dashboardSubmitButton' type='submit' value='search'>Search</button>
-                </fieldset>
+                <DashboardSearchPanel disabled={disabled} />
             </div>
 
             <fieldset id='resultsHeader' disabled={disabled}>

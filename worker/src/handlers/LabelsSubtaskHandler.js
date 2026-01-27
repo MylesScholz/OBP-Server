@@ -597,6 +597,22 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
             })
         }
 
+        // Update the dateLabelPrint field of the printed occurrences
+        const printedIds = printableOccurrences.map((occurrence) => occurrence._id)
+        const printedFilter = { _id: { $in: printedIds } }
+        // Format the date to DD-MMM-YY (e.g. 31-Jan-26)
+        const dateFormatter = new Intl.DateTimeFormat('en-US', {
+            year: '2-digit',
+            month: 'short',
+            day: 'numeric'
+        })
+        const dateParts = dateFormatter.formatToParts(new Date())
+        const day = dateParts.find(({ type }) => type === 'day').value
+        const month = dateParts.find(({ type }) => type === 'month').value
+        const year = dateParts.find(({ type }) => type === 'year').value
+        const dateLabelPrint = `${day}-${month}-${year}`
+        await OccurrenceService.updateOccurrences(printedFilter, { [fieldNames.dateLabelPrint]: dateLabelPrint })
+
         // Write the flags file
         const flags = await OccurrenceService.getUnprintableOccurrences({ scratch: true, ignoreDateLabelPrint: true })
         FileManager.writeCSV(flagsFilePath, flags, Object.keys(template))

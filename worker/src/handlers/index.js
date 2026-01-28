@@ -7,3 +7,4 @@ export { default as OccurrencesSubtaskHandler } from './OccurrencesSubtaskHandle
 export { default as PivotsSubtaskHandler } from './PivotsSubtaskHandler.js'
 export { default as PlantListSubtaskHandler } from './PlantListSubtaskHandler.js'
 export { default as StewardshipReportSubtaskHandler } from './StewardshipReportSubtaskHandler.js'
+export { default as UploadSubtaskHandler } from './UploadSubtaskHandler.js'

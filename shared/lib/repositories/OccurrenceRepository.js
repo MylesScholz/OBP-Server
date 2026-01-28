@@ -353,4 +353,11 @@ export default class OccurrenceRepository extends BaseRepository {
 
         return modifiedCount
     }
+
+    async replaceById(id, replacement, options = {}) {
+        let processedDocument = this.setSortField(replacement, this.sortConfig)
+        processedDocument = this.setDateField(processedDocument)
+
+        return await super.replaceById(id, processedDocument, options)
+    }
 }

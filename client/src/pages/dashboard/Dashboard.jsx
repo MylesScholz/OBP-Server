@@ -8,8 +8,9 @@ import OccurrencesPanel from '../../components/OccurrencesPanel'
 import DashboardSearchPanel from './DashboardSearchPanel'
 import DownloadButton from './DownloadButton'
 import { useFlow } from '../../FlowProvider'
+import DashboardUploadPanel from './DashboardUploadPanel'
 
-const DashboardContainer = styled.form`
+const DashboardForm = styled.form`
     display: grid;
     grid-template-columns: 350px minmax(0, 1fr);
     grid-template-rows: 55px 1fr;
@@ -21,12 +22,15 @@ const DashboardContainer = styled.form`
 
         display: flex;
         flex-direction: column;
+        align-items: stretch;
         gap: 15px;
 
         border: 1px solid #222;
         border-radius: 5px;
 
         padding: 15px;
+
+        overflow-y: scroll;
     }
 
     #resultsHeader {
@@ -190,9 +194,10 @@ export default function Dashboard() {
     }
 
     return (
-        <DashboardContainer onSubmit={ handleSubmit }>
+        <DashboardForm onSubmit={ handleSubmit }>
             <div id='toolBar'>
                 <DashboardSearchPanel disabled={disabled} />
+                <DashboardUploadPanel disabled={disabled} />
             </div>
 
             <fieldset id='resultsHeader' disabled={disabled}>
@@ -235,6 +240,6 @@ export default function Dashboard() {
             <div id='resultsContainer'>
                 <OccurrencesPanel occurrences={results?.data ?? []} />
             </div>
-        </DashboardContainer>
+        </DashboardForm>
     )
 }

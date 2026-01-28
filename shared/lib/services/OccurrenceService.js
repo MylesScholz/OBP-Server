@@ -249,8 +249,7 @@ class OccurrenceService {
             skipFormatting = false,
             scratch = false
         } = options
-
-        const chunkSize = 5000
+        
         // Return object containing information about inserted and duplicate occurrences
         const results = {
             insertedCount: 0,
@@ -258,6 +257,7 @@ class OccurrenceService {
             duplicates: []
         }
 
+        const chunkSize = 5000
         for await (const chunk of FileManager.readCSVChunks(filePath, chunkSize)) {
             const chunkResults = await this.createOccurrences(chunk, { skipFormatting, scratch })
             
@@ -473,9 +473,8 @@ class OccurrenceService {
         const {
             skipFormatting = false,
             scratch = false
-        } = options
+        } = options        
 
-        const chunkSize = 5000
         // Return object containing information about updated and inserted occurrences
         const results = {
             modifiedCount: 0,
@@ -483,6 +482,7 @@ class OccurrenceService {
             upsertedIds: []
         }
 
+        const chunkSize = 5000
         for await (const chunk of FileManager.readCSVChunks(filePath, chunkSize)) {
             const chunkResults = await this.upsertOccurrences(chunk, { skipFormatting, scratch })
 
@@ -663,6 +663,156 @@ class OccurrenceService {
 
     async updateOccurrences(filter = {}, updateDocument) {
         return await this.repository.updateMany(filter, updateDocument)
+    }
+
+    async updateMatchingOccurrences(documents, options = { skipFormatting: false, scratch: false }) {
+        const {
+            skipFormatting = false,
+            scratch = false
+        } = options
+
+        // Return value
+        let modifiedCount = 0
+
+        // Apply formatting (unless skipped)
+        let updates = documents
+        if (!skipFormatting) {
+            updates = documents?.map((document) => {
+                // Limit update fields to those initially provided (and only occurrence template fields)
+                const initialFields = Object.keys(document).filter((field) => field in template)
+                const occurrence = this.formatOccurrence(document)
+
+                // Build an update document containing only the initial occurrence fields with the formatted values; always include _id
+                const updateDocument = { _id: occurrence._id }
+                initialFields.forEach((field) => updateDocument[field] = occurrence[field])
+
+                return updateDocument
+            })
+        }
+
+        // Return if no documents were provided
+        if (!updates || updates.length === 0) return modifiedCount
+
+        for (const update of updates) {
+            // Set scratch space flag
+            update.scratch = scratch
+
+            const response = this.repository.updateById(update._id, update)
+
+            modifiedCount += response?.modifiedCount ?? 0
+        }
+
+        return modifiedCount
+    }
+
+    async updateMatchingOccurrencesFromFile(filePath, options = { skipFormatting: false, scratch: false }) {
+        const {
+            skipFormatting = false,
+            scratch = false
+        } = options
+
+        // Return value
+        let modifiedCount = 0
+
+        const chunkSize = 5000
+        for await (const chunk of FileManager.readCSVChunks(filePath, chunkSize)) {
+            const chunkResults = await this.updateMatchingOccurrences(chunk, { skipFormatting, scratch })
+
+            modifiedCount += chunkResults
+        }
+
+        return modifiedCount
+    }
+
+    async replaceOccurrenceById(id, document, options = { skipFormatting: false, scratch: false, upsert: false }) {
+        const {
+            skipFormatting = false,
+            scratch = false,
+            upsert = false
+        } = options
+
+        // Return object containing information about replaced and upserted occurrences
+        const results = {
+            modifiedCount: 0,
+            upsertedCount: 0,
+            upsertedIds: []
+        }
+
+        // Apply formatting (unless skipped)
+        const occurrence = skipFormatting ? document : this.formatOccurrence(document)
+
+        // Return if no document was provided
+        if (!occurrence) return results
+
+        // Set scratch space flag
+        occurrence.scratch = scratch
+
+        const response = await this.repository.replaceById(id, occurrence, { upsert })
+
+        if (response) {
+            results.modifiedCount += response.modifiedCount ?? 0
+            results.upsertedCount = response.upsertedId ? 1 : 0
+            results.upsertedIds = response.upsertedId ? [ response.upsertedId ] : []
+        }
+
+        return results
+    }
+
+    async replaceOccurrences(documents, options = { skipFormatting: false, scratch: false, upsert: false }) {
+        const {
+            skipFormatting = false,
+            scratch = false,
+            upsert = false
+        } = options
+
+        // Return object containing information about replaced and upserted occurrences
+        const results = {
+            modifiedCount: 0,
+            upsertedCount: 0,
+            upsertedIds: []
+        }
+
+        // Apply formatting (unless skipped)
+        const occurrences = skipFormatting ? documents : documents?.map((doc) => this.formatOccurrence(doc))
+
+        // Return if no documents were provided
+        if (!occurrences || occurrences.length === 0) return results
+
+        // Set scratch space flags
+        for (const occurrence of occurrences) {
+            const occurrenceResults = await this.replaceOccurrenceById(occurrence._id, occurrence, { skipFormatting: true, scratch, upsert })
+
+            results.modifiedCount += occurrenceResults.modifiedCount
+            results.upsertedCount += occurrenceResults.upsertedCount
+            results.upsertedIds = results.upsertedIds.concat(occurrenceResults.upsertedIds)
+        }
+
+        return results
+    }
+
+    async replaceOccurrencesFromFile(filePath, options = { skipFormatting: false, scratch: false, upsert: false }) {
+        const {
+            skipFormatting = false,
+            scratch = false,
+            upsert = false
+        } = options
+
+        // Return object containing information about replaced and upserted occurrences
+        const results = {
+            modifiedCount: 0,
+            upsertedIds: []
+        }
+
+        const chunkSize = 5000
+        for await (const chunk of FileManager.readCSVChunks(filePath, chunkSize)) {
+            const chunkResults = await this.replaceOccurrences(chunk, { skipFormatting, scratch, upsert })
+
+            results.modifiedCount += chunkResults.modifiedCount
+            results.upsertedCount += chunkResults.upsertedCount
+            results.upsertedIds = results.upsertedIds.concat(chunkResults.upsertedIds)
+        }
+
+        return results
     }
 
     /*

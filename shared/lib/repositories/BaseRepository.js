@@ -120,6 +120,18 @@ export default class BaseRepository {
         return result.modifiedCount
     }
 
+    async replaceById(id, replacement = {}, options = {}) {
+        const queryId = ObjectId.isValid(id) ? new ObjectId(id) : id
+
+        const result = await this.collection.replaceOne(
+            { _id: queryId },
+            replacement,
+            options
+        )
+
+        return result
+    }
+
     // Delete
     async deleteById(id) {
         const queryId = ObjectId.isValid(id) ? new ObjectId(id) : id

@@ -13,7 +13,9 @@ const DashboardSearchPanelFieldset = styled.fieldset`
 
     margin: 0px;
 
-    padding: 5px 10px 10px 10px;
+    border: 1px solid gray;
+
+    padding: 10px;
 
     h3 {
         margin: 0px;
@@ -85,7 +87,7 @@ const DashboardSearchPanelFieldset = styled.fieldset`
         #fieldNameSelection {
             grid-column: 1 / 2;
 
-            width: 100px;
+            width: 95px;
         }
 
         #queryText {
@@ -210,6 +212,8 @@ export default function DashboardSearchPanel({ disabled }) {
         'sexVolDet',
         'casteVolDet',
     ]
+
+    /* Handler Functions */
 
     function handleEnter(event) {
         event.preventDefault()

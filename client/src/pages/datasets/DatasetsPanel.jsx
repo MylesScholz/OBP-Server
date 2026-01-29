@@ -2,11 +2,10 @@ import { useState } from 'react'
 import styled from '@emotion/styled'
 
 import DatasetsMenu from './DatasetsMenu'
-import ArchiveBrowser from '../../components/ArchiveBrowser'
-import DatasetAccessForm from './DatasetAccessForm'
-import DeterminationsAccessForm from '../../components/DeterminationsAccessForm'
-import UsernamesAccessForm from '../../components/UsernamesAccessForm'
-import PlantListAccessForm from '../../components/PlantListAccessForm'
+import DeterminationsAccessForm from './DeterminationsAccessForm'
+import UsernamesAccessForm from './UsernamesAccessForm'
+import PlantListAccessForm from './PlantListAccessForm'
+import ArchiveBrowser from './ArchiveBrowser'
 
 const DatasetsPanelContainer = styled.div`
     display: grid;

@@ -8,8 +8,6 @@ export default class DownloadSubtaskHandler extends BaseSubtaskHandler {
         super()
     }
 
-    /* Private Helper Methods */
-
     /* Main Handler Method */
 
     async handleTask(taskId) {

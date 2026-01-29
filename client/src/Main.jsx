@@ -11,6 +11,7 @@ import ErrorPage from './pages/error/ErrorPage'
 import AdminLoginPage from './pages/adminLogin/AdminLoginPage'
 import DashboardPage from './pages/dashboard/DashboardPage'
 import TasksPage from './pages/tasks/TasksPage'
+import DatasetsPage from './pages/datasets/DatasetsPage'
 
 const queryClient = new QueryClient()
 
@@ -23,7 +24,8 @@ const router = createBrowserRouter([
             { index: true, element: <LandingPage /> },
             { path: 'adminLogin', element: <AdminLoginPage /> },
             { path: 'dashboard', element: <DashboardPage /> },
-            { path: 'tasks', element: <TasksPage /> }
+            { path: 'tasks', element: <TasksPage /> },
+            { path: 'datasets', element: <DatasetsPage /> }
         ]
     }
 ])

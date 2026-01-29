@@ -62,6 +62,10 @@ export default function FlowBar() {
                 <h3>Tasks</h3>
                 <img src={chevronRightIcon} alt='Next' />
             </NavLink>
+            <NavLink className='flowStage' to='/datasets'>
+                <h3>Datasets</h3>
+                <img src={chevronRightIcon} alt='Next' />
+            </NavLink>
         </FlowBarContainer>
     )
 }

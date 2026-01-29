@@ -5,6 +5,7 @@ import styled from '@emotion/styled'
 const UsernamesAccessFormContainer = styled.div`
     display: flex;
     flex-direction: column;
+    align-items: start;
     gap: 10px;
 
     border: 1px solid gray;
@@ -65,7 +66,7 @@ const UsernamesAccessFormContainer = styled.div`
             flex-direction: column;
             gap: 10px;
 
-            border: 1px solid gray;
+            border: 1px solid #222;
             border-radius: 5px;
 
             padding: 10px;

@@ -150,12 +150,8 @@ export default function DashboardUploadPanel({ disabled }) {
     function handleUpload(event) {
         event.preventDefault()
 
-        // If not upload file has been provided, post a warning
-        if (!uploadFile) {
-            console.error('Please select a file')
-            window.alert('Please select a file')
-            return
-        }
+        // Return if no upload file has been provided
+        if (!uploadFile) return
 
         const formData = new FormData()
         

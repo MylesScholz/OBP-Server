@@ -13,12 +13,6 @@ const TaskPanelContainer = styled.form`
     display: grid;
     grid-template-columns: 3fr 9fr;
     grid-column-gap: 10px;
-
-    h1 {
-        margin: 0px;
-
-        font-size: 18pt;
-    }
 `
 
 export default function TaskPanel() {

@@ -1,4 +1,4 @@
-import { fieldNames } from './constants.js'
+import { fieldNames, sortConfig } from './constants.js'
 
 /*
  * includesStreetSuffix()
@@ -62,7 +62,8 @@ function parseQueryParameters(query) {
             date: 0,
             new: 0,
             scratch: 0
-        }
+        },
+        sortConfig: [ { field: 'composite_sort', direction: 1, type: 'string' } ]
     }
 
     // Parse query parameters
@@ -112,7 +113,18 @@ function parseQueryParameters(query) {
         }
     }
 
-    // TODO: sorting query parameters
+    // Sorting parameters
+    if (query.sort_by === 'fieldNumber') {
+        const direction = query.sort_dir === 'desc' ? -1 : 1
+        params.sortConfig = [ { field: 'composite_sort', direction } ]
+    } else if (query.sort_by === 'date') {
+        const direction = query.sort_dir === 'desc' ? -1 : 1
+        // Sort by date, then default
+        params.sortConfig = [
+            { field: 'date', direction },
+            { field: 'composite_sort', direction: 1 }
+        ]
+    }
 
     return params
 }

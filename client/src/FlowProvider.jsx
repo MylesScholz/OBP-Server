@@ -7,6 +7,8 @@ export function FlowProvider({ children }) {
         query: {
             page: 1,
             per_page: 25,
+            sort_by: 'fieldNumber',
+            sort_dir: 'asc',
             start_date: '',
             end_date: '',
             valueQueries: {},

@@ -170,6 +170,8 @@ export default function Dashboard() {
 
         params.set('page', query.page.toString())
         params.set('per_page', query.per_page.toString())
+        params.set('sort_by', query.sort_by)
+        params.set('sort_dir', query.sort_dir)
 
         for (const [ fieldName, values ] of Object.entries(query.valueQueries)) {
             params.set(fieldName, values)
@@ -202,12 +204,22 @@ export default function Dashboard() {
 
             <fieldset id='resultsHeader' disabled={disabled}>
                 <div id='sortDirContainer'>
-                    <label htmlFor='sortDir'>Sort By:</label>
-                    <select id='sortDir'>
-                        <option>fieldNumber (desc)</option>
-                        <option>fieldNumber (asc)</option>
-                        <option>verbatimEventDate (desc)</option>
-                        <option>verbatimEventDate (asc)</option>
+                    <label htmlFor='sortBy'>Sort By:</label>
+                    <select
+                        id='sortBy'
+                        value={query.sort_by}
+                        onChange={(event) => setQuery({ ...query, sort_by: event.target.value, unsubmitted: true })}
+                    >
+                        <option value='fieldNumber'>fieldNumber</option>
+                        <option value='date'>date</option>
+                    </select>
+                    <select
+                        id='sortDir'
+                        value={query.sort_dir}
+                        onChange={(event) => setQuery({ ...query, sort_dir: event.target.value, unsubmitted: true })}
+                    >
+                        <option value='asc'>ascending</option>
+                        <option value='desc'>descending</option>
                     </select>
                 </div>
                 <div id='resultsHeaderRight'>

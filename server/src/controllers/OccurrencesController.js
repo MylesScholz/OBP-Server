@@ -3,7 +3,6 @@ import path from 'path'
 import { OccurrenceService, TaskService } from '../../shared/lib/services/index.js'
 import { InvalidArgumentError, ValidationError } from '../../shared/lib/utils/errors.js'
 import { parseQueryParameters } from '../../shared/lib/utils/utilities.js'
-import FileManager from '../../shared/lib/utils/FileManager.js'
 
 export default class OccurrencesController {
     static async getOccurrencesPage(req, res, next) {

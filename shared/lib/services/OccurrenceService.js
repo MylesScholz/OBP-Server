@@ -521,7 +521,10 @@ class OccurrenceService {
     }
 
     async getOccurrencesPage(options = {}) {
-        const sortConfig = [ { field: 'composite_sort', direction: 1, type: 'string' } ]
+        const {
+            sortConfig = [ { field: 'composite_sort', direction: 1, type: 'string' } ]
+        } = options
+        
         return await this.repository.paginate({ ...options, sortConfig })
     }
 

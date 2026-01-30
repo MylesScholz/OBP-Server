@@ -13,6 +13,9 @@ export default class TaskRepository extends BaseRepository {
             $set: {
                 status: 'Completed',
                 completedAt: new Date().toISOString()
+            },
+            $unset: {
+                progress: ''
             }
         })
     }

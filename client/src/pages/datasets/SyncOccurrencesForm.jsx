@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import styled from '@emotion/styled'
 
-import { useAuth } from '../../AuthProvider'
+import { useFlow } from '../../FlowProvider'
 
 const SyncOccurrencesFormContainer = styled.div`
     display: flex;
@@ -62,6 +62,7 @@ const SyncOccurrencesFormContainer = styled.div`
 export default function SyncOccurrencesForm() {
     const [ syncQuery, setSyncQuery ] = useState({ operation: 'read', file: 'working' })
     const [ selectedTaskId, setSelectedTaskId ] = useState()
+    const { query, setQuery } = useFlow()
 
     /*
      * Selected Task Query
@@ -92,6 +93,10 @@ export default function SyncOccurrencesForm() {
         }).catch((error) => {
             // TODO: store error status and data for display
             console.error(error)
+        }).finally(() => {
+            if (syncQuery.operation === 'read' && syncQuery.file === 'working') {
+                setQuery({ ...query, unsubmitted: true })
+            }
         })
     }
 

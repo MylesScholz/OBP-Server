@@ -11,6 +11,7 @@ export function FlowProvider({ children }) {
             end_date: '',
             valueQueries: {},
             searchParams: '',
+            unsubmitted: false,
             totalDocuments: 0
         },
         results: {}

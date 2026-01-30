@@ -19,7 +19,7 @@ export default function TaskPanel() {
     const [ taskState, setTaskState ] = useState(new TaskState())
     const [ selectedTaskId, setSelectedTaskId ] = useState()
     const [ postTaskResponse, setPostTaskResponse ] = useState()
-    const { query } = useFlow()
+    const { query, setQuery } = useFlow()
     const { loggedIn } = useAuth()
 
     /* Queries */
@@ -167,6 +167,8 @@ export default function TaskPanel() {
             setSelectedTaskId(postedTaskId)
         }).catch((error) => {
             setPostTaskResponse({ status: error.response?.status, error: error.response?.data?.error ?? error.message })
+        }).finally(() => {
+            setQuery({ ...query, unsubmitted: true })
         })
     }
 

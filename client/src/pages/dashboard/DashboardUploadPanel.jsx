@@ -5,6 +5,7 @@ import axios from 'axios'
 
 import uploadIcon from '/src/assets/upload.svg'
 import csvIcon from '/src/assets/csv.svg'
+import { useFlow } from '../../FlowProvider'
 
 
 const DashboardUploadPanelContainer = styled.div`
@@ -119,6 +120,7 @@ export default function DashboardUploadPanel({ disabled }) {
     const [ uploadFile, setUploadFile ] = useState()
     const [ settings, setSettings ] = useState({ replace: false, upsert: true })
     const uploadInputRef = useRef()
+    const { query, setQuery } = useFlow()
 
     /* Queries */
 
@@ -173,6 +175,8 @@ export default function DashboardUploadPanel({ disabled }) {
             setSelectedTaskId(postedTaskId)
         }).catch((error) => {
             console.error(error)
+        }).finally(() => {
+            setQuery({ ...query, unsubmitted: true })
         })
     }
 

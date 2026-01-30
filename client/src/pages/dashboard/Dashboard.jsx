@@ -189,7 +189,7 @@ export default function Dashboard() {
             // Remove pagination params before setting query.searchParams (not relevant to data selection)
             params.delete('page')
             params.delete('per_page')
-            setQuery({ ...query, searchParams: url.search })
+            setQuery({ ...query, searchParams: url.search, unsubmitted: false })
         })
     }
 

@@ -124,11 +124,8 @@ export default function DownloadButton({ searchParams }) {
     function handleClick(event) {
         event.preventDefault()
 
-        // No button behavior if there are no searchParams
-        if (!searchParams) return
-
-        // Search params exist, but no task (or downloads)
-        if (searchParams && !selectedTaskId) {
+        // Query if no task is selected (i.e. not pending or downloaded)
+        if (!selectedTaskId) {
             axios.get(`/api/occurrences/download${searchParams}`).then((res) => {
                 // TODO: store res status and data for display
                 const postedTaskId = res.data?.uri?.replace('/api/tasks/', '')
@@ -147,9 +144,8 @@ export default function DownloadButton({ searchParams }) {
                     <img src={csvIcon} alt='CSV' />
                 </a>
             ) : (
-                <button className={ `${!searchParams ? 'noDownload' : ''} ${selectedTaskId && !downloads ? 'pendingDownload' : ''}` } onClick={handleClick}>
-                    { !searchParams && <img src={downloadOffIcon} alt='No download' /> }
-                    { searchParams && !selectedTaskId && <img src={downloadIcon} alt='Download' /> }
+                <button className={ `${selectedTaskId && !downloads ? 'pendingDownload' : ''}` } onClick={handleClick}>
+                    { !selectedTaskId && <img src={downloadIcon} alt='Download' /> }
                     { selectedTaskId && !downloads && <img src={downloadingIcon} alt='Downloading...' /> }
                 </button>
             )}

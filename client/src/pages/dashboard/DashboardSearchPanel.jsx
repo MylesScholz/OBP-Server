@@ -17,6 +17,11 @@ const DashboardSearchPanelFieldset = styled.fieldset`
 
     padding: 10px;
 
+    &.unsubmitted {
+        border-color: dodgerblue;
+        box-shadow: 0px 0px 5px dodgerblue;
+    }
+
     h3 {
         margin: 0px;
 
@@ -227,11 +232,11 @@ export default function DashboardSearchPanel({ disabled }) {
     function handleClear(event, key) {
         event.preventDefault()
 
-        setQuery({ ...query, [key]: '' })
+        setQuery({ ...query, [key]: '', unsubmitted: true })
     }
 
     function handleAdd(event) {
-        event.preventDefault()
+        if (event) event.preventDefault()
 
         // Don't query by blank field names
         if (!selectedFieldName) return
@@ -240,7 +245,7 @@ export default function DashboardSearchPanel({ disabled }) {
         const queryTextValues = queryText.split(',').map((value) => value.trim())
         const newValues = values.concat(queryTextValues).join(',')
 
-        setQuery({ ...query, valueQueries: { ...query.valueQueries, [selectedFieldName]: newValues } })
+        setQuery({ ...query, valueQueries: { ...query.valueQueries, [selectedFieldName]: newValues }, unsubmitted: true })
         setSelectedFieldName('')
         setQueryText('')
     }
@@ -253,18 +258,18 @@ export default function DashboardSearchPanel({ disabled }) {
             const valueRemoved = values.filter((value) => value !== removeValue)
 
             if (valueRemoved.length > 0) {
-                setQuery({ ...query, valueQueries: { ...query.valueQueries, [fieldName]: valueRemoved.join(',') } })
+                setQuery({ ...query, valueQueries: { ...query.valueQueries, [fieldName]: valueRemoved.join(',') }, unsubmitted: true })
             } else {
                 // Remove fieldName from the query.valueQueries object using destructuring
                 const { [fieldName]: _, ...newValueQueries } = query.valueQueries
-                setQuery({ ...query, valueQueries: newValueQueries })
+                setQuery({ ...query, valueQueries: newValueQueries, unsubmitted: true })
             }
         }
     }
 
     return (
-        <DashboardSearchPanelFieldset disabled={disabled}>
-            <h3>Search Records</h3>
+        <DashboardSearchPanelFieldset className={query.unsubmitted ? 'unsubmitted' : ''} disabled={disabled}>
+            <h3>Search Records{query.unsubmitted && <span style={{ color: 'dodgerblue' }}>*</span>}</h3>
 
             <div id='dateFilters'>
                 <p>Date</p>
@@ -275,7 +280,7 @@ export default function DashboardSearchPanel({ disabled }) {
                     type='date'
                     value={query.start_date}
                     onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }}
-                    onChange={(event) => setQuery({ ...query, start_date: event.target.value })}
+                    onChange={(event) => setQuery({ ...query, start_date: event.target.value, unsubmitted: true })}
                 />
                 <button className='iconButton' onClick={(event) => handleClear(event, 'start_date')}>
                     <img src={closeIcon} alt='Clear' />
@@ -287,7 +292,7 @@ export default function DashboardSearchPanel({ disabled }) {
                     type='date'
                     value={query.end_date}
                     onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }}
-                    onChange={(event) => setQuery({ ...query, end_date: event.target.value })}
+                    onChange={(event) => setQuery({ ...query, end_date: event.target.value, unsubmitted: true })}
                 />
                 <button className='iconButton' onClick={(event) => handleClear(event, 'end_date')}>
                     <img src={closeIcon} alt='Clear' />
@@ -300,7 +305,10 @@ export default function DashboardSearchPanel({ disabled }) {
                 <select
                     id='fieldNameSelection'
                     value={selectedFieldName}
-                    onChange={(event) => setSelectedFieldName(event.target.value)}
+                    onChange={(event) => {
+                        setSelectedFieldName(event.target.value)
+                        setQuery({ ...query, unsubmitted: true })
+                    }}
                 >
                     <option key='select' value=''>Field...</option>
                     {fieldNames.map((fieldName) => <option key={fieldName} value={fieldName}>{fieldName}</option>)}
@@ -311,7 +319,10 @@ export default function DashboardSearchPanel({ disabled }) {
                     placeholder='Enter a query value...'
                     value={queryText}
                     onKeyDown={(event) => { if (event.key === 'Enter') handleAdd(event) }}
-                    onChange={(event) => setQueryText(event.target.value)}
+                    onChange={(event) => {
+                        setQueryText(event.target.value)
+                        setQuery({ ...query, unsubmitted: true })
+                    }}
                 />
                 <button className='iconButton' onClick={(event) => handleAdd(event)}>
                     <img src={addIcon} alt='Add' />
@@ -348,6 +359,7 @@ export default function DashboardSearchPanel({ disabled }) {
                 type='submit'
                 value='search'
                 ref={submitRef}
+                onClick={() => handleAdd()}
             >Search</button>
         </DashboardSearchPanelFieldset>
     )

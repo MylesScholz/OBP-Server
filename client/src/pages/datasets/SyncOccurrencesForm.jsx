@@ -60,7 +60,9 @@ const SyncOccurrencesFormContainer = styled.div`
 `
 
 export default function SyncOccurrencesForm() {
-    const [ syncQuery, setSyncQuery ] = useState({ operation: 'read', file: 'working' })
+    const [ syncQuery, setSyncQuery ] = useState({ operation: 'download', file: 'working' })
+    const [ disabled, setDisabled ] = useState(false)
+    const [ queryResponse, setQueryResponse ] = useState()
     const [ selectedTaskId, setSelectedTaskId ] = useState()
     const { query, setQuery } = useFlow()
 
@@ -86,23 +88,41 @@ export default function SyncOccurrencesForm() {
     function handleSubmit(event) {
         event.preventDefault()
 
-        axios.post(`/api/occurrences/${syncQuery.file}/${syncQuery.operation}`).then((res) => {
-            // TODO: store res status and data for display
-            const postedTaskId = res.data?.uri?.replace('/api/tasks/', '')
-            setSelectedTaskId(postedTaskId)
-        }).catch((error) => {
-            // TODO: store error status and data for display
-            console.error(error)
-        }).finally(() => {
-            if (syncQuery.operation === 'read' && syncQuery.file === 'working') {
-                setQuery({ ...query, unsubmitted: true })
-            }
-        })
+        setDisabled(true)
+        setQueryResponse(null)
+
+        if (syncQuery.operation === 'download') {
+            axios.get(`/api/occurrences/${syncQuery.file}`, { responseType: 'blob' }).then((res) => {
+                setDisabled(false)
+                setQueryResponse({ status: res.status, data: URL.createObjectURL(res.data) })
+            }).catch((error) => {
+                setDisabled(false)
+                setQueryResponse({ status: error.response?.status, error: error.response?.data?.error ?? error.message })
+                console.error(error)
+            })
+        } else {
+            axios.post(`/api/occurrences/${syncQuery.file}/${syncQuery.operation}`).then((res) => {
+                setDisabled(false)
+                setQueryResponse({ status: res.status, data: res.data })
+
+                const postedTaskId = res.data?.uri?.replace('/api/tasks/', '')
+                setSelectedTaskId(postedTaskId)
+            }).catch((error) => {
+                setDisabled(false)
+                setQueryResponse({ status: error.response?.status, error: error.response?.data?.error ?? error.message })
+                console.error(error)
+            }).finally(() => {
+                if (syncQuery.operation === 'read' && syncQuery.file === 'working') {
+                    setQuery({ ...query, unsubmitted: true })
+                }
+            })
+        }
     }
 
     function handleReset(event) {
         event.preventDefault()
 
+        setQueryResponse(null)
         setSelectedTaskId(null)
     }
 
@@ -110,20 +130,22 @@ export default function SyncOccurrencesForm() {
         <SyncOccurrencesFormContainer>
             <h2>Working and Backup Occurrences</h2>
 
-            { !selectedTaskId ? (
+            { !queryResponse ? (
                 <form id='syncOccurrencesQueryForm' onSubmit={ handleSubmit }>
-                    <fieldset>
+                    <fieldset disabled={disabled}>
                         <div id='syncQuerySettings'>
                             <select
                                 id='syncOperation'
                                 value={syncQuery.operation}
                                 onChange={(event) => setSyncQuery({ ...syncQuery, operation: event.target.value })}
                             >
+                                <option value='download'>Download</option>
                                 <option value='read'>Read</option>
                                 <option value='write'>Write</option>
                             </select>
 
-                            <p>{syncQuery.operation === 'read' ? 'from' : 'into'}</p>
+                            { syncQuery.operation === 'read' && <p>from</p> }
+                            { syncQuery.operation === 'write' && <p>into</p> }
 
                             <select
                                 id='syncFile'
@@ -134,10 +156,13 @@ export default function SyncOccurrencesForm() {
                                 <option value='backup'>Backup Occurrences</option>
                             </select>
 
-                            <p>
-                                {syncQuery.operation === 'read' ? 'into ' : 'from '}
-                                {syncQuery.file === 'working' ? 'the occurrence database' : 'the working occurrences file'}
-                            </p>
+                            { syncQuery.operation !== 'download' &&
+                                <p>
+                                    {syncQuery.operation === 'read' ? 'into ' : 'from '}
+                                    {syncQuery.file === 'working' ? 'the occurrence database' : 'the working occurrences file'}
+                                </p>
+                            }
+                            
                         </div>                        
 
                         <input type='submit' value='Submit' />
@@ -145,9 +170,20 @@ export default function SyncOccurrencesForm() {
                 </form>
             ) : (
                 <div id='syncQueryStatus'>
+                    { queryResponse.status === 200 && syncQuery.operation === 'download' &&
+                        <a href={queryResponse.data} download={`${syncQuery.file}Occurrences.csv`}>Download {syncQuery.file} occurrences file</a>
+                    }
+                    { queryResponse.error &&
+                        <p>Error: {queryResponse.error}</p>
+                    }
                     { selectedTaskData?.task &&
                         <>
-                            <p>Status: {selectedTaskData?.task.status}</p>
+                            { selectedTaskData?.task.status &&
+                                <p>Status: {selectedTaskData?.task.status}</p>
+                            }
+                            { selectedTaskData.task.progress?.currentStep &&
+                                <p>Current Step: {selectedTaskData.task.progress.currentStep}</p>
+                            }
                             { selectedTaskData.task.progress?.percentage &&
                                 <p>{selectedTaskData.task.progress.percentage}</p>
                             }

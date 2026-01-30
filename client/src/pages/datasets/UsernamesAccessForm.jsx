@@ -13,8 +13,6 @@ const UsernamesAccessFormContainer = styled.div`
 
     padding: 20px;
 
-    min-width: 400px;
-
     h2 {
         margin: 0px;
         margin-bottom: 5px;
@@ -82,33 +80,32 @@ const UsernamesAccessFormContainer = styled.div`
 
 export default function UsernamesAccessForm() {
     const [ queryType, setQueryType ] = useState('get')
-    const [ file, setFile ] = useState()
-    const [ formDisabled, setFormDisabled ] = useState(false)
+    const [ disabled, setDisabled ] = useState(false)
     const [ queryResponse, setQueryResponse ] = useState()
 
     function handleSubmit(event) {
         event.preventDefault()
 
-        setFormDisabled(true)
+        setDisabled(true)
         setQueryResponse(undefined)
 
         if (queryType === 'get') {
             axios.get('/api/usernames', { responseType: 'blob' }).then((res) => {
-                setFormDisabled(false)
+                setDisabled(false)
                 setQueryResponse({ status: res.status, data: URL.createObjectURL(res.data) })
             }).catch((err) => {
-                setFormDisabled(false)
+                setDisabled(false)
                 setQueryResponse({ status: err.response?.status, error: err.response?.data?.error ?? err.message })
             })
         } else if (queryType === 'post') {
             const formData = new FormData()
-            formData.append('file', file)
+            formData.append('file', event.target.usernamesFileUpload.files[0])
 
             axios.postForm('/api/usernames', formData).then((res) => {
-                setFormDisabled(false)
+                setDisabled(false)
                 setQueryResponse({ status: res.status, data: res.data })
             }).catch((err) => {
-                setFormDisabled(false)
+                setDisabled(false)
                 setQueryResponse({ status: err.response?.status, error: err.response?.data?.error ?? err.message })
             })
         }
@@ -116,11 +113,11 @@ export default function UsernamesAccessForm() {
 
     return (
         <UsernamesAccessFormContainer>
-            <h2>Username Dataset Access</h2>
+            <h2>Registered iNaturalist Usernames</h2>
 
             <div id='usernamesQueryPanel'>
                 <form onSubmit={ handleSubmit }>
-                    <fieldset disabled={formDisabled}>
+                    <fieldset disabled={disabled}>
                         <div>
                             <label htmlFor='usernamesQueryType'>Operation:</label>
                             <select id='usernamesQueryType' onChange={(event) => {
@@ -140,7 +137,6 @@ export default function UsernamesAccessForm() {
                                     accept='.csv'
                                     id='usernamesFileUpload'
                                     required
-                                    onChange={ (event) => setFile(event.target.files[0]) }
                                 />
                             </div>
                         }

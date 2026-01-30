@@ -43,7 +43,7 @@ occurrencesRouter.post('/working/read', requireAuthentication, OccurrencesContro
 
 /*
  * POST /api/occurrences/working/write
- * Write the database into the current working occurrences dataset file
+ * Overwrite the current working occurrences dataset file with the database occurrences
  * Authentication required
  */
 occurrencesRouter.post('/working/write', requireAuthentication, OccurrencesController.writeWorkingFile)
@@ -57,17 +57,17 @@ occurrencesRouter.post('/working/write', requireAuthentication, OccurrencesContr
 occurrencesRouter.get('/backup', requireAuthentication, OccurrencesController.getBackupFile)
 
 /*
- * GET /api/occurrences/sync
- * Returns the subset of the current working occurrence dataset that has been changed since last sync
+ * POST /api/occurrences/backup/read
+ * Read the backup occurrences file into the working occurrences file
  * Authentication required
  */
-occurrencesRouter.get('/sync', requireAuthentication, (req, res, next) => { next() })
+occurrencesRouter.post('/backup/read', requireAuthentication, OccurrencesController.readBackupFile)
 
 /*
- * POST /api/occurrences/sync
- * Syncs the current working occurrence dataset with the backup dataset
+ * POST /api/occurrences/backup/write
+ * Overwrite the backup occurrences file with the current working occurrences file
  * Authentication required
  */
-occurrencesRouter.post('/sync', requireAuthentication, OccurrencesController.syncOccurrenceFiles)
+occurrencesRouter.post('/backup/write', requireAuthentication, OccurrencesController.writeBackupFile)
 
 export default occurrencesRouter

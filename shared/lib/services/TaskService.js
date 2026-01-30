@@ -20,7 +20,7 @@ class TaskService {
         try {
             const subtasks = JSON.parse(subtasksJSON)
 
-            const subtaskTypes = [ 'addresses', 'download', 'emails', 'labels', 'observations', 'occurrences', 'pivots', 'plantList', 'stewardshipReport', 'upload' ]
+            const subtaskTypes = [ 'addresses', 'download', 'emails', 'labels', 'observations', 'occurrences', 'pivots', 'plantList', 'stewardshipReport', 'syncOccurrences', 'upload' ]
             for (let i = 0; i < subtasks.length; i++) {
                 const subtask = subtasks[i]
                 if (!subtaskTypes.includes(subtask.type)) { throw new ValidationError(`Invalid subtask type '${subtask.type}'`) }
@@ -183,7 +183,7 @@ class TaskService {
         const task = await this.repository.findById(id)
 
         const formattedPercentage = typeof percentage === 'number' && !isNaN(parseFloat(percentage))
-            ? `${percentage.toFixed(2).toString()}%`
+            ? `${percentage.toFixed(2)}%`
             : percentage
 
         return await this.repository.updateProgressById(id, {

@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import styled from '@emotion/styled'
 
+import { useAuth } from '../../AuthProvider'
+
 const PlantListAccessFormContainer = styled.div`
     display: flex;
     flex-direction: column;
@@ -13,8 +15,6 @@ const PlantListAccessFormContainer = styled.div`
     border-radius: 5px;
 
     padding: 20px;
-
-    min-width: 400px;
 
     h2 {
         margin: 0px;
@@ -83,10 +83,10 @@ const PlantListAccessFormContainer = styled.div`
 
 export default function PlantListAccessForm() {
     const [ queryType, setQueryType ] = useState('get')
-    const [ file, setFile ] = useState()
-    const [ formDisabled, setFormDisabled ] = useState(false)
+    const [ disabled, setDisabled ] = useState(false)
     const [ queryResponse, setQueryResponse ] = useState()
     const [ selectedTaskId, setSelectedTaskId ] = useState()
+    const { loggedIn } = useAuth()
 
     /* Queries */
 
@@ -107,24 +107,22 @@ export default function PlantListAccessForm() {
         enabled: !!selectedTaskId
     })
 
-    // On remount, update result based on the selected task data
-    let result = selectedTaskData?.task?.result
+    // On remount, update subtasks based on the selected task data
+    let subtasks = selectedTaskData?.task?.subtasks ?? []
 
     /*
      * Downloads Query
      * Generates download links for each output file in the currently selected task
      */
     const { data: downloads } = useQuery({
-        queryKey: ['downloads', result],
+        queryKey: ['downloads', subtasks, loggedIn],
         queryFn: async () => {
             const downloads = []
 
-            const subtaskOutputs = result?.subtaskOutputs || []
-            for (const subtaskOutput of subtaskOutputs) {
-
-                const outputs = subtaskOutput.outputs || []
+            for (const subtask of subtasks) {
+                const outputs = subtask.outputs ?? []
                 for (const output of outputs) {
-                    const response = await axios.get(`${output.uri}`, { responseType: 'blob' }).catch((error) => {
+                    const response = await axios.get(output.uri, { responseType: 'blob' }).catch((error) => {
                         return { status: error.status }
                     })
 
@@ -132,7 +130,7 @@ export default function PlantListAccessForm() {
                         fileName: output.fileName,
                         type: output.type,
                         subtype: output.subtype,
-                        subtask: subtaskOutput.type,
+                        subtask: subtask.type,
                         responseStatus: response.status
                     }
                     if (response.status === 200) {
@@ -145,7 +143,7 @@ export default function PlantListAccessForm() {
             return downloads
         },
         refetchOnMount: 'always',
-        enabled: !!result
+        enabled: subtasks.some((subtask) => !!subtask.outputs)
     })
 
     /* Handler Functions */
@@ -157,27 +155,27 @@ export default function PlantListAccessForm() {
     function handleSubmit(event) {
         event.preventDefault()
 
-        setFormDisabled(true)
+        setDisabled(true)
         setQueryResponse(null)
         setSelectedTaskId(null)
 
         if (queryType === 'get') {
             axios.get('/api/plantList', { responseType: 'blob' }).then((res) => {
-                setFormDisabled(false)
+                setDisabled(false)
                 setQueryResponse({ status: res.status, data: URL.createObjectURL(res.data) })
             }).catch((err) => {
-                setFormDisabled(false)
+                setDisabled(false)
                 setQueryResponse({ status: err.response?.status, error: err.response?.data?.error ?? err.message })
             })
         } else if (queryType === 'post') {
             const formData = new FormData()
-            formData.append('file', file)
+            formData.append('file', event.target.plantListFileUpload.files[0])
 
             axios.postForm('/api/plantList', formData).then((res) => {
-                setFormDisabled(false)
+                setDisabled(false)
                 setQueryResponse({ status: res.status, data: res.data })
             }).catch((err) => {
-                setFormDisabled(false)
+                setDisabled(false)
                 setQueryResponse({ status: err.response?.status, error: err.response?.data?.error ?? err.message })
             })
         } else if (queryType === 'update') {
@@ -188,13 +186,13 @@ export default function PlantListAccessForm() {
             formData.append('subtasks', JSON.stringify(subtasks))
 
             axios.postForm('/api/tasks', formData).then((res) => {
-                setFormDisabled(false)
+                setDisabled(false)
                 setQueryResponse({ status: res.status, data: res.data })
 
                 const postedTaskId = res.data?.uri?.replace('/api/tasks/', '')
                 setSelectedTaskId(postedTaskId)
             }).catch((err) => {
-                setFormDisabled(false)
+                setDisabled(false)
                 setQueryResponse({ status: err.response?.status, error: err.response?.data?.error ?? err.message })
             })
         }
@@ -202,11 +200,11 @@ export default function PlantListAccessForm() {
 
     return (
         <PlantListAccessFormContainer>
-            <h2>Plant List Access</h2>
+            <h2>Oregon Plant List</h2>
 
             <div id='plantListQueryPanel'>
                 <form onSubmit={ handleSubmit }>
-                    <fieldset disabled={formDisabled}>
+                    <fieldset disabled={disabled}>
                         <div>
                             <label htmlFor='plantListQueryType'>Operation:</label>
                             <select id='plantListQueryType' onChange={(event) => {
@@ -227,7 +225,6 @@ export default function PlantListAccessForm() {
                                     accept='.csv'
                                     id='plantListFileUpload'
                                     required
-                                    onChange={ (event) => setFile(event.target.files[0]) }
                                 />
                             </div>
                         }

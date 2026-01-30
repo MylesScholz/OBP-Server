@@ -2,7 +2,7 @@ import amqp from 'amqplib'
 
 import { messageBroker } from '../shared/lib/config/environment.js'
 import { TaskService } from '../shared/lib/services/index.js'
-import { AddressesSubtaskHandler, DownloadSubtaskHandler, EmailsSubtaskHandler, LabelsSubtaskHandler, ObservationsSubtaskHandler, OccurrencesSubtaskHandler, PivotsSubtaskHandler, PlantListSubtaskHandler, StewardshipReportSubtaskHandler, UploadSubtaskHandler } from './handlers/index.js'
+import { AddressesSubtaskHandler, DownloadSubtaskHandler, EmailsSubtaskHandler, LabelsSubtaskHandler, ObservationsSubtaskHandler, OccurrencesSubtaskHandler, PivotsSubtaskHandler, PlantListSubtaskHandler, StewardshipReportSubtaskHandler, SyncOccurrencesSubtaskHandler, UploadSubtaskHandler } from './handlers/index.js'
 
 class TaskConsumer {
     constructor() {
@@ -72,6 +72,7 @@ class TaskConsumer {
             const stewardshipReportHandler = new StewardshipReportSubtaskHandler()
             const downloadHandler = new DownloadSubtaskHandler()
             const uploadHandler = new UploadSubtaskHandler()
+            const syncOccurrencesHandler = new SyncOccurrencesSubtaskHandler()
 
             for (const subtask of task.subtasks) {
                 console.log(`\t${new Date().toLocaleTimeString('en-US')} Processing ${subtask.type} subtask...`)
@@ -96,6 +97,8 @@ class TaskConsumer {
                     await downloadHandler.handleTask(task._id)
                 } else if (subtask.type === 'upload') {
                     await uploadHandler.handleTask(task._id)
+                } else if (subtask.type === 'syncOccurrences') {
+                    await syncOccurrencesHandler.handleTask(task._id)
                 }
             }
 

@@ -99,24 +99,61 @@ export default class OccurrencesController {
     }
 
     static async readWorkingFile(req, res, next) {
-        // TODO: turn this operation into a subtask
-        
-        // Delete previous occurrences from database (asynchronous)
-        OccurrenceService.deleteOccurrences().then(() => {
-            // Read occurrences from working file into database
-            OccurrenceService.createOccurrencesFromFile(path.resolve('./shared/data/workingOccurrences.csv'))
-        })
+        try {
+            // Create task and send its ID to the RabbitMQ queue
+            const subtasks = [
+                {
+                    type: 'syncOccurrences',
+                    operation: 'read',
+                    file: 'workingOccurrences'
+                }
+            ]
+            const { insertedId, createdAt } = await TaskService.createTask(JSON.stringify(subtasks))
 
-        res.status(200).send()
+            // Return 'Accepted' response and HATEOAS link
+            res.status(202).send({
+                uri: `/api/tasks/${insertedId}`,
+                createdAt
+            })
+        } catch (error) {
+            if (error instanceof InvalidArgumentError || error instanceof ValidationError) {
+                res.status(400).send({
+                    error: error.message
+                })
+            } else {
+                // Forward to 500-code middleware
+                next(error)
+            }
+        }
     }
 
     static async writeWorkingFile(req, res, next) {
-        // TODO: turn this operation into a subtask
+        try {
+            // Create task and send its ID to the RabbitMQ queue
+            const subtasks = [
+                {
+                    type: 'syncOccurrences',
+                    operation: 'write',
+                    file: 'workingOccurrences'
+                }
+            ]
+            const { insertedId, createdAt } = await TaskService.createTask(JSON.stringify(subtasks))
 
-        // Write the entire occurrences collection to the workingOccurrences file (asynchronous)
-        OccurrenceService.writeOccurrencesFromDatabase(path.resolve('./shared/data/workingOccurrences.csv'))
-
-        res.status(200).send()
+            // Return 'Accepted' response and HATEOAS link
+            res.status(202).send({
+                uri: `/api/tasks/${insertedId}`,
+                createdAt
+            })
+        } catch (error) {
+            if (error instanceof InvalidArgumentError || error instanceof ValidationError) {
+                res.status(400).send({
+                    error: error.message
+                })
+            } else {
+                // Forward to 500-code middleware
+                next(error)
+            }
+        }
     }
 
     static async getBackupFile(req, res, next) {
@@ -124,14 +161,61 @@ export default class OccurrencesController {
         res.status(200).sendFile(path.resolve('./shared/data/backupOccurrences.csv'))
     }
 
-    static async syncOccurrenceFiles(req, res, next) {
-        const result = FileManager.copyFile(path.resolve('./shared/data/workingOccurrences.csv'), path.resolve('./shared/data/backupOccurrences.csv'))
+    static async readBackupFile(req, res, next) {
+        try {
+            // Create task and send its ID to the RabbitMQ queue
+            const subtasks = [
+                {
+                    type: 'syncOccurrences',
+                    operation: 'read',
+                    file: 'backupOccurrences'
+                }
+            ]
+            const { insertedId, createdAt } = await TaskService.createTask(JSON.stringify(subtasks))
 
-        if (result.success) {
-            res.status(200).send({ success: true })
-        } else {
-            // Forward to 500-code middleware
-            next(result.error)
+            // Return 'Accepted' response and HATEOAS link
+            res.status(202).send({
+                uri: `/api/tasks/${insertedId}`,
+                createdAt
+            })
+        } catch (error) {
+            if (error instanceof InvalidArgumentError || error instanceof ValidationError) {
+                res.status(400).send({
+                    error: error.message
+                })
+            } else {
+                // Forward to 500-code middleware
+                next(error)
+            }
+        }
+    }
+
+    static async writeBackupFile(req, res, next) {
+        try {
+            // Create task and send its ID to the RabbitMQ queue
+            const subtasks = [
+                {
+                    type: 'syncOccurrences',
+                    operation: 'write',
+                    file: 'backupOccurrences'
+                }
+            ]
+            const { insertedId, createdAt } = await TaskService.createTask(JSON.stringify(subtasks))
+
+            // Return 'Accepted' response and HATEOAS link
+            res.status(202).send({
+                uri: `/api/tasks/${insertedId}`,
+                createdAt
+            })
+        } catch (error) {
+            if (error instanceof InvalidArgumentError || error instanceof ValidationError) {
+                res.status(400).send({
+                    error: error.message
+                })
+            } else {
+                // Forward to 500-code middleware
+                next(error)
+            }
         }
     }
 }

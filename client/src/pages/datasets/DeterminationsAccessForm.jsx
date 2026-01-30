@@ -13,8 +13,6 @@ const DeterminationsAccessFormContainer = styled.div`
 
     padding: 20px;
 
-    min-width: 400px;
-
     h2 {
         margin: 0px;
         margin-bottom: 5px;
@@ -83,34 +81,33 @@ const DeterminationsAccessFormContainer = styled.div`
 export default function DeterminationsAccessForm() {
     const [ queryType, setQueryType ] = useState('get')
     const [ uploadFormat, setUploadFormat ] = useState('ecdysis')
-    const [ file, setFile ] = useState()
-    const [ formDisabled, setFormDisabled ] = useState(false)
+    const [ disabled, setDisabled ] = useState(false)
     const [ queryResponse, setQueryResponse ] = useState()
 
     function handleSubmit(event) {
         event.preventDefault()
 
-        setFormDisabled(true)
+        setDisabled(true)
         setQueryResponse(undefined)
 
         if (queryType === 'get') {
             axios.get('/api/determinations', { responseType: 'blob' }).then((res) => {
-                setFormDisabled(false)
+                setDisabled(false)
                 setQueryResponse({ status: res.status, data: URL.createObjectURL(res.data) })
             }).catch((err) => {
-                setFormDisabled(false)
+                setDisabled(false)
                 setQueryResponse({ status: err.response?.status, error: err.response?.data?.error ?? err.message })
             })
         } else if (queryType === 'post') {
             const formData = new FormData()
-            formData.append('file', file)
+            formData.append('file', event.target.determinationsFileUpload.files[0])
             formData.append('format', uploadFormat)
 
             axios.postForm('/api/determinations', formData).then((res) => {
-                setFormDisabled(false)
+                setDisabled(false)
                 setQueryResponse({ status: res.status, data: res.data })
             }).catch((err) => {
-                setFormDisabled(false)
+                setDisabled(false)
                 setQueryResponse({ status: err.response?.status, error: err.response?.data?.error ?? err.message })
             })
         }
@@ -118,11 +115,11 @@ export default function DeterminationsAccessForm() {
 
     return (
         <DeterminationsAccessFormContainer>
-            <h2>Determinations Dataset Access</h2>
+            <h2>Authoritative Determinations</h2>
 
             <div id='determinationsQueryPanel'>
                 <form onSubmit={ handleSubmit }>
-                    <fieldset disabled={formDisabled}>
+                    <fieldset disabled={disabled}>
                         <div>
                             <label htmlFor='determinationsQueryType'>Operation:</label>
                             <select id='determinationsQueryType' onChange={(event) => {
@@ -150,7 +147,6 @@ export default function DeterminationsAccessForm() {
                                         accept='.csv'
                                         id='determinationsFileUpload'
                                         required
-                                        onChange={ (event) => setFile(event.target.files[0]) }
                                     />
                                 </div>
                             </>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import styled from '@emotion/styled'
 
 import DatasetsMenu from './DatasetsMenu'
+import SyncOccurrencesForm from './SyncOccurrencesForm'
 import DeterminationsAccessForm from './DeterminationsAccessForm'
 import UsernamesAccessForm from './UsernamesAccessForm'
 import PlantListAccessForm from './PlantListAccessForm'
@@ -20,6 +21,9 @@ export default function DatasetsPanel() {
         <DatasetsPanelContainer>
             <DatasetsMenu selectedTool={selectedTool} setSelectedTool={setSelectedTool} />
 
+            { selectedTool === 'syncOccurrences' &&
+                <SyncOccurrencesForm />
+            }
             { selectedTool === 'determinations' &&
                 <DeterminationsAccessForm />
             }

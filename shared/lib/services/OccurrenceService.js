@@ -244,7 +244,7 @@ class OccurrenceService {
      * createOccurrencesFromFile()
      * Reads a given occurrences file chunk-by-chunk and inserts formatted occurrences for each entry
      */
-    async createOccurrencesFromFile(filePath, options = { skipFormatting: false, scratch: false }) {
+    async createOccurrencesFromFile(filePath, options = { skipFormatting: false, scratch: false }, updateProgress = null) {
         const {
             skipFormatting = false,
             scratch = false
@@ -258,7 +258,7 @@ class OccurrenceService {
         }
 
         const chunkSize = 5000
-        for await (const chunk of FileManager.readCSVChunks(filePath, chunkSize)) {
+        for await (const chunk of FileManager.readCSVChunks(filePath, chunkSize, updateProgress)) {
             const chunkResults = await this.createOccurrences(chunk, { skipFormatting, scratch })
             
             // Add the results for this chunk to the running total
@@ -407,21 +407,30 @@ class OccurrenceService {
             upsertedIds: []
         }
 
-        const occurrence = skipFormatting ? document : this.formatOccurrence(document)
+        let update = document
+        if (!skipFormatting) {
+            // Limit update fields to those initially provided (and only occurrence template fields)
+            const initialFields = Object.keys(document).filter((field) => field in template)
+            const occurrence = this.formatOccurrence(document)
+
+            // Build an update document containing only the initial occurrence fields with the formatted values; always include _id
+            update = { _id: occurrence._id }
+            initialFields.forEach((field) => update[field] = occurrence[field])
+        }
 
         // Return if no document was provided
-        if (!occurrence) return results
+        if (!update) return results
 
         // Set scratch space flag
-        occurrence.scratch = scratch
+        update.scratch = scratch
 
         try {
-            const response = await this.repository.updateById(occurrence._id, occurrence, { upsert: true })
+            const upsertResults = await this.repository.updateById(update._id, update, { upsert: true })
 
-            if (response) {
-                results.modifiedCount = response.modifiedCount
-                results.upsertedCount = response.upsertedCount
-                results.upsertedIds.push(response.upsertedId)
+            if (upsertResults) {
+                results.modifiedCount = upsertResults.modifiedCount
+                results.upsertedCount = upsertResults.upsertedCount
+                results.upsertedIds.push(upsertResults.upsertedId)
             }
         } catch (error) {
             console.error('Error while upserting occurrence:', document)
@@ -449,17 +458,30 @@ class OccurrenceService {
         }
 
         // Apply formatting (unless skipped)
-        const occurrences = skipFormatting ? documents : documents?.map((doc) => this.formatOccurrence(doc))
+        let updates = documents
+        if (!skipFormatting) {
+            updates = documents?.map((document) => {
+                // Limit update fields to those initially provided (and only occurrence template fields)
+                const initialFields = Object.keys(document).filter((field) => field in template)
+                const occurrence = this.formatOccurrence(document)
+
+                // Build an update document containing only the initial occurrence fields with the formatted values; always include _id
+                const updateDocument = { _id: occurrence._id }
+                initialFields.forEach((field) => updateDocument[field] = occurrence[field])
+
+                return updateDocument
+            })
+        }
 
         // Return if no documents were provided
-        if (!occurrences || occurrences.length === 0) return results
+        if (!updates || updates.length === 0) return results
 
-        for (const occurrence of occurrences) {
-            const occurrenceResults = await this.upsertOccurrence(occurrence, { skipFormatting: true, scratch })
+        for (const update of updates) {
+            const upsertResults = await this.upsertOccurrence(update, { skipFormatting: true, scratch })
 
-            results.modifiedCount += occurrenceResults.modifiedCount
-            results.upsertedCount += occurrenceResults.upsertedCount
-            results.upsertedIds = results.upsertedIds.concat(occurrenceResults.upsertedIds)
+            results.modifiedCount += upsertResults.modifiedCount
+            results.upsertedCount += upsertResults.upsertedCount
+            results.upsertedIds = results.upsertedIds.concat(upsertResults.upsertedIds)
         }
 
         return results
@@ -906,13 +928,14 @@ class OccurrenceService {
      * writeOccurrencesFromDatabase()
      * Writes all occurrences matching a given filter to a CSV file at the given file path
      */
-    async writeOccurrencesFromDatabase(filePath, filter = {}, projection = {}) {
+    async writeOccurrencesFromDatabase(filePath, filter = {}, projection = {}, updateProgress = null) {
         if (!filePath) return
 
         await FileManager.writeCSVFromDatabase(
             filePath,
             Object.keys(template),
-            async (page) => this.getOccurrencesPage({ page, filter, projection })
+            async (page) => this.getOccurrencesPage({ page, pageSize: 5000, filter, projection }),
+            updateProgress
         )
     }
 

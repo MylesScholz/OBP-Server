@@ -104,7 +104,10 @@ function parseQueryParameters(query) {
     // Parse field names directly included in the query object
     const queryFields = Object.keys(fieldNames).filter((fieldName) => !!query[fieldName] || query[fieldName] === '')
     for (const queryField of queryFields) {
-        if (query[queryField] === '(non-empty)') {
+        if (query[queryField] === '(empty)') {
+            // The query value '(empty)' is reserved for empty value queries
+            params.filter[queryField] = { $in: [ null, '' ] }
+        } else if (query[queryField] === '(non-empty)') {
             // The query value '(non-empty)' is reserved for non-empty value queries
             params.filter[queryField] = { $exists: true, $nin: [ null, '' ] }
         } else {

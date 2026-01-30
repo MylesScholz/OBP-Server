@@ -239,7 +239,10 @@ export default function DashboardSearchPanel({ disabled }) {
         if (event) event.preventDefault()
 
         // Don't query by blank field names
-        if (!selectedFieldName) return
+        if (!selectedFieldName) {
+            setQueryText('')
+            return
+        }
 
         const values = query.valueQueries[selectedFieldName]?.split(',') ?? []
         const queryTextValues = queryText.split(',').map((value) => value.trim())
@@ -313,10 +316,13 @@ export default function DashboardSearchPanel({ disabled }) {
                     <option key='select' value=''>Field...</option>
                     {fieldNames.map((fieldName) => <option key={fieldName} value={fieldName}>{fieldName}</option>)}
                 </select>
+
                 <input
                     id='queryText'
                     type='text'
                     placeholder='Enter a query value...'
+                    list='queryTextSuggestions'
+                    autoComplete='off'
                     value={queryText}
                     onKeyDown={(event) => { if (event.key === 'Enter') handleAdd(event) }}
                     onChange={(event) => {
@@ -324,6 +330,11 @@ export default function DashboardSearchPanel({ disabled }) {
                         setQuery({ ...query, unsubmitted: true })
                     }}
                 />
+                <datalist id='queryTextSuggestions'>
+                    <option>(empty)</option>
+                    <option>(non-empty)</option>
+                </datalist>
+
                 <button className='iconButton' onClick={(event) => handleAdd(event)}>
                     <img src={addIcon} alt='Add' />
                 </button>

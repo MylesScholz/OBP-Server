@@ -252,13 +252,19 @@ export default function PlantListAccessForm() {
                         { queryResponse.status === 200 && queryType === 'post' &&
                             <p>File uploaded successfully</p>
                         }
+                        { queryResponse.error &&
+                            <p>Error: {queryResponse.error}</p>
+                        }
                         { selectedTaskData?.task &&
                             <>
-                                { selectedTaskData.task.progress &&
-                                    <>
-                                        <p>Current Step: {selectedTaskData.task.progress.currentStep}</p>
-                                        { selectedTaskData.task.progress.percentage && <p>{selectedTaskData.task.progress.percentage}</p> }
-                                    </>
+                                { selectedTaskData?.task.status &&
+                                    <p>Status: {selectedTaskData?.task.status}</p>
+                                }
+                                { selectedTaskData.task.progress?.currentStep &&
+                                    <p>Current Step: {selectedTaskData.task.progress.currentStep}</p>
+                                }
+                                { selectedTaskData.task.progress?.percentage &&
+                                    <p>{selectedTaskData.task.progress.percentage}</p>
                                 }
                                 {
                                     downloads?.map((d) => {
@@ -272,9 +278,6 @@ export default function PlantListAccessForm() {
                                     })
                                 }
                             </>
-                        }
-                        { queryResponse.error &&
-                            <p>Error: {queryResponse.error}</p>
                         }
                         { selectedTaskData?.error &&
                             <p>Error: {selectedTaskData.status} {selectedTaskData.statusText}</p>

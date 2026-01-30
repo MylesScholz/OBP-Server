@@ -42,8 +42,10 @@ class FileManager {
      * writeCSVFromDatabase()
      * Writes a CSV page-by-page from a database table using a given page query function
      */
-    async writeCSVFromDatabase(filePath, header, getPage) {
+    async writeCSVFromDatabase(filePath, header, getPage, updateProgress = null) {
         if (!filePath || !getPage) return
+
+        if (updateProgress) await updateProgress(0)
         
         try {
             // Create an output stringifier
@@ -71,11 +73,17 @@ class FileManager {
                 for (const document of results.data) {
                     await writeAsync(stringifier, document)
                 }
+
+                if (updateProgress) await updateProgress(100 * results.pagination.currentPage / results.pagination.totalPages)
         
                 // Query the next page
                 results = await getPage(++pageNumber)
             }
 
+            if (updateProgress) await updateProgress(100)
+
+            // Close file stream and return success
+            outputFileStream.close()
             return true
         } catch (error) {
             console.error(`Error while attempting to write to '${filePath}' from database:`, error)
@@ -124,14 +132,33 @@ class FileManager {
      * readCSVChunks()
      * A generator function that reads a given CSV file into memory in chunks of a given size
      */
-    async *readCSVChunks(filePath, chunkSize) {
+    async *readCSVChunks(filePath, chunkSize, updateProgress = null) {
         // Check that the input file path exists
         if (!fs.existsSync(filePath)) {
             return []
         }
 
-        // Create the read stream and pipe it to a CSV parser
+        if (updateProgress) await updateProgress(0)
+
+        // Create a read stream and add a listener to track progress
         const fileStream = fs.createReadStream(filePath, { encoding: 'utf-8' })
+
+        const stats = fs.statSync(filePath)
+        const totalSize = stats.size
+        let bytesRead = 0
+        let lastPercent = -1
+        fileStream.on('data', async (chunk) => {
+            bytesRead += chunk.length
+
+            const percent = parseFloat((100 * bytesRead / totalSize).toFixed(2))
+            if (percent !== lastPercent && updateProgress) {
+                await updateProgress(percent)
+
+                lastPercent = percent
+            }
+        })
+
+        // Create a CSV parser and pipe the file stream into it
         const parser = parseAsync({ columns: true, skip_empty_lines: true, relax_quotes: true, trim: true, bom: true })
         const csvStream = fileStream.pipe(parser)
 
@@ -154,6 +181,11 @@ class FileManager {
         if (chunk.length > 0) {
             yield chunk
         }
+
+        if (updateProgress) await updateProgress(100)
+
+        // Close file stream
+        fileStream.close()
     }
 
     /*

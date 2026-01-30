@@ -42,7 +42,7 @@ export default class BaseRepository {
         return await this.collection.find(filter, options).sort(sort).toArray()
     }
 
-    async paginate(options = { page: 1, pageSize: 1, filter: {}, sortConfig: [], projection: {}, includeTotal: true }) {
+    async paginate(options = { page: 1, pageSize: 1000, filter: {}, sortConfig: [], projection: {}, includeTotal: true }) {
         const page = Math.max(1, options.page ?? 1)
         const pageSize = Math.max(1, options.pageSize ?? 1000)
         const {

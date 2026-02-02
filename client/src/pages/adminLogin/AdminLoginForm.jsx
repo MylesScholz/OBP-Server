@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import axios from 'axios'
-import styled from '@emotion/styled'
 import { useNavigate, Link } from 'react-router'
+import styled from '@emotion/styled'
+import axios from 'axios'
 
 import arrowBackIcon from '/src/assets/arrow_back.svg'
 import { useAuth } from '../../AuthProvider'
@@ -23,6 +23,27 @@ const AdminLoginFormContainer = styled.form`
     background-color: white;
 
     color: #222;
+
+    label {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+
+        margin: 0px;
+
+        font-size: 16pt;
+    }
+
+    input {
+        border: 1px solid gray;
+        border-radius: 5px;
+
+        padding: 10px;
+
+        font-size: 16pt;
+
+        background-color: white;
+    }
 
     #adminLoginFormHeader {
         position: relative;
@@ -64,26 +85,7 @@ const AdminLoginFormContainer = styled.form`
         }
     }
 
-    label {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-
-        margin: 0px;
-
-        font-size: 16pt;
-    }
-
-    input {
-        font-size: 16pt;
-    }
-
     #adminUsername, #adminPassword {
-        border: 1px solid gray;
-        border-radius: 5px;
-
-        padding: 10px;
-
         font-size: 14pt;
 
         &:focus {
@@ -96,11 +98,6 @@ const AdminLoginFormContainer = styled.form`
     #loginSubmit {
         grid-column: 1 / 3;
 
-        border: 1px solid #222;
-        border-radius: 5px;
-
-        background-color: white;
-
         &:hover {
             background-color: #efefef;
         }
@@ -108,13 +105,13 @@ const AdminLoginFormContainer = styled.form`
 `
 
 export default function AdminLoginForm() {
+    const [ disabled, setDisabled ] = useState(false)
     const { setLoggedIn } = useAuth()
-    const [ formDisabled, setFormDisabled ] = useState(false)
     const navigate = useNavigate()
 
     function handleSubmit(event) {
         event.preventDefault()
-        setFormDisabled(true)
+        setDisabled(true)
 
         const credentials = {
             username: event.target.adminUsername.value,
@@ -123,18 +120,19 @@ export default function AdminLoginForm() {
         event.target.reset()
 
         axios.post('/api/admins/login', credentials).then((res) => {
-            setFormDisabled(false)
+            setDisabled(false)
             if (res.status === 200) {
                 setLoggedIn(credentials.username)
                 navigate('/dashboard')
             }
         }).catch((error) => {
             console.error(error)
-            setFormDisabled(false)
+            setDisabled(false)
         })
     }
+
     return (
-        <AdminLoginFormContainer onSubmit={ handleSubmit } disabled={formDisabled}>
+        <AdminLoginFormContainer onSubmit={ handleSubmit } disabled={disabled}>
             <div id='adminLoginFormHeader'>
                 <Link to='/'>
                     <img src={arrowBackIcon} alt='Back' />

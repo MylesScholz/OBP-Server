@@ -177,7 +177,7 @@ export default function TaskMenu({ taskState, setTaskState, selectedTaskId, setS
     return (
         <TaskMenuContainer>
             <div id='taskSelectionContainer'>
-                <select value={selectedValue} onChange={() => {}}>
+                <select value={selectedValue} onChange={ handleTaskSelect }>
                     <optgroup label='New task presets'>
                         { Object.keys(newTaskPresets).map((preset) => <option key={preset} value={preset} onClick={ handleTaskSelect }>New {preset} task</option>) }
                     </optgroup>

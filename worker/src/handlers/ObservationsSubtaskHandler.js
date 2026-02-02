@@ -106,7 +106,7 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
      */
     async #indexOccurrences(year) {
         // Query the highest field number from the occurrence database
-        const maxFieldNumber = await OccurrenceService.getMaxFieldNumber({ scratch: true })
+        const maxFieldNumber = await OccurrenceService.getMaxFieldNumber()
 
         // Create a default field number from the given year
         const yearPrefix = year.toString().slice(2)

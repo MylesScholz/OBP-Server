@@ -13,7 +13,8 @@ const OccurrencesPanelContainer = styled.div`
 
     min-height: 600px;
 
-    overflow: scroll;
+    overflow-x: scroll;
+    overflow-y: hidden;
     scroll-snap-type: y proximity;
 
     p {

@@ -113,6 +113,21 @@ const DashboardUploadPanelContainer = styled.div`
             font-size: 12pt;
         }
     }
+
+    #uploadButton {
+        border: 1px solid gray;
+        border-radius: 5px;
+
+        padding: 5px;
+
+        font-size: 10pt;
+
+        background-color: white;
+
+        &:hover {
+            background-color: #efefef;
+        }
+    }
 `
 
 export default function DashboardUploadPanel({ disabled }) {

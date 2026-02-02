@@ -39,10 +39,19 @@ const DashboardSearchPanelFieldset = styled.fieldset`
         justify-content: center;
         align-items: center;
 
+        border: 1px solid gray;
+        border-radius: 5px;
+
         padding: 0px;
 
         width: 25px;
         height: 25px;
+
+        background-color: white;
+
+        &:hover {
+            background-color: #efefef;
+        }
 
         img {
             width: 20px;
@@ -53,7 +62,7 @@ const DashboardSearchPanelFieldset = styled.fieldset`
     #dateFilters {
         display: grid;
         grid-template-columns: 1fr 5fr 25px;
-        grid-column-gap: 5px;
+        grid-column-gap: 10px;
         grid-row-gap: 5px;
 
         padding: 0px;
@@ -70,6 +79,15 @@ const DashboardSearchPanelFieldset = styled.fieldset`
 
         input {
             grid-column: 2 / 3;
+            justify-self: end;
+
+            border: 1px solid gray;
+            border-radius: 5px;
+
+            padding: 3px;
+
+            width: 175px;
+            height: 17px;
         }
 
         .iconButton {
@@ -80,7 +98,7 @@ const DashboardSearchPanelFieldset = styled.fieldset`
     #fieldValueFilters {
         display: grid;
         grid-template-columns: 1fr 1fr 25px;
-        grid-column-gap: 5px;
+        grid-column-gap: 10px;
         grid-row-gap: 5px;
 
         padding: 0px;
@@ -92,11 +110,24 @@ const DashboardSearchPanelFieldset = styled.fieldset`
         #fieldNameSelection {
             grid-column: 1 / 2;
 
-            width: 95px;
+            border: 1px solid gray;
+            border-radius: 5px;
+
+            width: 90px;
+            height: 25px;
         }
 
         #queryText {
             grid-column: 2 / 3;
+            justify-self: end;
+
+            border: 1px solid gray;
+            border-radius: 5px;
+
+            padding: 3px;
+
+            width: 150px;
+            height: 17px;
         }
 
         .iconButton {
@@ -144,6 +175,21 @@ const DashboardSearchPanelFieldset = styled.fieldset`
                 height: 12px;
                 width: 12px;
             }
+        }
+    }
+
+    #dashboardSubmitButton {
+        border: 1px solid gray;
+        border-radius: 5px;
+
+        padding: 5px;
+
+        font-size: 10pt;
+
+        background-color: white;
+
+        &:hover {
+            background-color: #efefef;
         }
     }
 `

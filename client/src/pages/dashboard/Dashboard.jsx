@@ -30,7 +30,7 @@ const DashboardForm = styled.form`
 
         padding: 15px;
 
-        overflow-y: scroll;
+        overflow: hidden;
     }
 
     #resultsHeader {
@@ -60,6 +60,13 @@ const DashboardForm = styled.form`
                 margin: 0px;
 
                 font-size: 12pt;
+            }
+
+            select {
+                border: 1px solid gray;
+                border-radius: 5px;
+
+                height: 25px;
             }
         }
 
@@ -93,7 +100,14 @@ const DashboardForm = styled.form`
                     input[type='number'] {
                         text-align: center;
 
+                        border: 1px solid gray;
+                        border-radius: 5px;
+
+                        padding: 5px;
+
                         width: 50px;
+
+                        font-size: 10pt;
 
                         appearance: textfield;
                         -moz-appearance: textfield;
@@ -107,7 +121,19 @@ const DashboardForm = styled.form`
                         justify-content: center;
                         align-items: center;
 
+                        border: 1px solid gray;
+                        border-radius: 5px;
+
                         padding: 0px;
+
+                        width: 32px;
+                        height: 32px;
+
+                        background-color: white;
+
+                        &:hover {
+                            background-color: #efefef;
+                        }
                         
                         img {
                             width: 25px;

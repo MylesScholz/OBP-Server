@@ -15,7 +15,7 @@ const DownloadButtonContainer = styled.div`
     justify-content: center;
     align-items: center;
 
-    border: 1px solid #222;
+    border: 1px solid gray;
     border-radius: 5px;
     
     padding: 0px;

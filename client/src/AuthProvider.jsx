@@ -10,14 +10,15 @@ export function AuthProvider({ children }) {
     useQuery({
         queryKey: ['loggedInQuery'],
         queryFn: async () => {
-            axios.get('/api/admins/login').then((res) => {
-                if (res.status === 200) {
-                    setLoggedIn(res.data.username)
-                } else {
-                    setLoggedIn(null)
-                }
-            })
-            return
+            const response = await axios.get('/api/admins/login')
+
+            if (response?.status === 200) {
+                setLoggedIn(response?.data?.username)
+            } else {
+                setLoggedIn(null)
+            }
+
+            return { status: response?.status, data: response?.data }
         },
         refetchInterval: 300000,    // 5 minutes
         refetchOnMount: 'always'

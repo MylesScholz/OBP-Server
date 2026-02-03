@@ -101,9 +101,14 @@ export default function TaskPanel() {
 
         // If there are subtasks with no valid input file post a warning
         const enabledSubtasks = taskState.getEnabledSubtasks()
-        if (enabledSubtasks.some((type) => !event.target[`${type}Input`]?.value)) {
+        if (enabledSubtasks.some((type) => taskState.subtaskIO[type].inputs.length > 0 && !event.target[`${type}Input`]?.value)) {
             console.error('Some subtasks have no valid input')
             window.alert('Some subtasks have no valid input')
+            return
+        }
+        if (enabledSubtasks.filter((type) => event.target[`${type}Input`]?.value === 'upload').length > 1) {
+            console.error('Multiple uploads are not allowed')
+            window.alert('Multiple uploads are not allowed')
             return
         }
 

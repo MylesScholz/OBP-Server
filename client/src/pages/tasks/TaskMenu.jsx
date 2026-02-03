@@ -41,6 +41,12 @@ const TaskMenuContainer = styled.div`
 
             padding: 5px;
 
+            background-color: white;
+
+            &:hover {
+                background-color: #efefef;
+            }
+
             img {
                 width: 20px;
                 height: 20px;
@@ -56,10 +62,18 @@ const TaskMenuContainer = styled.div`
         gap: 10px;
 
         select {
+            border: 1px solid gray;
+            border-radius: 5px;
 
             padding: 5px;
 
             font-size: 12pt;
+
+            background-color: white;
+
+            &:hover {
+                background-color: #efefef;
+            }
 
             optgroup {
                 font-style: normal;
@@ -87,6 +101,12 @@ const TaskMenuContainer = styled.div`
         padding: 5px;
 
         font-size: 12pt;
+
+        background-color: white;
+            
+        &:hover {
+            background-color: #efefef;
+        }
     }
 `
 

@@ -47,6 +47,16 @@ const SubtaskIOPanelContainer = styled.div`
             }
         }
 
+        .uploadInput {
+            display: grid;
+            grid-template-columns: 14px 1fr;
+            grid-row-gap: 5px;
+
+            input[type='file'] {
+                grid-column: 1 / 3;
+            }
+        }
+
         .warningMessage {
             color: firebrick;
             font-weight: bold;
@@ -84,17 +94,8 @@ export default function SubtaskIOPanel({ type, taskState, pipelineState, setPipe
     const hoveredFileType = pipelineState.hoveredFile.split('_').at(1) ?? ''
 
     const selectionAvailable = io?.inputs?.includes('occurrences') && results?.pagination?.totalDocuments > 0
-    const isFirstSubtask = taskState.getFirstSubtask() === type
-    const defaultInputFile = inputOptions?.find((option) => !!option.default)?.key || (selectionAvailable && 'selection') || (isFirstSubtask && 'upload')
+    const defaultInputFile = inputOptions?.find((option) => !!option.default)?.key || (selectionAvailable && 'selection') || (io.inputs.length > 0 && 'upload')
     const [ selectedInputFile, setSelectedInputFile ] = useState(defaultInputFile)
-
-    useEffect(() => {
-        if (selectedInputFile === 'upload') {
-            setPipelineState({ ...pipelineState, uploadSelected: true })
-        } else {
-            setPipelineState({ ...pipelineState, uploadSelected: false })
-        }
-    }, [selectedInputFile])
 
     useEffect(() => {
         if (!inputOptions.includes(selectedInputFile) && selectedInputFile !== 'selection' && selectedInputFile !== 'upload') {
@@ -138,30 +139,33 @@ export default function SubtaskIOPanel({ type, taskState, pipelineState, setPipe
                         <label htmlFor={`${type}Input-selection`}>Selection ({results?.pagination?.totalDocuments?.toLocaleString('en-US') ?? '0'} occurrences)</label>
                     </div>
                 }
-                <div>
-                    <input
-                        type='radio'
-                        id={`${type}Input-upload`}
-                        name={`${type}Input`}
-                        value='upload'
-                        checked={selectedInputFile === 'upload'}
-                        onChange={(event) => setSelectedInputFile(event.target.value)}
-                    />
-                    <label htmlFor={`${type}Input-upload`}>Upload</label>
-                </div>
-                { isFirstSubtask &&
-                    <div>
-                        <label htmlFor={`${type}Input-uploadFile`}>Upload File:</label>
+                { defaultInputFile &&
+                    <div className='uploadInput'>
                         <input
-                            type='file'
-                            accept='.csv'
-                            id='fileUpload'
-                            required={pipelineState.uploadSelected}
-                            onChange={() => setSelectedInputFile('upload')}
+                            type='radio'
+                            id={`${type}Input-upload`}
+                            name={`${type}Input`}
+                            value='upload'
+                            checked={selectedInputFile === 'upload'}
+                            onChange={(event) => setSelectedInputFile(event.target.value)}
                         />
+                        <label htmlFor={`${type}Input-upload`}>
+                            Upload ({ io?.inputs?.map((input) =>
+                                <span className={`fileTip ${input}FileTip`}>{input}</span>
+                            )})
+                        </label>
+                        { selectedInputFile === 'upload' &&
+                            <input
+                                type='file'
+                                id={`${type}Input-file`}
+                                name='fileUpload'
+                                accept='.csv'
+                                required={true}
+                            />
+                        }
                     </div>
                 }
-                { !defaultInputFile &&
+                { !defaultInputFile && io.inputs.length > 0 &&
                     <div>
                         <p className='warningMessage'>No valid input files</p>
                     </div>

@@ -4,10 +4,9 @@ import SubtaskStatus from './SubtaskStatus'
 import SubtaskCardForm from './SubtaskCardForm'
 
 const SubtaskCardContainer = styled.div`
-    position: relative;
     display: flex;
     flex-direction: column;
-    flex-grow: 1;
+    flex: 0 0 350px;
     gap: 15px;
 
     border: 1px solid gray;

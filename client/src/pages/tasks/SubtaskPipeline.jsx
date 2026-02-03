@@ -15,14 +15,14 @@ const SubtaskPipelineContainer = styled.div`
 
     padding: 15px;
 
-    overflow: scroll;
+    overflow-x: scroll;
+    overflow-y: hidden;
 `
 
 export default function SubtaskPipeline({ taskState, selectedTaskData, downloads }) {
     const [ pipelineState, setPipelineState ] = useState({
         hoveredFile: '',
-        ignoreDateLabelPrint: false,
-        uploadSelected: false
+        ignoreDateLabelPrint: false
     })
     const scrollRef = useRef(null)
 

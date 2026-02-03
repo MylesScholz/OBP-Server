@@ -41,8 +41,18 @@ const SubtaskCardFormContainer = styled.div`
                 align-items: center;
             }
 
+            input[type='date'] {
+                border: 1px solid gray;
+                border-radius: 5px;
+
+                padding: 3px;
+            }
+
             input[type='checkbox'] {
                 margin: 0px;
+
+                border: 1px solid gray;
+                border-radius: 5px;
 
                 width: 15px;
                 height: 15px;

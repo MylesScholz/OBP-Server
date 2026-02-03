@@ -2,6 +2,9 @@ import { useState } from 'react'
 import axios from 'axios'
 import styled from '@emotion/styled'
 
+import closeIcon from '/src/assets/close.svg'
+import addIcon from '/src/assets/add.svg'
+
 const ProjectSelectionContainer = styled.div`
     display: flex;
     flex-direction: column;
@@ -23,14 +26,25 @@ const ProjectSelectionContainer = styled.div`
         }
 
         button {
-            margin: 0px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            border: 1px solid gray;
+            border-radius: 5px;
 
             padding: 5px;
 
-            width: 30px;
-            height: 30px;
+            background-color: white;
 
-            text-align: center;
+            &:hover {
+                background-color: #efefef;
+            }
+
+            img {
+                width: 20px;
+                height: 20px;
+            }
         }
     }
 
@@ -51,14 +65,25 @@ const ProjectSelectionContainer = styled.div`
         }
 
         #submitProject {
-            margin: 0px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            border: 1px solid gray;
+            border-radius: 5px;
 
             padding: 5px;
 
-            width: 30px;
-            height: 30px;
+            background-color: white;
 
-            text-align: center;
+            &:hover {
+                background-color: #efefef;
+            }
+
+            img {
+                width: 20px;
+                height: 20px;
+            }
         }
     }
 `
@@ -98,7 +123,9 @@ export default function ProjectSelection() {
             { projects.map((project) => (
                 <div key={project.id} className='project'>
                     <p>{project.name} (ID: {project.id})</p>
-                    <button onClick={ () => handleRemove(project.id) }>X</button>
+                    <button onClick={ () => handleRemove(project.id) }>
+                        <img src={closeIcon} alt='Remove' />
+                    </button>
                 </div>
             )) }
 
@@ -111,7 +138,9 @@ export default function ProjectSelection() {
                     onChange={(e) => setNewProjectQuery(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') { handleAdd() } }}
                 />
-                <button type='button' id='submitProject' onClick={ handleAdd }>+</button>
+                <button type='button' id='submitProject' onClick={ handleAdd }>
+                    <img src={addIcon} alt='Add' />
+                </button>
             </div>
         </ProjectSelectionContainer>
     )

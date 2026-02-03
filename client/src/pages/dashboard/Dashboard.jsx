@@ -67,6 +67,12 @@ const DashboardForm = styled.form`
                 border-radius: 5px;
 
                 height: 25px;
+
+                background-color: white;
+            
+                &:hover {
+                    background-color: #efefef;
+                }
             }
         }
 

@@ -115,6 +115,12 @@ const DashboardSearchPanelFieldset = styled.fieldset`
 
             width: 90px;
             height: 25px;
+
+            background-color: white;
+            
+            &:hover {
+                background-color: #efefef;
+            }
         }
 
         #queryText {

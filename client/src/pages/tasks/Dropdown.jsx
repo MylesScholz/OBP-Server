@@ -27,7 +27,7 @@ const DropdownContainer = styled.data`
         padding: 5px;
 
         &:hover {
-            background-color: #dfdfdf;
+            background-color: #efefef;
         }
 
         img {
@@ -42,10 +42,10 @@ const DropdownContainer = styled.data`
 
         padding: 5px;
 
-        background-color: #efefef;
+        background-color: white;
 
         &:hover {
-            background-color: #dfdfdf;
+            background-color: #efefef;
         }
     }
 
@@ -85,6 +85,16 @@ const DropdownContainer = styled.data`
 
             &:hover {
                 background-color: #efefef;
+            }
+        }
+
+        .selected {
+            border: none;
+
+            background-color: #efefef;
+
+            &:hover {
+                background-color: #dfdfdf;
             }
         }
     }

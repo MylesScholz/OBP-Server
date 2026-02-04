@@ -13,7 +13,7 @@ export default class TaskState {
                 outputs: [ 'occurrences', 'duplicates' ]
             },
             'observations': {
-                inputs: [],
+                inputs: [ 'occurrences', 'none' ],
                 outputs: [ 'occurrences', 'pulls', 'flags' ]
             },
             'emails': {

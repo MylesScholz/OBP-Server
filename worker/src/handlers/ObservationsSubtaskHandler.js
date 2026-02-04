@@ -32,7 +32,7 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
             insertedCount: 0,
             duplicatesCount: 0
         }
-        const createOccurrencesChunkSize = 10000     // Approximate; actual number of inserts may be a couple dozen above this number at most
+        const createOccurrencesChunkSize = 10000     // Approximate; actual number of inserts may be a couple dozen above this number
 
         let pageNumber = 1
         let observationIndex = 0
@@ -121,9 +121,9 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
         while (pageNumber <= results.pagination.totalPages) {
             for (const occurrence of results.data) {
                 // Set field number, and if stateProvince is 'OR', set occurrenceId and resourceId
-                const updateDocument = { ...occurrence, observation: null }
-
-                updateDocument[fieldNames.fieldNumber] = nextFieldNumber
+                const updateDocument = {
+                    [fieldNames.fieldNumber]: nextFieldNumber
+                }
                 if (occurrence[fieldNames.stateProvince] === 'OR') {
                     updateDocument[fieldNames.occurrenceId] = occurrence[fieldNames.occurrenceId] || `https://osac.oregonstate.edu/OBS/OBA_${nextFieldNumber}`
                     updateDocument[fieldNames.resourceId] = occurrence[fieldNames.resourceId] || `https://osac.oregonstate.edu/OBS/OBA_${nextFieldNumber}`
@@ -158,10 +158,10 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
 
         // Input and output file names
         
-        // Set the default input file to the file upload
-        let inputFilePath = task.upload?.filePath ?? ''
-        // If not using the upload file or selection, try to find the specified input file in the previous subtask outputs
-        if (subtask.input !== 'upload' && subtask.input !== 'selection') {
+        // If using the upload (and it exists), set the input file to its file path
+        let inputFilePath = subtask.input === 'upload' && task.upload?.filePath ? task.upload.filePath : ''
+        // If using an input file that is not the upload file, try to find the specified input file in the previous subtask outputs
+        if (subtask.input !== 'none' && subtask.input !== 'selection' && subtask.input !== 'upload') {
             const subtaskInputSplit = subtask.input?.split('_') ?? []
             const subtaskInputIndex = parseInt(subtaskInputSplit[0])
             const subtaskInputFileType = subtaskInputSplit[1]
@@ -193,10 +193,10 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
         // Delete old scratch space occurrences (from previous tasks)
         await OccurrenceService.deleteOccurrences({ scratch: true })
 
-        if (subtask.input !== 'selection') {
+        if (inputFilePath) {   // subtask.input is either 'upload' or a previous subtask's output file
             // Upsert data from the input occurrence file into scratch space (existing records will be moved to scratch space)
             await OccurrenceService.upsertOccurrencesFromFile(inputFilePath, { scratch: true })
-        } else {    // subtask.input === 'selection'
+        } else if (subtask.input === 'selection') {
             // Move occurrences matching the query parameters into scratch space
             await OccurrenceService.updateOccurrences(subtask.params?.filter ?? {}, { scratch: true })
         }
@@ -249,7 +249,7 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
         await TaskService.logTaskStep(taskId, 'Writing output files')
         await TaskService.updateProgressPercentageById(taskId, 0)
 
-        // Write unflagged occurrences to the occurrences output file
+        // Write unflagged scratch space occurrences to the occurrences output file
         const occurrencesFilter = {
             scratch: true,
             $or: [
@@ -261,7 +261,7 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
 
         await TaskService.updateProgressPercentageById(taskId, 100 / 3)
         
-        // Write unprinted, flagged occurrences to the flags output file
+        // Write unprinted, flagged scratch space occurrences to the flags output file
         const flagsFilter = {
             scratch: true,
             [fieldNames.errorFlags]: { $exists: true, $nin: [ null, '' ] },
@@ -274,7 +274,7 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
 
         await TaskService.updateProgressPercentageById(taskId, 100 * 2 / 3)
 
-        // Write new unflagged occurrences to the pulls output file
+        // Write new unflagged scratch space occurrences to the pulls output file
         const pullsFilter = {
             scratch: true,
             new: true,

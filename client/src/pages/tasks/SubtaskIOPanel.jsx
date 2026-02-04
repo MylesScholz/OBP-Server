@@ -98,7 +98,7 @@ export default function SubtaskIOPanel({ type, taskState, pipelineState, setPipe
     const [ selectedInputFile, setSelectedInputFile ] = useState(defaultInputFile)
 
     useEffect(() => {
-        if (!inputOptions.includes(selectedInputFile) && selectedInputFile !== 'selection' && selectedInputFile !== 'upload') {
+        if (!inputOptions.includes(selectedInputFile) && selectedInputFile !== 'none' && selectedInputFile !== 'selection' && selectedInputFile !== 'upload') {
             setSelectedInputFile(defaultInputFile)
         }
     }, [inputOptions])
@@ -151,7 +151,7 @@ export default function SubtaskIOPanel({ type, taskState, pipelineState, setPipe
                         />
                         <label htmlFor={`${type}Input-upload`}>
                             Upload ({ io?.inputs?.map((input) =>
-                                <span className={`fileTip ${input}FileTip`}>{input}</span>
+                                input !== 'none' && <span className={`fileTip ${input}FileTip`}>{input}</span>
                             )})
                         </label>
                         { selectedInputFile === 'upload' &&
@@ -163,6 +163,19 @@ export default function SubtaskIOPanel({ type, taskState, pipelineState, setPipe
                                 required={true}
                             />
                         }
+                    </div>
+                }
+                { io?.inputs?.includes('none') &&
+                    <div>
+                        <input
+                            type='radio'
+                            id={`${type}Input-none`}
+                            name={`${type}Input`}
+                            value='none'
+                            checked={selectedInputFile === 'none'}
+                            onChange={(event) => setSelectedInputFile(event.target.value)}
+                        />
+                        <label htmlFor={`${type}Input-none`}>None</label>
                     </div>
                 }
                 { !defaultInputFile && io.inputs.length > 0 &&

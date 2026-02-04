@@ -62,6 +62,11 @@ const ProjectSelectionContainer = styled.div`
 
         #projectNameQuery {
             flex-grow: 1;
+
+            border: 1px solid gray;
+            border-radius: 5px;
+
+            padding: 3px;
         }
 
         #submitProject {

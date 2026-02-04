@@ -117,7 +117,7 @@ export default function TaskPanel() {
         const formData = new FormData()
 
         // Add the upload file (if present)
-        if (event.target.fileUpload.files.length > 0) {
+        if (event.target.fileUpload?.files?.length > 0) {
             formData.append('file', event.target.fileUpload.files[0])
         }
 

@@ -199,10 +199,10 @@ export default function TaskMenu({ taskState, setTaskState, selectedTaskId, setS
             <div id='taskSelectionContainer'>
                 <select value={selectedValue} onChange={ handleTaskSelect }>
                     <optgroup label='New task presets'>
-                        { Object.keys(newTaskPresets).map((preset) => <option key={preset} value={preset} onClick={ handleTaskSelect }>New {preset} task</option>) }
+                        { Object.keys(newTaskPresets).map((preset) => <option key={preset} value={preset}>New {preset} task</option>) }
                     </optgroup>
                     <optgroup label='Previous tasks'>
-                        { tasks?.map((task) => <option value={task._id} key={task._id} onClick={ handleTaskSelect }>{task.name}</option>)}
+                        { tasks?.map((task) => <option value={task._id} key={task._id}>{task.name}</option>)}
                     </optgroup>
                 </select>
 

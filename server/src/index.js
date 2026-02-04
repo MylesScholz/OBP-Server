@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import path from 'path'
+import { Worker } from 'worker_threads'
 
 import { database, port } from '../shared/lib/config/environment.js'
 import { ValidationError } from '../shared/lib/utils/errors.js'
@@ -35,6 +36,30 @@ if (occurrenceCount === 0) {
 }
 
 console.log('Database initialized')
+
+// Create a worker thread to write into workingOccurrences from the database every hour
+setInterval(() => {
+    const worker = new Worker('./src/writeWorkingOccurrences.js', {
+        stdout: true,
+        stderr: true
+    })
+
+    worker.on('message', (result) => {
+        console.log('[Worker]:', result)
+    })
+
+    worker.on('error', (error) => {
+        console.error('[Worker]:', error)
+    })
+
+    worker.stdout.on('data', (data) => {
+        console.log('[Worker.stdout]:', data.toString().trim())
+    })
+
+    worker.stderr.on('data', (data) => {
+        console.error('[Worker.stderr]:', data.toString().trim())
+    })
+}, 60 * 60 * 1000)  // 1 hour
 
 app.listen(port, () => {
     console.log('Listening on port ' + port + '...')

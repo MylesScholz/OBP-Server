@@ -36,6 +36,9 @@ const SubtaskIOPanelContainer = styled.div`
 
             input[type='radio'] {
                 margin: 0px;
+
+                width: 15px;
+                height: 15px
             }
 
             label {
@@ -49,7 +52,7 @@ const SubtaskIOPanelContainer = styled.div`
 
         .uploadInput {
             display: grid;
-            grid-template-columns: 14px 1fr;
+            grid-template-columns: 15px 1fr;
             grid-row-gap: 5px;
 
             input[type='file'] {

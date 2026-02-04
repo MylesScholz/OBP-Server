@@ -55,8 +55,39 @@ const PlantListAccessFormContainer = styled.div`
 
                     white-space: nowrap;
 
-                    select, input {
+                    select {
                         flex-grow: 1;
+
+                        border: 1px solid gray;
+                        border-radius: 5px;
+
+                        background-color: white;
+
+                        &:hover {
+                            background-color: #efefef;
+                        }
+                    }
+
+                    input {
+                        flex-grow: 1;
+                    }
+
+                    input[type='url'] {
+                        border: 1px solid gray;
+                        border-radius: 5px;
+
+                        padding: 3px;
+                    }
+                }
+
+                input[type='submit'] {
+                    border: 1px solid gray;
+                    border-radius: 5px;
+
+                    background-color: white;
+
+                    &:hover {
+                        background-color: #efefef;
                     }
                 }
             }

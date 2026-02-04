@@ -29,6 +29,32 @@ const SyncOccurrencesFormContainer = styled.div`
         font-size: 12pt;
     }
 
+    select {
+        border: 1px solid gray;
+        border-radius: 5px;
+
+        font-size: 10pt;
+
+        background-color: white;
+
+        &:hover {
+            background-color: #efefef;
+        }
+    }
+
+    button {
+        border: 1px solid gray;
+        border-radius: 5px;
+
+        font-size: 10pt;
+
+        background-color: white;
+
+        &:hover {
+            background-color: #efefef;
+        }
+    }
+
     #syncOccurrencesQueryForm {
         fieldset {
             display: flex;
@@ -165,7 +191,7 @@ export default function SyncOccurrencesForm() {
                             
                         </div>                        
 
-                        <input type='submit' value='Submit' />
+                        <button type='submit' value='submit'>Submit</button>
                     </fieldset>
                 </form>
             ) : (

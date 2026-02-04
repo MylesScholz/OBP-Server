@@ -54,6 +54,26 @@ const UsernamesAccessFormContainer = styled.div`
 
                     select {
                         flex-grow: 1;
+
+                        border: 1px solid gray;
+                        border-radius: 5px;
+
+                        background-color: white;
+
+                        &:hover {
+                            background-color: #efefef;
+                        }
+                    }
+                }
+
+                input[type='submit'] {
+                    border: 1px solid gray;
+                    border-radius: 5px;
+
+                    background-color: white;
+
+                    &:hover {
+                        background-color: #efefef;
                     }
                 }
             }

@@ -238,7 +238,9 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
         // Add new occurrence data from pulled observations
         await TaskService.logTaskStep(taskId, 'Adding new occurrence data from iNaturalist observations')
 
-        await this.#insertOccurrencesFromObservations(elevations, this.#createUpdateProgressFn(taskId))
+        const createOccurrencesResults = await this.#insertOccurrencesFromObservations(elevations, this.#createUpdateProgressFn(taskId))
+
+        console.log(createOccurrencesResults)
 
         // Fill fieldNumber for unindexed occurrences without errors
         await TaskService.logTaskStep(taskId, 'Indexing occurrences')

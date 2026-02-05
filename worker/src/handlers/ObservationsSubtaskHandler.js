@@ -238,9 +238,7 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
         // Add new occurrence data from pulled observations
         await TaskService.logTaskStep(taskId, 'Adding new occurrence data from iNaturalist observations')
 
-        const createOccurrencesResults = await this.#insertOccurrencesFromObservations(elevations, this.#createUpdateProgressFn(taskId))
-
-        console.log(createOccurrencesResults)
+        await this.#insertOccurrencesFromObservations(elevations, this.#createUpdateProgressFn(taskId))
 
         // Fill fieldNumber for unindexed occurrences without errors
         await TaskService.logTaskStep(taskId, 'Indexing occurrences')
@@ -311,11 +309,6 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
                 { [fieldNames.errorFlags]: { $in: [ null, '' ] } }
             ]
         }
-
-        console.log(await OccurrenceService.getOccurrences({ scratch: true }))
-        console.log(await OccurrenceService.count({ scratch: true }))
-        console.log(await OccurrenceService.count(unscratchFilter))
-
         await OccurrenceService.updateOccurrences(unscratchFilter, { scratch: false })
         // Discard remaining scratch space occurrences
         await OccurrenceService.deleteOccurrences({ scratch: true })

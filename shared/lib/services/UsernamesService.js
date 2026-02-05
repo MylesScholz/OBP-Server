@@ -27,10 +27,8 @@ class UsernamesService {
      * Searches for a first name, initial, and last name by user login in the usernames data
      */
     getUserName(userLogin) {
-        // Read usernames data if not defined
-        if (this.usernames.length === 0) {
-            this.readUsernames()
-        }
+        // Read usernames data
+        this.readUsernames()
 
         const user = this.usernames.find((u) => u.userLogin === userLogin)
 
@@ -46,10 +44,8 @@ class UsernamesService {
      * Searches for a first name, initial, and last name by full name in the usernames data
      */
     getUserNameByFullName(fullName) {
-        // Read usernames data if not defined
-        if (this.usernames.length === 0) {
-            this.readUsernames()
-        }
+        // Read usernames data
+        this.readUsernames()
 
         const user = this.usernames.find((u) => u.fullName === fullName)
 

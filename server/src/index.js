@@ -37,7 +37,7 @@ if (occurrenceCount === 0) {
 
 console.log('Database initialized')
 
-// Create a worker thread to write into workingOccurrences from the database every hour
+// Create a worker thread to write into workingOccurrences from the database periodically
 setInterval(() => {
     const worker = new Worker('./src/writeWorkingOccurrences.js', {
         stdout: true,
@@ -59,7 +59,7 @@ setInterval(() => {
     worker.stderr.on('data', (data) => {
         console.error('[Worker.stderr]:', data.toString().trim())
     })
-}, 60 * 60 * 1000)  // 1 hour
+}, 24 * 60 * 60 * 1000)  // 24 hours
 
 app.listen(port, () => {
     console.log('Listening on port ' + port + '...')

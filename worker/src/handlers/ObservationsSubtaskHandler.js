@@ -311,6 +311,11 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
                 { [fieldNames.errorFlags]: { $in: [ null, '' ] } }
             ]
         }
+
+        console.log(await OccurrenceService.getOccurrences({ scratch: true }))
+        console.log(await OccurrenceService.count({ scratch: true }))
+        console.log(await OccurrenceService.count(unscratchFilter))
+
         await OccurrenceService.updateOccurrences(unscratchFilter, { scratch: false })
         // Discard remaining scratch space occurrences
         await OccurrenceService.deleteOccurrences({ scratch: true })

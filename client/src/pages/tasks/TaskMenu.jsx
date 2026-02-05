@@ -124,6 +124,7 @@ export default function TaskMenu({ taskState, setTaskState, selectedTaskId, setS
         'occurrences-observations': { occurrences: true, observations: true },
         'occurrences-observations-pivots': { occurrences: true, observations: true, pivots: true },
         'occurrences-observations-emails': { occurrences: true, observations: true, emails: true },
+        'observations-labels-addresses': { observations: true, labels: true, addresses: true },
         'labels-addresses': { labels: true, addresses: true },
         'full': { occurrences: true, observations: true, labels: true, addresses: true, emails: true, pivots: true }
     }

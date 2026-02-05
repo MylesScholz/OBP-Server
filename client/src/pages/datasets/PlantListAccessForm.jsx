@@ -210,13 +210,9 @@ export default function PlantListAccessForm() {
                 setQueryResponse({ status: err.response?.status, error: err.response?.data?.error ?? err.message })
             })
         } else if (queryType === 'update') {
-            const formData = new FormData()
-
             const url = event.target.plantListUrl?.value ?? ''
-            const subtasks = [ { type: 'plantList', url } ]
-            formData.append('subtasks', JSON.stringify(subtasks))
 
-            axios.postForm('/api/tasks', formData).then((res) => {
+            axios.post('/api/plantList/update', { url }).then((res) => {
                 setDisabled(false)
                 setQueryResponse({ status: res.status, data: res.data })
 

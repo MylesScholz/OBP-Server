@@ -20,4 +20,11 @@ plantListRouter.get('/', requireAuthentication, PlantListController.getPlantList
  */
 plantListRouter.post('/', requireAuthentication, uploadPlantList.single('file'), PlantListController.uploadPlantList)
 
+/*
+ * POST /api/plantList/update
+ * Updates plantList.csv with plants from a given iNaturalist query URL
+ * Authentication required
+ */
+plantListRouter.post('/update', requireAuthentication, PlantListController.updatePlantList)
+
 export default plantListRouter

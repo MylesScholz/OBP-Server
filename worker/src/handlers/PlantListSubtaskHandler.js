@@ -29,12 +29,9 @@ export default class PlantListSubtaskHandler extends BaseSubtaskHandler {
         // Fetch the task and subtask
         const task = await TaskService.getTaskById(taskId)
         const subtask = task.subtasks.find((subtask) => subtask.type === 'plantList')
-        const previousSubtaskOutputs = task.result?.subtaskOutputs ?? []
 
         // Input and output file names
-        const uploadFilePath = task.upload?.filePath ?? ''  // TODO: use file upload?
         const plantListFileName = 'plantList.csv'
-        const plantListFilePath = './shared/data/' + plantListFileName
 
         // Pull and insert iNaturalist observations
         await TaskService.logTaskStep(taskId, 'Querying observations from iNaturalist')
@@ -68,9 +65,6 @@ export default class PlantListSubtaskHandler extends BaseSubtaskHandler {
         const outputs = [
             { uri: `/api/plantList`, fileName: plantListFileName, type: 'plantList' }
         ]
-        previousSubtaskOutputs.push({ type: subtask.type, outputs })
-        await TaskService.updateResultById(taskId, {
-            subtaskOutputs: previousSubtaskOutputs
-        })
+        await TaskService.updateSubtaskOutputsById(taskId, 'plantList', outputs)
     }
 }

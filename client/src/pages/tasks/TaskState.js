@@ -3,34 +3,34 @@ export default class TaskState {
         this.occurrences = !!taskState?.occurrences
         this.observations = !!taskState?.observations
         this.emails = !!taskState?.emails
+        this.pivots = !!taskState?.pivots
         this.labels = !!taskState?.labels
         this.addresses = !!taskState?.addresses
-        this.pivots = !!taskState?.pivots
-        this.subtasks = [ 'occurrences', 'observations', 'emails', 'labels', 'addresses', 'pivots' ]
+        this.subtasks = [ 'occurrences', 'observations', 'emails', 'pivots', 'labels', 'addresses' ]
         this.subtaskIO = {
             'occurrences': {
                 inputs: [ 'occurrences' ],
                 outputs: [ 'occurrences', 'duplicates' ]
             },
             'observations': {
-                inputs: [ 'occurrences', 'none' ],
+                inputs: [ 'occurrences', 'none' ],      // The first input file type will be treated as the default
                 outputs: [ 'occurrences', 'pulls', 'flags' ]
             },
             'emails': {
                 inputs: [ 'flags' ],
                 outputs: [ 'emails' ]
             },
+            'pivots': {
+                inputs: [ 'occurrences', 'pulls' ],
+                outputs: [ 'pivots' ]
+            },
             'labels': {
-                inputs: [ 'occurrences', 'pulls' ],     // The first input file type will be treated as the default
-                outputs: [ 'labels', 'flags' ]
+                inputs: [ 'occurrences', 'pulls' ],
+                outputs: [ 'labels', 'occurrences', 'flags' ]
             },
             'addresses': {
                 inputs: [ 'occurrences', 'pulls' ],
                 outputs: [ 'addresses' ]
-            },
-            'pivots': {
-                inputs: [ 'occurrences', 'pulls' ],
-                outputs: [ 'pivots' ]
             }
         }
         this.id = !!taskState?.id

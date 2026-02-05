@@ -536,6 +536,8 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         const labelFilePath = './shared/data/labels/' + labelsFileName
         const warningLabelsFileName = `labels_warnings_${task.tag}.pdf`
         const warningLabelsFilePath = './shared/data/labels/' + warningLabelsFileName
+        const occurrencesFileName = `occurrences_printed_${task.tag}.csv`
+        const occurrencesFilePath = './shared/data/occurrences/' + occurrencesFileName
         const flagsFileName = `flags_unprintable_${task.tag}.csv`
         const flagsFilePath = './shared/data/flags/' + flagsFileName
 
@@ -613,6 +615,9 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         const dateLabelPrint = `${day}-${month}-${year}`
         await OccurrenceService.updateOccurrences(printedFilter, { [fieldNames.dateLabelPrint]: dateLabelPrint })
 
+        // Write printed occurrences file
+        await OccurrenceService.writeOccurrencesFromDatabase(occurrencesFilePath, printedFilter)
+
         // Write the flags file
         const flags = await OccurrenceService.getUnprintableOccurrences({ scratch: true, ignoreDateLabelPrint: true })
         FileManager.writeCSV(flagsFilePath, flags, Object.keys(template))
@@ -620,6 +625,7 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         // Update the task result with the output files
         const outputs = [
             { uri: `/api/labels/${labelsFileName}`, fileName: labelsFileName, type: 'labels' },
+            { uri: `/api/occurrences/${occurrencesFileName}`, fileName: occurrencesFileName, type: 'occurrences', subtype: 'printed' },
             { uri: `/api/flags/${flagsFileName}`, fileName: flagsFileName, type: 'flags', subtype: 'unprintable' }
         ]
         if (warningLabels.length > 0) {
@@ -630,6 +636,7 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         // Archive excess output files
         FileManager.limitFilesInDirectory('./shared/data/labels', fileLimits.maxLabels)
         FileManager.limitFilesInDirectory('./shared/data/occurrences', fileLimits.maxOccurrences)
+        FileManager.limitFilesInDirectory('./shared/data/flags', fileLimits.maxFlags)
 
         // Move occurrences with a fieldNumber or no errorFlags back to non-scratch space
         const unscratchFilter = {

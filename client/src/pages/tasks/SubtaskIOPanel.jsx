@@ -100,13 +100,10 @@ export default function SubtaskIOPanel({ type, taskState, pipelineState, setPipe
     const defaultInputFile = inputOptions?.find((option) => !!option.default)?.key || (selectionAvailable && 'selection') || (io.inputs.length > 0 && 'upload')
     const [ selectedInputFile, setSelectedInputFile ] = useState(defaultInputFile)
 
+    // Select the default file when it changes (when the input options change)
     useEffect(() => {
-        const keys = inputOptions.map((option) => option.key)
-        
-        if (!keys.includes(selectedInputFile) && selectedInputFile !== 'none' && selectedInputFile !== 'selection' && selectedInputFile !== 'upload') {
-            setSelectedInputFile(defaultInputFile)
-        }
-    }, [inputOptions])
+        setSelectedInputFile(defaultInputFile)
+    }, [defaultInputFile])
 
     return (
         <SubtaskIOPanelContainer>

@@ -128,6 +128,16 @@ export default function TaskMenu({ taskState, setTaskState, selectedTaskId, setS
         'full': { occurrences: true, observations: true, labels: true, addresses: true, emails: true, pivots: true }
     }
 
+    // List of displayable subtasks
+    const displayableSubtasks = [
+        'occurrences',
+        'observations',
+        'emails',
+        'labels',
+        'addresses',
+        'pivots'
+    ]
+
     /* Queries */
 
     /*
@@ -140,7 +150,10 @@ export default function TaskMenu({ taskState, setTaskState, selectedTaskId, setS
             const response = await fetch('/api/tasks')
             const parsedResponse = await response.json()
 
-            return parsedResponse.tasks
+            // Limit tasks to those with displayable subtasks
+            const displayableTasks = parsedResponse.tasks?.filter((task) => task.subtasks?.some((subtask) => displayableSubtasks.includes(subtask.type)))
+
+            return displayableTasks
         },
         refetchInterval: 10000,
         refetchOnMount: 'always',

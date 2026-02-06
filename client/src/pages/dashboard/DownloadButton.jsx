@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query'
 import styled from '@emotion/styled'
 import axios from 'axios'
 
-import downloadOffIcon from '/src/assets/download_off.svg'
 import downloadIcon from '/src/assets/download.svg'
 import downloadingIcon from '/src/assets/downloading.svg'
 import csvIcon from '/src/assets/csv.svg'

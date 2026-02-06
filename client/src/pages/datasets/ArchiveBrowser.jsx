@@ -3,6 +3,12 @@ import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import styled from '@emotion/styled'
 
+import folderIcon from '/src/assets/folder.svg'
+import folderZipIcon from '/src/assets/folder_zip.svg'
+import csvIcon from '/src/assets/csv.svg'
+import fileIcon from '/src/assets/file.svg'
+import downloadingIcon from '/src/assets/downloading.svg'
+
 const ArchiveBrowserContainer = styled.div`
     display: flex;
     flex-direction: column;
@@ -23,21 +29,79 @@ const ArchiveBrowserContainer = styled.div`
         font-size: 16pt;
     }
 
-    div {
-        display: flex;
-        flex-direction: row;
-        justify-content: stretch;
+    .directory {
+        display: grid;
+        grid-template-columns: repeat(10, 100px);
         gap: 10px;
 
-        select {
-            flex-grow: 1;
+        .directoryItem {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+
+            border: 1px solid transparent;
+            border-radius: 5px;
+
+            padding: 0px 5px 5px 5px;
+
+            color: #222;
+            text-decoration: none;
+
+            background-color: white;
+
+            cursor: pointer;
+
+            &:hover {
+                background-color: #efefef;
+            }
+
+            &:focus {
+                border: 1px solid gray;
+            }
+
+            img {
+                width: 50px;
+                height: 50px;
+            }
+
+            label {
+                font-size: 12px;
+
+                text-align: center;
+                word-break: break-all;
+
+                cursor: pointer;
+            }
+        }
+
+        .downloading {
+            cursor: not-allowed;
+
+            label {
+                cursor: not-allowed;
+            }
         }
     }
 `
 
 export default function ArchiveBrowser() {
     const [ selectedFileType, setSelectedFileType ] = useState()
-    const [ selectedFileUri, setSelectedFileUri ] = useState()
+
+    const directories = [
+        { name: 'Addresses', endpoint: 'addresses' },
+        { name: 'Backups', endpoint: 'backups' },
+        { name: 'Duplicates', endpoint: 'duplicates' },
+        { name: 'Emails', endpoint: 'emails' },
+        { name: 'Flags', endpoint: 'flags' },
+        { name: 'Labels', endpoint: 'labels' },
+        { name: 'Observations', endpoint: 'observations' },
+        { name: 'Occurrences', endpoint: 'occurrences' },
+        { name: 'Pivots', endpoint: 'pivots' },
+        { name: 'Pulls', endpoint: 'pulls' },
+        { name: 'Reports', endpoint: 'reports' },
+        { name: 'Uploads', endpoint: 'uploads' }
+    ]
 
     const { error: archiveQueryError, data: archiveData } = useQuery({
         queryKey: ['archiveData', selectedFileType],
@@ -52,58 +116,91 @@ export default function ArchiveBrowser() {
         enabled: !!selectedFileType
     })
 
-    let { data: downloadURL } = useQuery({
-        queryKey: ['archiveFile', selectedFileUri],
+    const { data: downloads } = useQuery({
+        queryKey: ['archiveDownloads', archiveData],
         queryFn: async () => {
-            const res = await axios.get(`${selectedFileUri}`, { responseType: 'blob' })
-            return URL.createObjectURL(res.data)
+            const downloads = []
+
+            for (const file of archiveData.files) {
+                const response = await axios.get(file.uri, { responseType: 'blob' }).catch((error) => {
+                    return { status: error.status }
+                })
+                const download = {
+                    fileName: file.fileName,
+                    type: selectedFileType,
+                    responseStatus: response.status
+                }
+                if (response.status === 200) {
+                    download.url = URL.createObjectURL(response.data)
+                }
+                downloads.push(download)
+            }
+            return downloads
         },
         refetchOnMount: 'always',
-        enabled: !!selectedFileUri
+        enabled: !!archiveData
     })
+
+    console.log(archiveData)
+    console.log(downloads)
 
     return (
         <ArchiveBrowserContainer>
             <h2>Archive Browser</h2>
 
-            <div>
-                <label htmlFor='archiveFileTypeSelect'>File Type:</label>
-                <select id='archiveFileTypeSelect' onChange={ (event) => {
-                    setSelectedFileType(event.target.value)
-                    setSelectedFileUri(undefined)
-                } }>
-                    <option value='' disabled selected={!selectedFileType}>Select an archive file type...</option>
-                    <option value='addresses'>Addresses</option>
-                    <option value='backups'>Backups</option>
-                    <option value='duplicates'>Duplicates</option>
-                    <option value='emails'>Emails</option>
-                    <option value='flags'>Flags</option>
-                    <option value='labels'>Labels</option>
-                    <option value='observations'>Observations</option>
-                    <option value='occurrences'>Occurrences</option>
-                    <option value='pivots'>Pivots</option>
-                    <option value='pulls'>Pulls</option>
-                    <option value='reports'>Reports</option>
-                    <option value='uploads'>Uploads</option>
-                </select>
-            </div>            
-
-            { selectedFileType &&
-                <div>
-                    <label htmlFor='archiveFileSelect'>File:</label>
-                    <select id='archiveFileSelect' onChange={ (event) => {
-                        setSelectedFileUri(event.target.value)
-                        downloadURL = undefined
-                    } }>
-                        <option value='' disabled selected={!selectedFileUri}>Select an archive file...</option>
-                        {archiveData?.files && archiveData.files.map((f) => <option value={f.uri} key={f.fileName} selected={f.uri === selectedFileUri}>{f.fileName}</option>)}
-                    </select>
+            { !selectedFileType ? (
+                <div className='directory'>
+                    { directories.map((directory) =>
+                        <button
+                            className='directoryItem'
+                            key={directory.endpoint}
+                            onClick={() => setSelectedFileType(directory.endpoint)}
+                        >
+                            <img src={folderIcon} alt={`${directory.name} file`} />
+                            <label>{directory.name}</label>
+                        </button>
+                    )}
                 </div>
-            }
+            ) : (
+                <div className='directory'>
+                    <button
+                        className='directoryItem'
+                        onClick={() => setSelectedFileType(null)}
+                    >
+                        <img src={folderIcon} alt='Parent directory' />
+                        <label>Parent directory</label>
+                    </button>
 
-            { downloadURL &&
-                <a href={downloadURL} download={selectedFileUri.substring(selectedFileUri.lastIndexOf('/') + 1)}>Download File</a>
-            }
+                    { archiveData?.files && !downloads && archiveData.files.map(({ fileName }) =>
+                        <button
+                            className='directoryItem downloading'
+                            key={fileName}
+                            disabled
+                        >
+                            <img src={downloadingIcon} alt={fileName} />
+                            <label>{fileName}</label>
+                        </button>
+                    )}
+                    
+                    { downloads?.map(({ fileName, url }) => {
+                        let icon = fileIcon
+                        if (fileName.endsWith('.csv')) icon = csvIcon
+                        if (fileName.endsWith('.zip')) icon = folderZipIcon
+
+                        return (
+                            <a
+                                className='directoryItem'
+                                key={fileName}
+                                href={url}
+                                download={fileName}
+                            >
+                                <img src={icon} alt={fileName} />
+                                <label>{fileName}</label>
+                            </a>
+                        )
+                    })}
+                </div>
+            )}
         </ArchiveBrowserContainer>
     )
 }

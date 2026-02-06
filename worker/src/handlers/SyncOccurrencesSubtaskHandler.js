@@ -2,6 +2,7 @@ import path from 'path'
 
 import BaseSubtaskHandler from './BaseSubtaskHandler.js'
 import { OccurrenceService, TaskService } from '../../shared/lib/services/index.js'
+import { fileLimits } from '../../shared/lib/utils/constants.js'
 import FileManager from '../../shared/lib/utils/FileManager.js'
 
 export default class SyncOccurrencesSubtaskHandler extends BaseSubtaskHandler {
@@ -60,6 +61,17 @@ export default class SyncOccurrencesSubtaskHandler extends BaseSubtaskHandler {
             // Copy backupOccurrences.csv into workingOccurrences.csv
             FileManager.copyFile(backupOccurrencesFilePath, workingOccurrencesFilePath)
         } else if (subtask.operation === 'write' && subtask.file === 'backupOccurrences') {
+            await TaskService.logTaskStep(taskId, 'Archiving backup occurrences')
+
+            // Create a timestamped copy of backupOccurrences.csv and archive it in /shared/data/backups
+            const now = new Date()
+            const timestamp = now.toISOString().slice(0, -5).replaceAll(':', '.')   // ISO minus milliseconds, replace : with .
+            const archivedOccurrencesFilePath = path.resolve(`./shared/data/backups/backupOccurrences_${timestamp}.csv`)
+            FileManager.copyFile(backupOccurrencesFilePath, archivedOccurrencesFilePath)
+            FileManager.compressFile(archivedOccurrencesFilePath)
+            FileManager.deleteFile(archivedOccurrencesFilePath)
+            FileManager.limitFilesInDirectory('./shared/data/backups', fileLimits.maxBackups, { archive: false })
+
             await TaskService.logTaskStep(taskId, 'Writing into backup occurrences from working occurrences')
 
             // Copy workingOccurrences.csv into backupOccurrences.csv

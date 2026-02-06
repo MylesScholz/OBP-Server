@@ -1,8 +1,6 @@
 import Router from 'express'
 import fs from 'fs'
 
-import { requireAuthentication } from '../middleware/auth.js'
-
 const archiveRouter = Router()
 
 function createReadDirMiddleware(directory, uriStem) {
@@ -23,26 +21,28 @@ function createReadDirMiddleware(directory, uriStem) {
     }
 }
 
-archiveRouter.get('/addresses', requireAuthentication, createReadDirMiddleware('./shared/data/addresses', '/api/addresses/'))
+archiveRouter.get('/addresses', createReadDirMiddleware('./shared/data/addresses', '/api/addresses/'))
 
-archiveRouter.get('/duplicates', requireAuthentication, createReadDirMiddleware('./shared/data/duplicates', '/api/duplicates/'))
+archiveRouter.get('/backups', createReadDirMiddleware('./shared/data/backups', '/api/backups/'))
 
-archiveRouter.get('/emails', requireAuthentication, createReadDirMiddleware('./shared/data/emails', '/api/emails/'))
+archiveRouter.get('/duplicates', createReadDirMiddleware('./shared/data/duplicates', '/api/duplicates/'))
 
-archiveRouter.get('/flags', requireAuthentication, createReadDirMiddleware('./shared/data/flags', '/api/flags/'))
+archiveRouter.get('/emails', createReadDirMiddleware('./shared/data/emails', '/api/emails/'))
 
-archiveRouter.get('/labels', requireAuthentication, createReadDirMiddleware('./shared/data/labels', '/api/labels/'))
+archiveRouter.get('/flags', createReadDirMiddleware('./shared/data/flags', '/api/flags/'))
 
-archiveRouter.get('/observations', requireAuthentication, createReadDirMiddleware('./shared/data/observations', '/api/observations/'))
+archiveRouter.get('/labels', createReadDirMiddleware('./shared/data/labels', '/api/labels/'))
 
-archiveRouter.get('/occurrences', requireAuthentication, createReadDirMiddleware('./shared/data/occurrences', '/api/occurrences/'))
+archiveRouter.get('/observations', createReadDirMiddleware('./shared/data/observations', '/api/observations/'))
 
-archiveRouter.get('/pivots', requireAuthentication, createReadDirMiddleware('./shared/data/pivots', '/api/pivots/'))
+archiveRouter.get('/occurrences', createReadDirMiddleware('./shared/data/occurrences', '/api/occurrences/'))
 
-archiveRouter.get('/pulls', requireAuthentication, createReadDirMiddleware('./shared/data/pulls', '/api/pulls/'))
+archiveRouter.get('/pivots', createReadDirMiddleware('./shared/data/pivots', '/api/pivots/'))
 
-archiveRouter.get('/reports', requireAuthentication, createReadDirMiddleware('./shared/data/reports', '/api/reports/'))
+archiveRouter.get('/pulls', createReadDirMiddleware('./shared/data/pulls', '/api/pulls/'))
 
-archiveRouter.get('/uploads', requireAuthentication, createReadDirMiddleware('./shared/data/uploads', '/api/uploads/'))
+archiveRouter.get('/reports', createReadDirMiddleware('./shared/data/reports', '/api/reports/'))
+
+archiveRouter.get('/uploads', createReadDirMiddleware('./shared/data/uploads', '/api/uploads/'))
 
 export default archiveRouter

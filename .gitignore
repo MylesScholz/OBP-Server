@@ -3,6 +3,7 @@ backups/
 
 # Shared Data
 shared/data/addresses
+shared/data/backups
 shared/data/duplicates
 shared/data/elevation
 shared/data/emails

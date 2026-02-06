@@ -74,6 +74,7 @@ export default function ArchiveBrowser() {
                 } }>
                     <option value='' disabled selected={!selectedFileType}>Select an archive file type...</option>
                     <option value='addresses'>Addresses</option>
+                    <option value='backups'>Backups</option>
                     <option value='duplicates'>Duplicates</option>
                     <option value='emails'>Emails</option>
                     <option value='flags'>Flags</option>

@@ -113,6 +113,7 @@ const constants = {
     // Maximum number of output files stored on the server for each output type
     fileLimits: {
         maxAddresses: 25,
+        maxBackups: 5,
         maxDuplicates: 25,
         maxEmails: 25,
         maxFlags: 25,

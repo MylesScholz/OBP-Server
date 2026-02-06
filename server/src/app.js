@@ -24,6 +24,7 @@ app.use(express.json())
 
 // API routes
 apiRouter.use('/addresses', requireAuthentication, express.static('./shared/data/addresses'))
+apiRouter.use('/backups', express.static('./shared/data/backups'))
 apiRouter.use('/duplicates', express.static('./shared/data/duplicates'))
 apiRouter.use('/emails', requireAuthentication, express.static('./shared/data/emails'))
 apiRouter.use('/flags', express.static('./shared/data/flags'))

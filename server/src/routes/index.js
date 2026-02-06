@@ -1,5 +1,7 @@
 import Router from 'express'
 
+import { requireAuthentication } from '../middleware/auth.js'
+
 import adminsRouter from './admins.js'
 import archiveRouter from './archive.js'
 import determinationsRouter from './determinations.js'
@@ -11,7 +13,7 @@ import usernamesRouter from './usernames.js'
 const apiRouter = Router()
 
 apiRouter.use('/admins', adminsRouter)
-apiRouter.use('/archive', archiveRouter)
+apiRouter.use('/archive', requireAuthentication, archiveRouter)
 apiRouter.use('/determinations', determinationsRouter)
 apiRouter.use('/occurrences', occurrencesRouter)
 apiRouter.use('/plantList', plantListRouter)

@@ -223,10 +223,14 @@ class FileManager {
      * limitFilesInDirectory()
      * Limits the number of files in a given directory; compresses the least recently edited file if over the limit
      */
-    limitFilesInDirectory(directory, maxFiles) {
+    limitFilesInDirectory(directory, maxFiles, options = { archive: true }) {
+        const {
+            archive = true
+        } = options
+
         try {
-            // Read the list of files in the given directory
-            let files = fs.readdirSync(directory).filter((f) => !f.toLowerCase().endsWith('.zip'))
+            // Read the list of files in the given directory; optionally filter by .zip extension, depending on archive
+            let files = fs.readdirSync(directory).filter((file) => !archive || !file.toLowerCase().endsWith('.zip'))
     
             // Delete the least recently edited file while over the limit
             while (files.length > maxFiles) {
@@ -238,11 +242,13 @@ class FileManager {
                     .filter((f) => f.stat.isFile())
                     .reduce((oldest, current) => current.stat.mtimeMs < oldest.stat.mtimeMs ? current : oldest)
                 
-                // Archive and then 'rm' the least recently edited file
-                this.compressFile(oldestFile.path)
+                // Archive (if applicable) and then 'rm' the least recently edited file
+                if (archive) {
+                    this.compressFile(oldestFile.path)
+                }
                 fs.rmSync(oldestFile.path)
-                // Reread the list of files in the directory
-                files = fs.readdirSync(directory).filter((f) => !f.toLowerCase().endsWith('.zip'))
+                // Reread the list of files in the directory; optionally filter by .zip extension, depending on archive
+                files = fs.readdirSync(directory).filter((file) => !archive || !file.toLowerCase().endsWith('.zip'))
             }
         } catch (error) {
             console.error('Error while limiting files in directory:', error)
@@ -264,6 +270,22 @@ class FileManager {
             }
         } catch (error) {
             console.error('Error while clearing directory:', error)
+        }
+    }
+
+    /*
+     * deleteFile()
+     * Deletes a file in the /shared/data directory at a given file path
+     */
+    deleteFile(filePath) {
+        try {
+            const parsedPath = path.parse(filePath)
+
+            if (!parsedPath.dir.includes('/shared/data')) throw new Error('Operation only permitted in /shared/data')
+
+            fs.rmSync(filePath)
+        } catch (error) {
+            console.error('Error while deleting file:', error)
         }
     }
 }

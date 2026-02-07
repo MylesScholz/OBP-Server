@@ -23,6 +23,7 @@ const SubtaskIOPanelContainer = styled.div`
             padding: 0px;
 
             font-size: 12pt;
+            font-weight: bold;
         }
 
         div {
@@ -75,6 +76,12 @@ const SubtaskIOPanelContainer = styled.div`
         padding: 0px;
         padding-right: 25px;
 
+        h3 {
+            margin: 0px;
+
+            font-size: 12pt;
+        }
+
         ul {
             margin: 0px;
             padding-left: 25px;
@@ -108,7 +115,7 @@ export default function SubtaskIOPanel({ type, taskState, pipelineState, setPipe
     return (
         <SubtaskIOPanelContainer>
             <fieldset className='inputFileFieldset'>
-                <legend>Input File:</legend>
+                <legend>Input:</legend>
                 { inputOptions?.map((option) =>
                     <div
                         onMouseEnter={() => setPipelineState({ ...pipelineState, hoveredFile: option.key })}
@@ -189,7 +196,7 @@ export default function SubtaskIOPanel({ type, taskState, pipelineState, setPipe
 
             { io &&
                 <div className='tipContainer'>
-                    <p>Output Files:</p>
+                    <h3>Outputs:</h3>
                     { io?.outputs?.length > 0 &&
                         <ul>
                             {

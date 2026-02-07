@@ -58,46 +58,6 @@ const SubtaskCardFormContainer = styled.div`
                 height: 15px;
             }
         }
-
-        .fileTip {
-            font-weight: bold;
-        }
-
-        .hoveredFileTip {
-            text-decoration: underline;
-        }
-
-        .occurrencesFileTip {
-            color: var(--occurrences-file-color);
-        }
-
-        .duplicatesFileTip {
-            color: var(--duplicates-file-color);
-        }
-
-        .pullsFileTip {
-            color: var(--pulls-file-color);
-        }
-
-        .flagsFileTip {
-            color: var(--flags-file-color);
-        }
-
-        .labelsFileTip {
-            color: var(--labels-file-color);
-        }
-
-        .addressesFileTip {
-            color: var(--addresses-file-color);
-        }
-
-        .emailsFileTip {
-            color: var(--emails-file-color);
-        }
-
-        .pivotsFileTip {
-            color: var(--pivots-file-color);
-        }
     }
 
     #removeSubtask {

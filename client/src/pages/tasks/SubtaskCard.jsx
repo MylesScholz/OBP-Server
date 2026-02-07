@@ -22,6 +22,48 @@ const SubtaskCardContainer = styled.div`
 
     p {
         margin: 0px;
+
+        font-size: 12pt;
+    }
+
+    .fileTip {
+        font-weight: bold;
+    }
+
+    .hoveredFileTip {
+        text-decoration: underline;
+    }
+
+    .occurrencesFileTip {
+        color: var(--occurrences-file-color);
+    }
+
+    .duplicatesFileTip {
+        color: var(--duplicates-file-color);
+    }
+
+    .pullsFileTip {
+        color: var(--pulls-file-color);
+    }
+
+    .flagsFileTip {
+        color: var(--flags-file-color);
+    }
+
+    .labelsFileTip {
+        color: var(--labels-file-color);
+    }
+
+    .addressesFileTip {
+        color: var(--addresses-file-color);
+    }
+
+    .emailsFileTip {
+        color: var(--emails-file-color);
+    }
+
+    .pivotsFileTip {
+        color: var(--pivots-file-color);
     }
 `
 
@@ -37,7 +79,7 @@ export default function SubtaskCard({ type, taskState, pipelineState, setPipelin
         <SubtaskCardContainer>
             <h2>{ordinal}. {capitalize(type)} Subtask</h2>
 
-            { !taskState.id ? (
+            { !selectedTaskData ? (
                 <SubtaskCardForm
                     type={type}
                     taskState={taskState}
@@ -47,6 +89,7 @@ export default function SubtaskCard({ type, taskState, pipelineState, setPipelin
             ) : (
                 <SubtaskStatus
                     type={type}
+                    taskState={taskState}
                     selectedTaskData={selectedTaskData}
                     downloads={downloads}
                 />

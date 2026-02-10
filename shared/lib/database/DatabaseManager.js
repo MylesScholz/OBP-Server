@@ -99,6 +99,9 @@ class DatabaseManager {
                 {
                     [fieldNames.recordedBy]: 1,
                     [fieldNames.fieldNumber]: 1
+                },
+                {
+                    [fieldNames.iNaturalistAlias]: 1
                 }
             ],
             'observations': [

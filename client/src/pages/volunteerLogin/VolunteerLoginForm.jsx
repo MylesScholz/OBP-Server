@@ -125,19 +125,38 @@ const VolunteerLoginFormContainer = styled.form`
 
 export default function VolunteerLoginForm() {
     const [ disabled, setDisabled ] = useState(false)
-    const { volunteer, setVolunteer } = useAuth()
+    const { admin, setVolunteer } = useAuth()
     const navigate = useNavigate()
 
     function handleSubmit(event) {
         event.preventDefault()
 
+        if (disabled) return
         setDisabled(true)
 
-        // TODO: check occurrences for submitted volunteer username or full name and update 'volunteer' (AuthProvider)
-        setVolunteer(event.target.volunteerUsername.value)
+        const fullName = event.target.volunteerFullName.value
+        const username = event.target.volunteerUsername.value
+        let queryUrl = username ? `/api/occurrences?per_page=1&userLogin=${username}&recordedBy=%28non-empty%29` : ''
+        queryUrl = !queryUrl && fullName ? `/api/occurrences?per_page=1&userLogin=%28non-empty%29&recordedBy=${fullName}` : queryUrl
+
+        if (queryUrl) {
+            axios.get(queryUrl).then((res) => {
+                const occurrence = res?.data?.data?.at(0)
+
+                if (occurrence) {
+                    setVolunteer(!admin ? occurrence['userLogin'] : null)   // Admin login supercedes volunteer
+                    navigate('/dashboard')
+                }
+            }).catch((error) => {
+                console.log(error)
+            }).finally(() => {
+                setDisabled(false)
+            })
+        } else {
+            setDisabled(false)
+        }
 
         event.target.reset()
-        navigate('/dashboard')
     }
 
     return (

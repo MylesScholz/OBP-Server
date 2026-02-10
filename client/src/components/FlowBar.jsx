@@ -1,8 +1,8 @@
 import styled from '@emotion/styled'
 
-import chevronRightIcon from '/src/assets/chevron_right.svg'
 import { NavLink } from 'react-router'
 import { useFlow } from '../FlowProvider'
+import { useAuth } from '../AuthProvider'
 
 const FlowBarContainer = styled.div`
     display: flex;
@@ -47,6 +47,7 @@ const FlowBarContainer = styled.div`
 
 export default function FlowBar() {
     const { query, results } = useFlow()
+    const { admin, volunteer } = useAuth()
 
     const selectedString = results?.pagination?.totalDocuments?.toLocaleString('en-US') ?? '0'
 
@@ -55,15 +56,19 @@ export default function FlowBar() {
             <NavLink className='flowStage' to='/dashboard'>
                 <h3>Dashboard ({selectedString}{query.unsubmitted && <span style={{ color: 'dodgerblue' }}>*</span>} selected)</h3>
             </NavLink>
-            <NavLink className='flowStage' to='/tasks'>
-                <h3>Tasks</h3>
-            </NavLink>
-            <NavLink className='flowStage' to='/datasets'>
-                <h3>Datasets</h3>
-            </NavLink>
-            <NavLink className='flowStage' to='/admin'>
-                <h3>Administration</h3>
-            </NavLink>
+            { admin &&
+                <>
+                    <NavLink className='flowStage' to='/tasks'>
+                        <h3>Tasks</h3>
+                    </NavLink>
+                    <NavLink className='flowStage' to='/datasets'>
+                        <h3>Datasets</h3>
+                    </NavLink>
+                    <NavLink className='flowStage' to='/admin'>
+                        <h3>Administration</h3>
+                    </NavLink>
+                </>
+            }
         </FlowBarContainer>
     )
 }

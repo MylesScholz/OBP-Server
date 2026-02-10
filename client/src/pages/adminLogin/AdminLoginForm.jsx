@@ -106,7 +106,7 @@ const AdminLoginFormContainer = styled.form`
 
 export default function AdminLoginForm() {
     const [ disabled, setDisabled ] = useState(false)
-    const { setAdmin } = useAuth()
+    const { setAdmin, setVolunteer } = useAuth()
     const navigate = useNavigate()
 
     function handleSubmit(event) {
@@ -123,6 +123,7 @@ export default function AdminLoginForm() {
             setDisabled(false)
             if (res.status === 200) {
                 setAdmin(credentials.username)
+                setVolunteer(null)  // Admin login supercedes volunteer
                 navigate('/dashboard')
             }
         }).catch((error) => {

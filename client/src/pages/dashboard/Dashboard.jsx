@@ -2,13 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import styled from '@emotion/styled'
 import axios from 'axios'
 
-import chevronLeftIcon from '/src/assets/chevron_left.svg'
-import chevronRightIcon from '/src/assets/chevron_right.svg'
 import OccurrencesPanel from '../../components/OccurrencesPanel'
 import DashboardSearchPanel from './DashboardSearchPanel'
-import DownloadButton from './DownloadButton'
-import { useFlow } from '../../FlowProvider'
 import DashboardUploadPanel from './DashboardUploadPanel'
+import { useFlow } from '../../FlowProvider'
+import DashboardResultsHeader from './DashboardResultsHeader'
 
 const DashboardForm = styled.form`
     display: grid;
@@ -166,14 +164,7 @@ export default function Dashboard() {
     const [ disabled, setDisabled ] = useState(false)
     const { query, setQuery, results, setResults } = useFlow()
     const hasSubmitted = useRef(false)
-
-    let pageMax = results?.pagination?.totalPages ? results?.pagination?.totalPages : 0
-    let currentPage = results?.pagination?.currentPage ?? 1
-    let pageLength = results?.data?.length ?? 0
-    let totalDocuments = results?.pagination?.totalDocuments ?? 0
-
-    const recordsText = `Showing ${pageLength.toLocaleString('en-US')} of ${totalDocuments.toLocaleString('en-US')} records`
-    const pagesText = `Page ${currentPage.toLocaleString('en-US')} of ${pageMax.toLocaleString('en-US')}`
+    const submitRef = useRef()
 
     useEffect(() => {
         if(hasSubmitted.current) return
@@ -181,16 +172,13 @@ export default function Dashboard() {
         hasSubmitted.current = true
     }, [])
 
-    useEffect(() => {
-        if (currentPage > pageMax) {
-            setQuery({ ...query, page: 1 })
-        }
-    }, [results])
-
     function handleEnter(event) {
         event.preventDefault()
 
-        document.getElementById('dashboardSubmitButton').click()
+        const element = submitRef.current
+        if (!element) return
+
+        element.click()
     }
 
     function handleSubmit (event) {
@@ -230,56 +218,11 @@ export default function Dashboard() {
     return (
         <DashboardForm onSubmit={ handleSubmit }>
             <div id='toolBar'>
-                <DashboardSearchPanel disabled={disabled} />
+                <DashboardSearchPanel submitRef={submitRef} disabled={disabled} />
                 <DashboardUploadPanel disabled={disabled} />
             </div>
 
-            <fieldset id='resultsHeader' disabled={disabled}>
-                <div id='sortDirContainer'>
-                    <label htmlFor='sortBy'>Sort By:</label>
-                    <select
-                        id='sortBy'
-                        value={query.sort_by}
-                        onChange={(event) => setQuery({ ...query, sort_by: event.target.value, unsubmitted: true })}
-                    >
-                        <option value='fieldNumber'>fieldNumber</option>
-                        <option value='date'>date</option>
-                    </select>
-                    <select
-                        id='sortDir'
-                        value={query.sort_dir}
-                        onChange={(event) => setQuery({ ...query, sort_dir: event.target.value, unsubmitted: true })}
-                    >
-                        <option value='asc'>ascending</option>
-                        <option value='desc'>descending</option>
-                    </select>
-                </div>
-                <div id='resultsHeaderRight'>
-                    <div id='resultsPagination'>
-                        <p>{recordsText} ({pagesText})</p>
-                        <div id='resultsPageSelector'>
-                            <button className='pageIncrementButton' onClick={() => setQuery({ ...query, page: Math.max(1, query.page - 1) })}>
-                                <img src={chevronLeftIcon} alt='Prev' />
-                            </button>
-                            <input
-                                id='resultsPage'
-                                type='number'
-                                value={query.page}
-                                min={1}
-                                max={Math.max(pageMax, 1)}
-                                onKeyDown={(event) => { if (event.key === 'Enter') handleEnter(event) }}
-                                onChange={(event) => setQuery({ ...query, page: parseInt(event.target.value) })}
-                            />
-                            <button className='pageIncrementButton' onClick={() => setQuery({ ...query, page: Math.max(1, (query.page + 1) % Math.max(pageMax + 1, 1)) })}>
-                                <img src={chevronRightIcon} alt='Next' />
-                            </button>
-                        </div>
-                    </div>
-                    <div id='downloadResults'>
-                        <DownloadButton searchParams={query.searchParams} />
-                    </div>
-                </div>
-            </fieldset>
+            <DashboardResultsHeader handleEnter={handleEnter} disabled={disabled} />
 
             <div id='resultsContainer'>
                 <OccurrencesPanel occurrences={results?.data ?? []} />

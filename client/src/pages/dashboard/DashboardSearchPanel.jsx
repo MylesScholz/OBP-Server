@@ -200,11 +200,10 @@ const DashboardSearchPanelFieldset = styled.fieldset`
     }
 `
 
-export default function DashboardSearchPanel({ disabled }) {
+export default function DashboardSearchPanel({ submitRef, disabled }) {
     const [ selectedFieldName, setSelectedFieldName ] = useState('')
     const [ queryText, setQueryText ] = useState('')
     const { query, setQuery } = useFlow()
-    const submitRef = useRef()
 
     // Occurrence field names
     const fieldNames = [

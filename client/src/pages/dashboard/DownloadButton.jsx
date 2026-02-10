@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import styled from '@emotion/styled'
 import axios from 'axios'
@@ -56,8 +56,12 @@ const DownloadButtonContainer = styled.div`
 `
 
 export default function DownloadButton({ searchParams }) {
-    const { loggedIn } = useAuth()
     const [ selectedTaskId, setSelectedTaskId ] = useState()
+    const { loggedIn } = useAuth()
+    const linkRef = useRef()
+    const hasClicked = useRef(false)
+
+    /* Queries */
 
     /*
      * Selected Task Query
@@ -115,10 +119,24 @@ export default function DownloadButton({ searchParams }) {
         enabled: subtasks.some((subtask) => !!subtask.outputs)
     })
 
+    /* Effects */
+
     // Reset selectedTaskId when searchParams changes
     useEffect(() => {
         setSelectedTaskId(null)
+        hasClicked.current = false
     }, [searchParams])
+
+    // Automatically click the download link once when it's ready
+    useEffect(() => {
+        const element = linkRef.current
+        if (downloads?.at(0)?.url && element && !hasClicked.current) {
+            element.click()
+            hasClicked.current = true
+        }
+    }, downloads)
+
+    /* Handler Functions */
 
     function handleClick(event) {
         event.preventDefault()
@@ -139,7 +157,11 @@ export default function DownloadButton({ searchParams }) {
     return (
         <DownloadButtonContainer>
             { downloads ? (
-                <a href={downloads?.at(0)?.url} download={downloads?.at(0).fileName}>
+                <a
+                    ref={linkRef}
+                    href={downloads?.at(0)?.url}
+                    download={downloads?.at(0).fileName}
+                >
                     <img src={csvIcon} alt='CSV' />
                 </a>
             ) : (

@@ -14,11 +14,11 @@ const AdminPageContainer = styled.div`
 `
 
 export default function AdminPage() {
-    const { loggedIn } = useAuth()
+    const { admin } = useAuth()
 
     return (
         <AdminPageContainer>
-            { loggedIn ? (
+            { admin ? (
                 <>
                     <FlowBar />
                     <AdminPanel />

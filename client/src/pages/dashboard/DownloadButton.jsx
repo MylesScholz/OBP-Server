@@ -57,7 +57,7 @@ const DownloadButtonContainer = styled.div`
 
 export default function DownloadButton({ searchParams }) {
     const [ selectedTaskId, setSelectedTaskId ] = useState()
-    const { loggedIn } = useAuth()
+    const { admin } = useAuth()
     const linkRef = useRef()
     const hasClicked = useRef(false)
 
@@ -88,7 +88,7 @@ export default function DownloadButton({ searchParams }) {
      * Generates download links for each output file in the currently selected task
      */
     const { data: downloads } = useQuery({
-        queryKey: ['downloads', subtasks, loggedIn],
+        queryKey: ['downloads', subtasks, admin],
         queryFn: async () => {
             const downloads = []
 

@@ -106,7 +106,7 @@ const AdminLoginFormContainer = styled.form`
 
 export default function AdminLoginForm() {
     const [ disabled, setDisabled ] = useState(false)
-    const { setLoggedIn } = useAuth()
+    const { setAdmin } = useAuth()
     const navigate = useNavigate()
 
     function handleSubmit(event) {
@@ -122,7 +122,7 @@ export default function AdminLoginForm() {
         axios.post('/api/admins/login', credentials).then((res) => {
             setDisabled(false)
             if (res.status === 200) {
-                setLoggedIn(credentials.username)
+                setAdmin(credentials.username)
                 navigate('/dashboard')
             }
         }).catch((error) => {

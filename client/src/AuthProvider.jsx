@@ -5,17 +5,18 @@ import axios from 'axios'
 const AuthContext = createContext()
 
 export function AuthProvider({ children }) {
-    const [ loggedIn, setLoggedIn ] = useState(null)
+    const [ admin, setAdmin ] = useState(null)
+    const [ volunteer, setVolunteer ] = useState(null)
 
     useQuery({
-        queryKey: ['loggedInQuery'],
+        queryKey: ['adminQuery'],
         queryFn: async () => {
             const response = await axios.get('/api/admins/login')
 
             if (response?.status === 200) {
-                setLoggedIn(response?.data?.username)
+                setAdmin(response?.data?.username)
             } else {
-                setLoggedIn(null)
+                setAdmin(null)
             }
 
             return { status: response?.status, data: response?.data }
@@ -25,7 +26,7 @@ export function AuthProvider({ children }) {
     })
 
     return (
-        <AuthContext.Provider value={{ loggedIn, setLoggedIn }}>
+        <AuthContext.Provider value={{ admin, setAdmin, volunteer, setVolunteer }}>
             { children }
         </AuthContext.Provider>
     )

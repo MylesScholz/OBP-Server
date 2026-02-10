@@ -115,7 +115,7 @@ export default function AdminManagementForm() {
     const [ selectedAdminId, setSelectedAdminId ] = useState()
     const [ formDisabled, setFormDisabled ] = useState()
     const [ queryResponse, setQueryResponse ] = useState()
-    const { loggedIn } = useAuth()
+    const { admin } = useAuth()
 
     const { error: adminsError, data: adminsData } = useQuery({
         queryKey: ['adminsQuery', queryResponse],
@@ -198,8 +198,8 @@ export default function AdminManagementForm() {
                             <div>
                                 <select id='adminIdToDelete' onChange={(event) => setSelectedAdminId(event.target.value)} required>
                                     <option value='' disabled selected={!selectedAdminId}>Select an admin account to delete...</option>
-                                    { adminsData?.admins?.filter((admin) => admin.username !== loggedIn).map((admin) => (
-                                        <option value={admin._id} key={admin._id} selected={admin._id === selectedAdminId}>{admin.username}</option>
+                                    { adminsData?.admins?.filter((a) => a.username !== admin).map((a) => (
+                                        <option value={a._id} key={a._id} selected={a._id === selectedAdminId}>{a.username}</option>
                                     ))}
                                 </select>
                             </div>

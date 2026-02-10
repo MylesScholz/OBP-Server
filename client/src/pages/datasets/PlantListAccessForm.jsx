@@ -117,7 +117,7 @@ export default function PlantListAccessForm() {
     const [ disabled, setDisabled ] = useState(false)
     const [ queryResponse, setQueryResponse ] = useState()
     const [ selectedTaskId, setSelectedTaskId ] = useState()
-    const { loggedIn } = useAuth()
+    const { admin } = useAuth()
 
     /* Queries */
 
@@ -146,7 +146,7 @@ export default function PlantListAccessForm() {
      * Generates download links for each output file in the currently selected task
      */
     const { data: downloads } = useQuery({
-        queryKey: ['downloads', subtasks, loggedIn],
+        queryKey: ['downloads', subtasks, admin],
         queryFn: async () => {
             const downloads = []
 

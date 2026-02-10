@@ -48,13 +48,13 @@ const LandingPageContainer = styled.div`
 `
 
 export default function LandingPage() {
-    const { loggedIn } = useAuth()
+    const { admin } = useAuth()
 
     return (
         <LandingPageContainer>
             <h2 id='rolePrompt'>Select your role</h2>
             <div id='roleContainer'>
-                <Link to={loggedIn ? '/dashboard' : '/adminLogin'}>Administrator</Link>
+                <Link to={admin ? '/dashboard' : '/adminLogin'}>Administrator</Link>
                 <Link to='/volunteerLogin'>Volunteer</Link>
             </div>
         </LandingPageContainer>

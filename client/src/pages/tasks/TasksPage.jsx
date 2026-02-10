@@ -14,11 +14,11 @@ const TasksPageContainer = styled.div`
 `
 
 export default function TasksPage() {
-    const { loggedIn } = useAuth()
+    const { admin } = useAuth()
 
     return (
         <TasksPageContainer>
-            { loggedIn ? (
+            { admin ? (
                 <>
                     <FlowBar />
                     <TaskPanel />

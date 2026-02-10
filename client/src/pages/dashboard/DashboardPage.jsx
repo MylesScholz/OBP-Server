@@ -14,11 +14,11 @@ const DashboardPageContainer = styled.div`
 `
 
 export default function DashboardPage() {
-    const { loggedIn } = useAuth()
+    const { admin, volunteer } = useAuth()
 
     return (
         <DashboardPageContainer>
-            { loggedIn ? (
+            { admin || volunteer ? (
                 <>
                     <FlowBar />
                     <Dashboard />

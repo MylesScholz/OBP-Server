@@ -13,11 +13,11 @@ const AdminLoginPageContainer = styled.div`
 `
 
 export default function AdminLoginPage() {
-    const { loggedIn } = useAuth()
+    const { admin } = useAuth()
 
     return (
         <AdminLoginPageContainer>
-            { loggedIn ? <Navigate to='/dashboard' /> : <AdminLoginForm /> }
+            { admin ? <Navigate to='/dashboard' /> : <AdminLoginForm /> }
         </AdminLoginPageContainer>
     )
 }

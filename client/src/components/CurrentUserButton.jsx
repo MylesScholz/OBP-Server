@@ -31,13 +31,13 @@ const CurrentUserButtonContainer = styled.div`
 `
 
 export default function CurrentUserButton() {
-    const { loggedIn } = useAuth()
     const [ accountModalOpen, setAccountModalOpen ] = useState(false)
+    const { admin, volunteer } = useAuth()
 
     return (
         <CurrentUserButtonContainer onKeyDown={(e) => e.key === 'Escape' ? setAccountModalOpen(false) : null }>
             <button id='logInButton' onClick={(e) => setAccountModalOpen(!accountModalOpen)}>
-                { loggedIn ? `Account: ${loggedIn}` : 'Log In' }
+                { admin || volunteer ? `User: ${admin || volunteer}` : 'Log In' }
             </button>
             { accountModalOpen && <LogoutModal setAccountModalOpen={setAccountModalOpen} /> }
         </CurrentUserButtonContainer>

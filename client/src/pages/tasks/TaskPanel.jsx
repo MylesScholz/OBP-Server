@@ -20,7 +20,7 @@ export default function TaskPanel() {
     const [ selectedTaskId, setSelectedTaskId ] = useState()
     const [ postTaskResponse, setPostTaskResponse ] = useState()
     const { query, setQuery } = useFlow()
-    const { loggedIn } = useAuth()
+    const { admin } = useAuth()
 
     /* Queries */
 
@@ -56,7 +56,7 @@ export default function TaskPanel() {
      * Generates download links for each output file in the currently selected task
      */
     const { data: downloads } = useQuery({
-        queryKey: ['downloads', subtasks, loggedIn],
+        queryKey: ['downloads', subtasks, admin],
         queryFn: async () => {
             const downloads = []
 

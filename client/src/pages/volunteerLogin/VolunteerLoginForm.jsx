@@ -4,6 +4,7 @@ import styled from '@emotion/styled'
 import axios from 'axios'
 
 import arrowBackIcon from '/src/assets/arrow_back.svg'
+import { useAuth } from '../../AuthProvider'
 
 const VolunteerLoginFormContainer = styled.form`
     display: grid;
@@ -124,6 +125,7 @@ const VolunteerLoginFormContainer = styled.form`
 
 export default function VolunteerLoginForm() {
     const [ disabled, setDisabled ] = useState(false)
+    const { volunteer, setVolunteer } = useAuth()
     const navigate = useNavigate()
 
     function handleSubmit(event) {
@@ -131,8 +133,11 @@ export default function VolunteerLoginForm() {
 
         setDisabled(true)
 
+        // TODO: check occurrences for submitted volunteer username or full name and update 'volunteer' (AuthProvider)
+        setVolunteer(event.target.volunteerUsername.value)
+
         event.target.reset()
-        // navigate('/dashboard')
+        navigate('/dashboard')
     }
 
     return (

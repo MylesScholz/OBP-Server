@@ -14,11 +14,11 @@ const DatasetsPageContainer = styled.div`
 `
 
 export default function DatasetsPage() {
-    const { loggedIn } = useAuth()
+    const { admin } = useAuth()
 
     return (
         <DatasetsPageContainer>
-            { loggedIn ? (
+            { admin ? (
                 <>
                     <FlowBar />
                     <DatasetsPanel />

@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import styled from '@emotion/styled'
 import axios from 'axios'
 
-import OccurrencesPanel from '../../components/OccurrencesPanel'
 import DashboardSearchPanel from './DashboardSearchPanel'
 import DashboardUploadPanel from './DashboardUploadPanel'
-import { useFlow } from '../../FlowProvider'
 import DashboardResultsHeader from './DashboardResultsHeader'
+import OccurrencesPanel from '../../components/OccurrencesPanel'
+import { useFlow } from '../../FlowProvider'
+import { useAuth } from '../../AuthProvider'
 
 const DashboardForm = styled.form`
     display: grid;
@@ -163,6 +164,7 @@ const DashboardForm = styled.form`
 export default function Dashboard() {
     const [ disabled, setDisabled ] = useState(false)
     const { query, setQuery, results, setResults } = useFlow()
+    const { admin } = useAuth()
     const hasSubmitted = useRef(false)
     const submitRef = useRef()
 
@@ -219,7 +221,7 @@ export default function Dashboard() {
         <DashboardForm onSubmit={ handleSubmit }>
             <div id='toolBar'>
                 <DashboardSearchPanel submitRef={submitRef} disabled={disabled} />
-                <DashboardUploadPanel disabled={disabled} />
+                { admin && <DashboardUploadPanel disabled={disabled} /> }
             </div>
 
             <DashboardResultsHeader handleEnter={handleEnter} disabled={disabled} />

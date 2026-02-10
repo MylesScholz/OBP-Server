@@ -83,7 +83,7 @@ const AppContainer = styled.div`
 `
 
 function App({ children }) {
-    const { loggedIn } = useAuth()
+    const { admin, volunteer } = useAuth()
     const navigate = useNavigate()
 
     return (
@@ -97,7 +97,7 @@ function App({ children }) {
                         <h3>The Bee Atlas Automated Interaction-Occurrence Data Pipeline</h3>
                     </div>
                 </div>
-                { loggedIn && <CurrentUserButton /> }
+                { (admin || volunteer) && <CurrentUserButton /> }
             </header>
             <main>
                 <FlowProvider>

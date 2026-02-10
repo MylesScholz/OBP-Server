@@ -2,10 +2,10 @@ import styled from '@emotion/styled'
 import { Navigate } from 'react-router'
 
 import FlowBar from '../../components/FlowBar'
-import Dashboard from './Dashboard'
+import AdminPanel from './AdminPanel'
 import { useAuth } from '../../AuthProvider'
 
-const DashboardPageContainer = styled.div`
+const AdminPageContainer = styled.div`
     display: flex;
     flex-direction: column;
     justify-content: start;
@@ -13,19 +13,19 @@ const DashboardPageContainer = styled.div`
     gap: 15px;
 `
 
-export default function DashboardPage() {
+export default function AdminPage() {
     const { loggedIn } = useAuth()
 
     return (
-        <DashboardPageContainer>
+        <AdminPageContainer>
             { loggedIn ? (
                 <>
                     <FlowBar />
-                    <Dashboard />
+                    <AdminPanel />
                 </>
             ) : (
                 <Navigate to='/' />
             )}
-        </DashboardPageContainer>
+        </AdminPageContainer>
     )
 }

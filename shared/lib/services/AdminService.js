@@ -55,7 +55,7 @@ class AdminService {
         if (deletedCount > 0) {
             return {
                 deleted: true,
-                deletedUsername: username
+                deletedUsername: username.username
             }
         } else {
             return { deleted: false }

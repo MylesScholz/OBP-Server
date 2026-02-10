@@ -12,6 +12,7 @@ import AdminLoginPage from './pages/adminLogin/AdminLoginPage'
 import DashboardPage from './pages/dashboard/DashboardPage'
 import TasksPage from './pages/tasks/TasksPage'
 import DatasetsPage from './pages/datasets/DatasetsPage'
+import AdminPage from './pages/admin/AdminPage'
 import VolunteerLoginPage from './pages/volunteerLogin/VolunteerLoginPage'
 
 const queryClient = new QueryClient()
@@ -27,6 +28,7 @@ const router = createBrowserRouter([
             { path: 'dashboard', element: <DashboardPage /> },
             { path: 'tasks', element: <TasksPage /> },
             { path: 'datasets', element: <DatasetsPage /> },
+            { path: 'admin', element: <AdminPage /> },
             { path: 'volunteerLogin', element: <VolunteerLoginPage /> }
         ]
     }

@@ -3,17 +3,18 @@ import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import styled from '@emotion/styled'
 
+import { useAuth } from '../../AuthProvider'
+
 const AdminManagementFormContainer = styled.div`
     display: flex;
     flex-direction: column;
+    align-items: start;
     gap: 10px;
 
-    border: 1px solid gray;
+    border: 1px solid #222;
     border-radius: 5px;
 
     padding: 20px;
-
-    min-width: 400px;
 
     h2 {
         margin: 0px;
@@ -54,8 +55,37 @@ const AdminManagementFormContainer = styled.div`
 
                     white-space: nowrap;
 
-                    input, select {
+                    select {
                         flex-grow: 1;
+
+                        border: 1px solid gray;
+                        border-radius: 5px;
+
+                        background-color: white;
+
+                        &:hover {
+                            background-color: #efefef;
+                        }
+                    }
+
+                    input {
+                        flex-grow: 1;
+
+                        border: 1px solid gray;
+                        border-radius: 5px;
+
+                        padding: 3px;
+                    }
+                }
+
+                input[type='submit'] {
+                    border: 1px solid gray;
+                    border-radius: 5px;
+
+                    background-color: white;
+
+                    &:hover {
+                        background-color: #efefef;
                     }
                 }
             }
@@ -85,14 +115,15 @@ export default function AdminManagementForm() {
     const [ selectedAdminId, setSelectedAdminId ] = useState()
     const [ formDisabled, setFormDisabled ] = useState()
     const [ queryResponse, setQueryResponse ] = useState()
+    const { loggedIn } = useAuth()
 
     const { error: adminsError, data: adminsData } = useQuery({
         queryKey: ['adminsQuery', queryResponse],
         queryFn: async () => {
-            const res = await fetch('/api/admins')
-            const resJSON = await res.json()
+            const response = await fetch('/api/admins')
+            const parsedResponse = await response.json()
 
-            return resJSON
+            return parsedResponse
         },
         refetchOnMount: 'always'
     })
@@ -122,9 +153,9 @@ export default function AdminManagementForm() {
             axios.delete(queryUrl).then((res) => {
                 setFormDisabled(false)
                 setQueryResponse({ status: res.status, data: res.data })
-            }).catch((err) => {
+            }).catch((error) => {
                 setFormDisabled(false)
-                setQueryResponse({ status: err.response?.status, error: err.response?.data?.error ?? err.message })
+                setQueryResponse({ status: error.response?.status, error: error.response?.data?.error ?? error.message })
             })
         }
     }
@@ -149,7 +180,7 @@ export default function AdminManagementForm() {
                             <>
                                 <div>
                                     <label htmlFor='newAdminUsername'>New Username:</label>
-                                    <input type='text' id='newAdminUsername' />
+                                    <input type='text' id='newAdminUsername' autoComplete='off' />
                                 </div>
                                 <div>
                                     <label htmlFor='newAdminPassword'>New Password:</label>
@@ -158,17 +189,20 @@ export default function AdminManagementForm() {
                                         minLength='8'
                                         maxLength='64'
                                         id='newAdminPassword'
+                                        autoComplete='new-password'
                                     />
                                 </div>
                             </>
                         }
                         { queryType === 'delete' &&
-                            <select id='adminIdToDelete' onChange={(event) => setSelectedAdminId(event.target.value)} required>
-                                <option value='' disabled selected={!selectedAdminId}>Select an admin...</option>
-                                {adminsData && adminsData.admins.map((admin) => (
-                                    <option value={admin._id} key={admin._id} selected={admin._id === selectedAdminId}>{admin.username}</option>
-                                ))}
-                            </select>
+                            <div>
+                                <select id='adminIdToDelete' onChange={(event) => setSelectedAdminId(event.target.value)} required>
+                                    <option value='' disabled selected={!selectedAdminId}>Select an admin account to delete...</option>
+                                    { adminsData?.admins?.filter((admin) => admin.username !== loggedIn).map((admin) => (
+                                        <option value={admin._id} key={admin._id} selected={admin._id === selectedAdminId}>{admin.username}</option>
+                                    ))}
+                                </select>
+                            </div>
                         }
                         <input type='submit' value='Submit' />
                     </fieldset>

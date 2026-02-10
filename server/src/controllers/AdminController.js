@@ -59,7 +59,7 @@ export default class AdminController {
      * Deletes a specific admin by ID, provided it is not the currently logged-in admin; returns the username of the deleted admin
      */
     static async deleteAdminById(req, res, next) {
-        if (req.params.id === req.adminId) {
+        if (req.params.id === req.adminId.toString()) {
             res.status(403).send({
                 error: 'Cannot delete the currently logged-in admin'
             })

@@ -9,7 +9,7 @@ const FlowBarContainer = styled.div`
     flex-direction: row;
     justify-content: start;
     align-items: center;
-    gap: 15px;
+    gap: 25px;
 
     border: 1px solid #222;
     border-radius: 10px;
@@ -42,10 +42,6 @@ const FlowBarContainer = styled.div`
             font-size: 16pt;
             font-weight: bold;
         }
-
-        img {
-            height: 100%;
-        }
     }
 `
 
@@ -58,15 +54,15 @@ export default function FlowBar() {
         <FlowBarContainer>
             <NavLink className='flowStage' to='/dashboard'>
                 <h3>Dashboard ({selectedString}{query.unsubmitted && <span style={{ color: 'dodgerblue' }}>*</span>} selected)</h3>
-                <img src={chevronRightIcon} alt='Next' />
             </NavLink>
             <NavLink className='flowStage' to='/tasks'>
                 <h3>Tasks</h3>
-                <img src={chevronRightIcon} alt='Next' />
             </NavLink>
             <NavLink className='flowStage' to='/datasets'>
                 <h3>Datasets</h3>
-                <img src={chevronRightIcon} alt='Next' />
+            </NavLink>
+            <NavLink className='flowStage' to='/admin'>
+                <h3>Administration</h3>
             </NavLink>
         </FlowBarContainer>
     )

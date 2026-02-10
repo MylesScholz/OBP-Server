@@ -58,9 +58,9 @@ export default function AdminMenu({ selectedTool, setSelectedTool }) {
 
             <div className='toolList'>
                 <button
-                    className={ selectedTool === 'login' ? 'selectedTool' : '' }
-                    onClick={() => setSelectedTool('login')}
-                >API Logins</button>
+                    className={ selectedTool === 'authorization' ? 'selectedTool' : '' }
+                    onClick={() => setSelectedTool('authorization')}
+                >API Authorization</button>
                 <button
                     className={ selectedTool === 'accounts' ? 'selectedTool' : '' }
                     onClick={() => setSelectedTool('accounts')}

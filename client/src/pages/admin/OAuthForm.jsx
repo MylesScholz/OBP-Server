@@ -36,17 +36,29 @@ const OAuthFormContainer = styled.div`
         &:hover {
             background-color: #efefef;
         }
+
+        &:link, &:visited {
+            color: #222;
+        }
     }
 `
 
 export default function OAuthForm() {
+    const iNaturalistAuthBaseUrl = 'https://www.inaturalist.org'
+    const iNaturalistClientId = ''
+    const iNaturalistRedirectUri = 'http://melittologist.org/admin'
+    const iNaturalistAuthUrl = `${iNaturalistAuthBaseUrl}/oauth/authorize?client_id=${iNaturalistClientId}&redirect_uri=${iNaturalistRedirectUri}&response_type=code`
+
     return (
         <OAuthFormContainer>
             <h2>iNaturalist Account</h2>
-            <a id='iNaturalistLogIn'>Log In</a>
+            <a
+                id='iNaturalistAuthorize'
+                href={iNaturalistAuthUrl}
+            >Authorize</a>
 
             <h2>Google Account</h2>
-            <a id='GoogleLogIn'>Log In</a>
+            <a id='GoogleAuthorize'>Authorize</a>
         </OAuthFormContainer>
     )
 }

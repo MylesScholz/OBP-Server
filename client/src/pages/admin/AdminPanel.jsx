@@ -12,13 +12,13 @@ const AdminPanelContainer = styled.div`
 `
 
 export default function AdminPanel() {
-    const [ selectedTool, setSelectedTool ] = useState('login')
+    const [ selectedTool, setSelectedTool ] = useState('authorization')
 
     return (
         <AdminPanelContainer>
             <AdminMenu selectedTool={selectedTool} setSelectedTool={setSelectedTool} />
 
-            { selectedTool === 'login' &&
+            { selectedTool === 'authorization' &&
                 <OAuthForm />
             }
             { selectedTool === 'accounts' &&

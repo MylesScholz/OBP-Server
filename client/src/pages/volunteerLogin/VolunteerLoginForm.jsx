@@ -5,6 +5,7 @@ import axios from 'axios'
 
 import arrowBackIcon from '/src/assets/arrow_back.svg'
 import { useAuth } from '../../AuthProvider'
+import { useFlow } from '../../FlowProvider'
 
 const VolunteerLoginFormContainer = styled.form`
     display: grid;
@@ -126,6 +127,7 @@ const VolunteerLoginFormContainer = styled.form`
 export default function VolunteerLoginForm() {
     const [ disabled, setDisabled ] = useState(false)
     const { admin, setVolunteer } = useAuth()
+    const { query, setQuery } = useFlow()
     const navigate = useNavigate()
 
     function handleSubmit(event) {
@@ -145,6 +147,7 @@ export default function VolunteerLoginForm() {
 
                 if (occurrence) {
                     setVolunteer(!admin ? occurrence['userLogin'] : null)   // Admin login supercedes volunteer
+                    setQuery({ ...query, valueQueries: { 'userLogin': occurrence['userLogin'] } })
                     navigate('/dashboard')
                 }
             }).catch((error) => {

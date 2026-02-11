@@ -7,7 +7,7 @@ import { parseQueryParameters } from '../../shared/lib/utils/utilities.js'
 export default class OccurrencesController {
     static async getOccurrencesPage(req, res, next) {
         // Parse query parameters
-        const params = parseQueryParameters(req.query)
+        const params = parseQueryParameters(req.query, req.adminId)
 
         if (params.error) {
             res.status(params.error.status ?? 400).send({
@@ -57,7 +57,7 @@ export default class OccurrencesController {
 
     static async getOccurrencesDownload(req, res, next) {
         // Parse query parameters for validation only
-        const params = parseQueryParameters(req.query)
+        const params = parseQueryParameters(req.query, req.adminId)
 
         if (params.error) {
             res.status(params.error.status ?? 400).send({

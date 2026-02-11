@@ -52,7 +52,7 @@ function getOFV(ofvs, fieldName) {
     return ofv?.value ?? ''
 }
 
-function parseQueryParameters(query) {
+function parseQueryParameters(query, adminId) {
     const params = {
         page: 1,
         pageSize: 50,
@@ -66,7 +66,18 @@ function parseQueryParameters(query) {
         sortConfig: [ { field: 'composite_sort', direction: 1, type: 'string' } ]
     }
 
+    // Non-admins must query a single userLogin value
+    const userLoginQuery = query[fieldNames.iNaturalistAlias]
+    if (!adminId && (!userLoginQuery || userLoginQuery.split(',').length > 1)) {
+        params.error = {
+            status: 401,
+            message: 'Unauthorized requests must query a single userLogin'
+        }
+    }
+
     // Parse query parameters
+
+    // Pagination parameters
     const parsedPage = parseInt(query.page)
     if (query.page && !isNaN(parsedPage)) {
         params.page = parsedPage
@@ -74,9 +85,10 @@ function parseQueryParameters(query) {
 
     const parsedPerPage = parseInt(query.per_page)
     if (query.per_page && !isNaN(parsedPerPage)) {
-        params.pageSize = parsedPerPage
+        params.pageSize = Math.min(parsedPerPage, 5000)     // Limit page size to 5000
     }
 
+    // Date parameters
     const startDate = new Date(query.start_date ?? '')
     const endDate = new Date(query.end_date ?? '')
     if (startDate > endDate) {
@@ -92,7 +104,7 @@ function parseQueryParameters(query) {
         // Set time to noon UTC to avoid location-based date variance
         startDate.setHours(12, 0, 0, 0)
         params.filter.date.$gte = startDate
-    }        
+    }
     if (endDate.toString() !== 'Invalid Date') {
         if (!params.filter.date) params.filter.date = {}
 

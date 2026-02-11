@@ -1,4 +1,5 @@
 import { AdminService } from '../../shared/lib/services/index.js'
+import { InvalidArgumentError } from '../../shared/lib/utils/errors.js'
 
 /*
  * requireAuthentication()
@@ -25,4 +26,28 @@ async function requireAuthentication(req, res, next) {
     }
 }
 
-export { requireAuthentication }
+/*
+ * checkAuthentication()
+ * A middleware function that checks for a valid JWT but does not require one
+ */
+async function checkAuthentication(req, res, next) {
+    const token = req.cookies.token
+
+    try {
+        const { loggedIn, id } = await AdminService.verifyLogin(token)
+
+        if (loggedIn) {
+            req.adminId = id
+        }
+
+        next()
+    } catch (error) {
+        if (error instanceof InvalidArgumentError) {
+            next()
+        } else {
+            next(error)
+        }
+    }
+}
+
+export { requireAuthentication, checkAuthentication }

@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { useRef } from 'react'
 import styled from '@emotion/styled'
 
 import closeIcon from '/src/assets/close.svg'
 import addIcon from '/src/assets/add.svg'
+import { useAuth } from '../../AuthProvider'
 import { useFlow } from '../../FlowProvider'
 
 const DashboardSearchPanelFieldset = styled.fieldset`
@@ -203,6 +203,7 @@ const DashboardSearchPanelFieldset = styled.fieldset`
 export default function DashboardSearchPanel({ submitRef, disabled }) {
     const [ selectedFieldName, setSelectedFieldName ] = useState('')
     const [ queryText, setQueryText ] = useState('')
+    const { volunteer } = useAuth()
     const { query, setQuery } = useFlow()
 
     // Occurrence field names
@@ -287,7 +288,14 @@ export default function DashboardSearchPanel({ submitRef, disabled }) {
     }
 
     function handleAdd(event) {
-        if (event) event.preventDefault()
+        event?.preventDefault()
+
+        // Prevent volunteers from adding other userLogin values
+        if (volunteer && selectedFieldName === 'userLogin') {
+            setSelectedFieldName('')
+            setQueryText('')
+            return
+        }
 
         // Don't query by blank field names
         if (!selectedFieldName) {
@@ -305,7 +313,10 @@ export default function DashboardSearchPanel({ submitRef, disabled }) {
     }
 
     function handleRemove(event, fieldName, removeValue) {
-        event.preventDefault()
+        event?.preventDefault()
+
+        // Prevent volunteers from remove userLogin values
+        if (volunteer && fieldName === 'userLogin') return
 
         if (Object.keys(query.valueQueries).includes(fieldName)) {
             const values = query.valueQueries[fieldName]?.split(',') ?? []

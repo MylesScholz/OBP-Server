@@ -313,8 +313,9 @@ export default class OccurrenceRepository extends BaseRepository {
         let processedDocument = Object.assign(document, updateDocument)
 
         // Set meta fields
-        processedDocument = this.setSortField(updateDocument, this.sortConfig)
+        processedDocument = this.setSortField(processedDocument, this.sortConfig)
         processedDocument = this.setDateField(processedDocument)
+        processedDocument = { ...updateDocument, composite_sort: processedDocument.composite_sort, date: processedDocument.date }
 
         // Update the document
         return await super.updateById(id, { $set: processedDocument }, options)
@@ -334,6 +335,7 @@ export default class OccurrenceRepository extends BaseRepository {
                 // Set meta fields
                 processedDocument = this.setSortField(processedDocument, this.sortConfig)
                 processedDocument = this.setDateField(processedDocument)
+                processedDocument = { ...updateDocument, composite_sort: processedDocument.composite_sort, date: processedDocument.date }
 
                 const response = await super.updateById(processedDocument._id, { $set: processedDocument })
                 modifiedCount += response?.modifiedCount ?? 0

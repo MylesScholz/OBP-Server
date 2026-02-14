@@ -2,7 +2,20 @@ import amqp from 'amqplib'
 
 import { messageBroker } from '../shared/lib/config/environment.js'
 import { TaskService } from '../shared/lib/services/index.js'
-import { AddressesSubtaskHandler, DownloadSubtaskHandler, EmailsSubtaskHandler, LabelsSubtaskHandler, ObservationsSubtaskHandler, OccurrencesSubtaskHandler, PivotsSubtaskHandler, PlantListSubtaskHandler, StewardshipReportSubtaskHandler, SyncOccurrencesSubtaskHandler, UploadSubtaskHandler } from './handlers/index.js'
+import {
+    AddressesSubtaskHandler,
+    DeterminationsSubtaskHandler,
+    DownloadSubtaskHandler,
+    EmailsSubtaskHandler,
+    LabelsSubtaskHandler,
+    ObservationsSubtaskHandler,
+    OccurrencesSubtaskHandler,
+    PivotsSubtaskHandler,
+    PlantListSubtaskHandler,
+    StewardshipReportSubtaskHandler,
+    SyncOccurrencesSubtaskHandler,
+    UploadSubtaskHandler
+} from './handlers/index.js'
 
 class TaskConsumer {
     constructor() {
@@ -62,43 +75,46 @@ class TaskConsumer {
         try {
             const task = await TaskService.getTaskById(taskId)
 
-            const occurrencesHandler = new OccurrencesSubtaskHandler()
-            const observationsHandler = new ObservationsSubtaskHandler()
-            const labelsHandler = new LabelsSubtaskHandler()
             const addressesHandler = new AddressesSubtaskHandler()
+            const determinationsHandler = new DeterminationsSubtaskHandler()
+            const downloadHandler = new DownloadSubtaskHandler()
             const emailsHandler = new EmailsSubtaskHandler()
+            const labelsHandler = new LabelsSubtaskHandler()
+            const observationsHandler = new ObservationsSubtaskHandler()
+            const occurrencesHandler = new OccurrencesSubtaskHandler()
             const pivotsHandler = new PivotsSubtaskHandler()
             const plantListHandler = new PlantListSubtaskHandler()
             const stewardshipReportHandler = new StewardshipReportSubtaskHandler()
-            const downloadHandler = new DownloadSubtaskHandler()
-            const uploadHandler = new UploadSubtaskHandler()
             const syncOccurrencesHandler = new SyncOccurrencesSubtaskHandler()
+            const uploadHandler = new UploadSubtaskHandler()
 
             for (const subtask of task.subtasks) {
                 console.log(`\t${new Date().toLocaleTimeString('en-US')} Processing ${subtask.type} subtask...`)
 
-                if (subtask.type === 'occurrences') {
-                    await occurrencesHandler.handleTask(task._id)
-                } else if (subtask.type === 'observations') {
-                    await observationsHandler.handleTask(task._id)
-                } else if (subtask.type === 'labels') {
-                    await labelsHandler.handleTask(task._id)
-                } else if (subtask.type === 'addresses') {
+                if (subtask.type === 'addresses') {
                     await addressesHandler.handleTask(task._id)
+                } else if (subtask.type === 'determinations') {
+                    await determinationsHandler.handleTask(task._id)
+                } else if (subtask.type === 'download') {
+                    await downloadHandler.handleTask(task._id)
                 } else if (subtask.type === 'emails') {
                     await emailsHandler.handleTask(task._id)
+                } else if (subtask.type === 'labels') {
+                    await labelsHandler.handleTask(task._id)
+                } else if (subtask.type === 'observations') {
+                    await observationsHandler.handleTask(task._id)
+                } else if (subtask.type === 'occurrences') {
+                    await occurrencesHandler.handleTask(task._id)
                 } else if (subtask.type === 'pivots') {
                     await pivotsHandler.handleTask(task._id)
                 } else if (subtask.type === 'plantList') {
                     await plantListHandler.handleTask(task._id)
                 } else if (subtask.type === 'stewardshipReport') {
                     await stewardshipReportHandler.handleTask(task._id)
-                } else if (subtask.type === 'download') {
-                    await downloadHandler.handleTask(task._id)
-                } else if (subtask.type === 'upload') {
-                    await uploadHandler.handleTask(task._id)
                 } else if (subtask.type === 'syncOccurrences') {
                     await syncOccurrencesHandler.handleTask(task._id)
+                } else if (subtask.type === 'upload') {
+                    await uploadHandler.handleTask(task._id)
                 }
             }
 

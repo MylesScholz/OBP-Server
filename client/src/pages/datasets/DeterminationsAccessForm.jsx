@@ -1,6 +1,9 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import styled from '@emotion/styled'
+
+import { useAuth } from '../../AuthProvider'
 
 const DeterminationsAccessFormContainer = styled.div`
     display: flex;
@@ -103,12 +106,75 @@ export default function DeterminationsAccessForm() {
     const [ uploadFormat, setUploadFormat ] = useState('ecdysis')
     const [ disabled, setDisabled ] = useState(false)
     const [ queryResponse, setQueryResponse ] = useState()
+    const [ selectedTaskId, setSelectedTaskId ] = useState()
+    const { admin } = useAuth()
+
+    /* Queries */
+
+    /*
+     * Selected Task Query
+     * Fetches the task data for the currently selected task
+     */
+    const { error: selectedTaskQueryError, data: selectedTaskData } = useQuery({
+        queryKey: ['selectedTask', selectedTaskId],
+        queryFn: async () => {
+            const response = await fetch(`/api/tasks/${selectedTaskId}`)
+            const selectedTaskResponse = await response.json()
+
+            return { ...selectedTaskResponse, status: response.status, statusText: response.statusText }
+        },
+        refetchInterval: 1000,
+        refetchOnMount: 'always',
+        enabled: !!selectedTaskId
+    })
+
+    // On remount, update subtasks based on the selected task data
+    let subtasks = selectedTaskData?.task?.subtasks ?? []
+
+    /*
+     * Downloads Query
+     * Generates download links for each output file in the currently selected task
+     */
+    const { data: downloads } = useQuery({
+        queryKey: ['downloads', subtasks, admin],
+        queryFn: async () => {
+            const downloads = []
+
+            for (const subtask of subtasks) {
+                const outputs = subtask.outputs ?? []
+                for (const output of outputs) {
+                    const response = await axios.get(output.uri, { responseType: 'blob' }).catch((error) => {
+                        return { status: error.status }
+                    })
+
+                    const download = {
+                        fileName: output.fileName,
+                        type: output.type,
+                        subtype: output.subtype,
+                        subtask: subtask.type,
+                        responseStatus: response.status
+                    }
+                    if (response.status === 200) {
+                        download.url = URL.createObjectURL(response.data)
+                    }
+                    downloads.push(download)
+                }
+            }
+            
+            return downloads
+        },
+        refetchOnMount: 'always',
+        enabled: subtasks.some((subtask) => !!subtask.outputs)
+    })
+
+    /* Handler Functions */
 
     function handleSubmit(event) {
         event.preventDefault()
 
         setDisabled(true)
-        setQueryResponse(undefined)
+        setQueryResponse(null)
+        setSelectedTaskId(null)
 
         if (queryType === 'get') {
             axios.get('/api/determinations', { responseType: 'blob' }).then((res) => {
@@ -126,6 +192,9 @@ export default function DeterminationsAccessForm() {
             axios.postForm('/api/determinations', formData).then((res) => {
                 setDisabled(false)
                 setQueryResponse({ status: res.status, data: res.data })
+
+                const postedTaskId = res.data?.uri?.replace('/api/tasks/', '')
+                setSelectedTaskId(postedTaskId)
             }).catch((err) => {
                 setDisabled(false)
                 setQueryResponse({ status: err.response?.status, error: err.response?.data?.error ?? err.message })
@@ -181,11 +250,35 @@ export default function DeterminationsAccessForm() {
                         { queryResponse.status === 200 && queryType === 'get' &&
                             <a href={queryResponse.data} download='determinations.csv'>Download Determinations Dataset</a>
                         }
-                        { queryResponse.status === 200 && queryType === 'post' &&
-                            <p>File uploaded successfully</p>
-                        }
                         { queryResponse.error &&
                             <p>Error: {queryResponse.error}</p>
+                        }
+                        { selectedTaskData?.task &&
+                            <>
+                                { selectedTaskData?.task.status &&
+                                    <p>Status: {selectedTaskData?.task.status}</p>
+                                }
+                                { selectedTaskData.task.progress?.currentStep &&
+                                    <p>Current Step: {selectedTaskData.task.progress.currentStep}</p>
+                                }
+                                { selectedTaskData.task.progress?.percentage &&
+                                    <p>{selectedTaskData.task.progress.percentage}</p>
+                                }
+                                {
+                                    downloads?.map((d) => {
+                                        if (d.responseStatus === 200) {
+                                            return <a href={d.url} download={d.fileName}>Download {d.type}{d.subtype ? ` (${d.subtype})` : ''} file</a>
+                                        } else if (d.responseStatus === 401) {
+                                            return <p className='authRequiredDownloadMessage'>Authentication Required</p>
+                                        } else {
+                                            return <p>Error {d.responseStatus}</p>
+                                        }
+                                    })
+                                }
+                            </>
+                        }
+                        { selectedTaskData?.error &&
+                            <p>Error: {selectedTaskData.status} {selectedTaskData.statusText}</p>
                         }
                     </div>
                 }

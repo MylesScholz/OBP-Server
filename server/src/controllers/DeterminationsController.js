@@ -1,6 +1,7 @@
 import path from 'path'
 
-import { DeterminationsService } from '../../shared/lib/services/index.js'
+import { TaskService } from '../../shared/lib/services/index.js'
+import { InvalidArgumentError, ValidationError } from '../../shared/lib/utils/errors.js'
 
 export default class DeterminationsController {
     static async getDeterminationsFile(req, res, next) {
@@ -24,15 +25,30 @@ export default class DeterminationsController {
             return
         }
 
-        // Delete previous determinations from database
-        await DeterminationsService.deleteDeterminations()
-        // Read determinations data from CSV into database
-        await DeterminationsService.createDeterminationsFromFile()
-        // Append determinations data from the upload file onto database determinations
-        await DeterminationsService.upsertDeterminationsFromFile(path.join('./shared/data/uploads/', req.file.filename), req.body.format)
-        // Write database determinations to determinations.csv
-        await DeterminationsService.writeDeterminationsFromDatabase()
+        try {
+            // Create task and send its ID to the RabbitMQ queue
+            const subtasks = [
+                {
+                    type: 'determinations',
+                    format: req.body.format
+                }
+            ]
+            const { insertedId, createdAt } = await TaskService.createTask(JSON.stringify(subtasks), req.file.filename)
 
-        res.status(200).send()
+            // Return 'Accepted' response and HATEOAS link
+            res.status(202).send({
+                uri: `/api/tasks/${insertedId}`,
+                createdAt
+            })
+        } catch (error) {
+            if (error instanceof InvalidArgumentError || error instanceof ValidationError) {
+                res.status(400).send({
+                    error: error.message
+                })
+            } else {
+                // Forward to 500-code middleware
+                next(error)
+            }
+        }
     }
 }

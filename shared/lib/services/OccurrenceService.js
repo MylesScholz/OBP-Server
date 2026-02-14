@@ -903,28 +903,31 @@ class OccurrenceService {
     async updateOccurrenceFromDetermination(occurrence, determination) {
         if (!occurrence) return
 
-        let updateDocument = { ...occurrence }
+        // List of aliases used in the constant field name objects (fieldNames and determinations.fieldNames)
+        const fieldNameAliases = [
+            'beePhylum',
+            'beeClass',
+            'beeOrder',
+            'beeFamily',
+            'beeGenus',
+            'beeSubgenus',
+            'specificEpithet',
+            'taxonomicNotes',
+            'scientificName',
+            'sex',
+            'caste',
+            'beeTaxonRank',
+            'identifiedBy',
+            'volDetFamily',
+            'volDetGenus',
+            'volDetSpecies',
+            'volDetSex',
+            'volDetCaste'
+        ]
+        const updateDocument = {}
+        fieldNameAliases.forEach((alias) => updateDocument[fieldNames[alias]] = determination[determinations.fieldNames[alias]] ?? '')
 
-        updateDocument[fieldNames.beePhylum] = determination[determinations.fieldNames.beePhylum] ?? ''
-        updateDocument[fieldNames.beeClass] = determination[determinations.fieldNames.beeClass] ?? ''
-        updateDocument[fieldNames.beeOrder] = determination[determinations.fieldNames.beeOrder] ?? ''
-        updateDocument[fieldNames.beeFamily] = determination[determinations.fieldNames.beeFamily] ?? ''
-        updateDocument[fieldNames.beeGenus] = determination[determinations.fieldNames.beeGenus] ?? ''
-        updateDocument[fieldNames.beeSubgenus] = determination[determinations.fieldNames.beeSubgenus] ?? ''
-        updateDocument[fieldNames.specificEpithet] = determination[determinations.fieldNames.specificEpithet] ?? ''
-        updateDocument[fieldNames.taxonomicNotes] = determination[determinations.fieldNames.taxonomicNotes] ?? ''
-        updateDocument[fieldNames.scientificName] = determination[determinations.fieldNames.scientificName] ?? ''
-        updateDocument[fieldNames.sex] = determination[determinations.fieldNames.sex] ?? ''
-        updateDocument[fieldNames.caste] = determination[determinations.fieldNames.caste] ?? ''
-        updateDocument[fieldNames.beeTaxonRank] = determination[determinations.fieldNames.beeTaxonRank] ?? ''
-        updateDocument[fieldNames.identifiedBy] = determination[determinations.fieldNames.identifiedBy] ?? ''
-        updateDocument[fieldNames.volDetFamily] = determination[determinations.fieldNames.volDetFamily] ?? ''
-        updateDocument[fieldNames.volDetGenus] = determination[determinations.fieldNames.volDetGenus] ?? ''
-        updateDocument[fieldNames.volDetSpecies] = determination[determinations.fieldNames.volDetSpecies] ?? ''
-        updateDocument[fieldNames.volDetSex] = determination[determinations.fieldNames.volDetSex] ?? ''
-        updateDocument[fieldNames.volDetCaste] = determination[determinations.fieldNames.volDetCaste] ?? ''
-
-        return await this.repository.updateById(updateDocument._id, updateDocument)
+        return await this.repository.updateById(occurrence._id, updateDocument)
     }
 
     /*

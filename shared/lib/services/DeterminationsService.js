@@ -26,7 +26,7 @@ class DeterminationsService {
 
         // If format is 'ecdysis', try to extract the fieldNumber from the catalogNumber field
         if (format === 'ecdysis') {
-            determination[determinations.fieldNames.fieldNumber] ||= document[fieldNames.catalogNumber]?.replace('WSDA_', '') ?? ''
+            determination[determinations.fieldNames.fieldNumber] = document[fieldNames.catalogNumber]?.replace('WSDA_', '') ?? ''
         }
 
         // Set the fieldNumber field as the _id (key) field
@@ -83,7 +83,7 @@ class DeterminationsService {
      * createDeterminationsFromFile()
      * Reads the determinations file chunk-by-chunk and inserts it into the database
      */
-    async createDeterminationsFromFile() {
+    async createDeterminationsFromFile(updateProgress = null) {
         const chunkSize = 5000
         // Return object containing information about inserted and duplicate determinations
         const results = {
@@ -92,7 +92,7 @@ class DeterminationsService {
             duplicates: []
         }
 
-        for await (const chunk of FileManager.readCSVChunks(this.filePath, chunkSize)) {
+        for await (const chunk of FileManager.readCSVChunks(this.filePath, chunkSize, updateProgress)) {
             const chunkResults = await this.createDeterminations(chunk)
             
             // Add the results for this chunk to the running total
@@ -166,7 +166,7 @@ class DeterminationsService {
      * upsertDeterminationsFromFile()
      * Inserts or updates determinations data from a given file path into the database
      */
-    async upsertDeterminationsFromFile(filePath, format) {
+    async upsertDeterminationsFromFile(filePath, format, updateProgress = null) {
         const chunkSize = 5000
         // Return object containing information about updated and inserted determinations
         const results = {
@@ -175,13 +175,22 @@ class DeterminationsService {
             upsertedIds: []
         }
 
-        for await (const chunk of FileManager.readCSVChunks(filePath, chunkSize)) {
+        for await (const chunk of FileManager.readCSVChunks(filePath, chunkSize, updateProgress)) {
             // Filter 'undetermined' records (from Ecdysis)
             const filteredChunk = chunk.filter((record) => {
-                // Check that some field (from the template fieldset) is defined other than fieldNumber and sex
-                const determinationFields = Object.keys(determinations.template).filter((key) => key !== determinations.fieldNames.sex && key !== determinations.fieldNames.fieldNumber)
+                // Create a list of template fields excluding fieldNumber and sex
+                const determinationFields = Object.keys(determinations.template).filter((field) =>
+                    field !== determinations.fieldNames.sex &&
+                    field !== determinations.fieldNames.fieldNumber
+                )
+
+                // Check that some field is defined other than fieldNumber and sex
                 // If sex is defined and not 'undetermined', include the record as well
-                return determinationFields.some((key) => !!record[key]) || (record[determinations.fieldNames.sex] !== 'undetermined' && !!record[determinations.fieldNames.sex])
+                return determinationFields.some((field) => !!record[field]) ||      // Record has some defined field other than fieldNumber and sex OR
+                    (
+                        !!record[determinations.fieldNames.sex] &&                  // Sex is defined AND
+                        record[determinations.fieldNames.sex] !== 'undetermined'    // Sex is not 'undetermined'
+                    )
             })
             const chunkResults = await this.upsertDeterminations(filteredChunk, format)
 
@@ -191,6 +200,14 @@ class DeterminationsService {
         }
 
         return results
+    }
+
+    /*
+     * getDeterminationById()
+     * Returns a single determination matching a given ID (field number)
+     */
+    async getDeterminationById(id, options = {}) {
+        return await this.repository.findById(id, options)
     }
 
     /*
@@ -210,14 +227,23 @@ class DeterminationsService {
     }
 
     /*
+     * updateDeterminationById()
+     * Updates a single determination with a given ID (field number)
+     */
+    async updateDeterminationById(id, updateDocument) {
+        return await this.repository.updateById(id, { $set: updateDocument })
+    }
+
+    /*
      * writeDeterminationsFromDatabase()
      * Writes determinations in the database to determinations.csv
      */
-    async writeDeterminationsFromDatabase(filter = {}) {
+    async writeDeterminationsFromDatabase(filter = {}, updateProgress = null) {
         await FileManager.writeCSVFromDatabase(
             this.filePath,
             this.header,
-            async (page) => this.getDeterminationsPage({ page, filter })
+            async (page) => this.getDeterminationsPage({ page, filter }),
+            updateProgress
         )
     }
 

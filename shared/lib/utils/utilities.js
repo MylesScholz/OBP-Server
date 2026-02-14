@@ -44,14 +44,18 @@ function delay(mSec) {
 }
 
 /*
-* getOFV()
-* Looks up the value of an iNaturalist observation field by name
-*/
+ * getOFV()
+ * Looks up the value of an iNaturalist observation field by name
+ */
 function getOFV(ofvs, fieldName) {
     const ofv = ofvs?.find((field) => field.name === fieldName)
     return ofv?.value ?? ''
 }
 
+/*
+ * parseQueryParameters()
+ * Parses API query parameters into a valid database query
+ */
 function parseQueryParameters(query, adminId) {
     const params = {
         page: 1,

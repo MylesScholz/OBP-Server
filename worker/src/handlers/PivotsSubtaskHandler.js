@@ -83,7 +83,6 @@ export default class PivotsSubtaskHandler extends BaseSubtaskHandler {
         // Fetch the task, subtask, and previous outputs
         const task = await TaskService.getTaskById(taskId)
         const subtask = task.subtasks.find((subtask) => subtask.type === 'pivots')
-        const previousSubtaskOutputs = task.result?.subtaskOutputs ?? []
 
         // Input and output file names
 

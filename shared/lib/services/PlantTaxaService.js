@@ -1,8 +1,8 @@
 import ApiService from './ApiService.js'
 import FileManager from '../utils/FileManager.js'
 
-class TaxaService {
-    constructor(apiService) {
+class PlantTaxaService {
+    constructor() {
         this.filePath = './shared/data/taxa.json'
         this.taxa = {}
 
@@ -142,4 +142,4 @@ class TaxaService {
     }
 }
 
-export default new TaxaService()
+export default new PlantTaxaService()

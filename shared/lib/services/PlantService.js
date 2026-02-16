@@ -1,7 +1,7 @@
 import { PlantRepository } from '../repositories/index.js'
 import { plants } from '../utils/constants.js'
+import PlantTaxaService from './PlantTaxaService.js'
 import FileManager from '../utils/FileManager.js'
-import TaxaService from './TaxaService.js'
 
 class PlantService {
     constructor() {
@@ -43,9 +43,9 @@ class PlantService {
         const plant = Object.assign({}, plants.template)
 
         // Get plant ancestry and synonyms
-        const plantAncestry = TaxaService.getPlantAncestry(observation.taxon)
+        const plantAncestry = PlantTaxaService.getPlantAncestry(observation.taxon)
         const synonymIds = observation.taxon?.current_synonymous_taxon_ids?.map((id) => id.toString()) ?? []
-        const synonyms = TaxaService.getTaxonNamesByIds(synonymIds)
+        const synonyms = PlantTaxaService.getTaxonNamesByIds(synonymIds)
 
         // Tag this plant as new
         plant.new = true

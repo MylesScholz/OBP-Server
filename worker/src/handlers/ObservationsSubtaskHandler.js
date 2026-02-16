@@ -1,6 +1,6 @@
 import BaseSubtaskHandler from './BaseSubtaskHandler.js'
 import { fieldNames, fileLimits } from '../../shared/lib/utils/constants.js'
-import { ElevationService, ObservationService, OccurrenceService, PlacesService, TaskService, TaxaService, UsernamesService } from '../../shared/lib/services/index.js'
+import { ElevationService, ObservationService, OccurrenceService, PlacesService, TaskService, PlantTaxaService, UsernamesService } from '../../shared/lib/services/index.js'
 import FileManager from '../../shared/lib/utils/FileManager.js'
 
 export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
@@ -222,7 +222,7 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
 
         await TaskService.logTaskStep(taskId, 'Updating taxonomy data')
 
-        await TaxaService.updateTaxaFromObservations(observations, this.#createUpdateProgressFn(taskId))
+        await PlantTaxaService.updateTaxaFromObservations(observations, this.#createUpdateProgressFn(taskId))
 
         // Update usernames data in memory
         UsernamesService.readUsernames()

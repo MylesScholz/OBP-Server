@@ -3,10 +3,10 @@ import Crypto from 'node:crypto'
 import { OccurrenceRepository } from '../repositories/index.js'
 import { fieldNames, template, nonEmptyFields, ofvs, abbreviations, determinations, requiredFields } from '../utils/constants.js'
 import { includesStreetSuffix, getDayOfYear, getOFV } from '../utils/utilities.js'
-import PlacesService from './PlacesService.js'
-import TaxaService from './TaxaService.js'
-import UsernamesService from './UsernamesService.js'
 import ElevationService from './ElevationService.js'
+import PlacesService from './PlacesService.js'
+import PlantTaxaService from './PlantTaxaService.js'
+import UsernamesService from './UsernamesService.js'
 import FileManager from '../utils/FileManager.js'
 
 
@@ -292,7 +292,7 @@ class OccurrenceService {
         let { firstName, firstNameInitial, lastName } = UsernamesService.getUserName(observation.user?.login)
 
         // Look up the plant ancestry and format it
-        const plantAncestry = TaxaService.getPlantAncestry(observation.taxon)
+        const plantAncestry = PlantTaxaService.getPlantAncestry(observation.taxon)
 
         // Parse country, state/province, and county
         const { country, stateProvince, county } =  PlacesService.getPlaceNames(observation.place_ids)
@@ -878,7 +878,7 @@ class OccurrenceService {
             updateDocument[fieldNames.relatedResourceId] = observation.uuid
 
             // Look up and update the plant taxonomy
-            const plantTaxonomy = TaxaService.getPlantAncestry(observation.taxon)
+            const plantTaxonomy = PlantTaxaService.getPlantAncestry(observation.taxon)
             updateDocument[fieldNames.plantPhylum] = plantTaxonomy.phylum
             updateDocument[fieldNames.plantOrder] = plantTaxonomy.order
             updateDocument[fieldNames.plantFamily] = plantTaxonomy.family

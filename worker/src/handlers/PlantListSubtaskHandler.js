@@ -1,5 +1,5 @@
 import BaseSubtaskHandler from './BaseSubtaskHandler.js'
-import { ApiService, ObservationService, PlantService, TaskService, TaxaService } from '../../shared/lib/services/index.js'
+import { ApiService, ObservationService, PlantService, TaskService, PlantTaxaService } from '../../shared/lib/services/index.js'
 
 export default class PlantListSubtaskHandler extends BaseSubtaskHandler {
     constructor() {
@@ -44,7 +44,7 @@ export default class PlantListSubtaskHandler extends BaseSubtaskHandler {
 
         await TaskService.logTaskStep(taskId, 'Updating taxonomy data')
         
-        await TaxaService.updateTaxaFromObservations(observations, this.#createUpdateProgressFn(taskId))
+        await PlantTaxaService.updateTaxaFromObservations(observations, this.#createUpdateProgressFn(taskId))
 
         await TaskService.logTaskStep(taskId, 'Combining records from observations and plant list')
 

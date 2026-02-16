@@ -1,6 +1,5 @@
+import { useEffect, useRef } from 'react'
 import styled from '@emotion/styled'
-import { useEffect } from 'react'
-import { useRef } from 'react'
 
 const OccurrencesPanelContainer = styled.div`
     position: relative;
@@ -8,6 +7,8 @@ const OccurrencesPanelContainer = styled.div`
     display: grid;
     grid-template-columns: repeat(61, 1fr);
     grid-auto-rows: 22px;
+
+    border: 1px solid #222;
 
     padding-bottom: 12px;
 
@@ -20,7 +21,7 @@ const OccurrencesPanelContainer = styled.div`
     p {
         margin: 0px;
 
-        border: 0.5px solid #222;
+        border: 1px solid #222;
 
         padding: 2px;
 
@@ -106,7 +107,7 @@ export default function OccurrencesPanel({ occurrences }) {
         'genusVolDet',
         'speciesVolDet',
         'sexVolDet',
-        'casteVolDet',
+        'casteVolDet'
     ]
 
     // Convert vertical scrolling into horizontal scrolling

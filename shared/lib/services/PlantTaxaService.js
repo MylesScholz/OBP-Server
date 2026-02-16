@@ -3,7 +3,7 @@ import FileManager from '../utils/FileManager.js'
 
 class PlantTaxaService {
     constructor() {
-        this.filePath = './shared/data/taxa.json'
+        this.filePath = './shared/data/plantTaxa.json'
         this.taxa = {}
 
         this.readTaxa()

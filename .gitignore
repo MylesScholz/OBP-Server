@@ -16,7 +16,7 @@ shared/data/pulls
 shared/data/reports
 shared/data/uploads
 shared/data/places.json
-shared/data/taxa.json
+shared/data/plantTaxa.json
 shared/data/backupOccurrences.csv
 shared/data/usernames.csv
 shared/data/determinations.csv

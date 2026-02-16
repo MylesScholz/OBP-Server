@@ -23,80 +23,87 @@ const DeterminationsAccessFormContainer = styled.div`
         font-size: 16pt;
     }
 
-    #determinationsQueryPanel {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
+    p {
+        margin: 0px;
 
-        form {
+        font-size: 12pt;
+    }
+
+    select {
+        border: 1px solid gray;
+        border-radius: 5px;
+
+        font-size: 10pt;
+
+        background-color: white;
+
+        &:hover {
+            background-color: #efefef;
+        }
+    }
+
+    button {
+        border: 1px solid gray;
+        border-radius: 5px;
+
+        font-size: 10pt;
+
+        background-color: white;
+
+        &:hover {
+            background-color: #efefef;
+        }
+    }
+
+    form {
+        fieldset {
             display: flex;
             flex-direction: column;
-            flex-grow: 1;
-            gap: 10px;
+            gap: 15px;
 
-            fieldset {
+            margin: 0px;
+
+            border: none;
+
+            padding: 0px;
+
+            font-size: 12pt;
+
+            div {
                 display: flex;
-                flex-direction: column;
+                justify-content: stretch;
+                align-items: center;
                 gap: 10px;
 
-                margin: 0px;
+                white-space: nowrap;
 
-                border: none;
-
-                padding: 0px;
-
-                font-size: 12pt;
-
-                div {
-                    display: flex;
-                    justify-content: stretch;
-                    align-items: center;
-                    gap: 10px;
-
-                    white-space: nowrap;
-
-                    select {
-                        flex-grow: 1;
-
-                        border: 1px solid gray;
-                        border-radius: 5px;
-
-                        background-color: white;
-
-                        &:hover {
-                            background-color: #efefef;
-                        }
-                    }
+                select {
+                    flex-grow: 1;
                 }
+            }
 
-                input[type='submit'] {
-                    border: 1px solid gray;
-                    border-radius: 5px;
+            input[type='submit'] {
+                border: 1px solid gray;
+                border-radius: 5px;
 
-                    background-color: white;
+                background-color: white;
 
-                    &:hover {
-                        background-color: #efefef;
-                    }
+                &:hover {
+                    background-color: #efefef;
                 }
             }
         }
+    }
 
-        #determinationsQueryResults {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+    #determinationsQueryResults {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
 
-            border: 1px solid #222;
-            border-radius: 5px;
+        p {
+            margin: 0px;
 
-            padding: 10px;
-
-            p {
-                margin: 0px;
-
-                font-size: 12pt;
-            }
+            font-size: 12pt;
         }
     }
 `
@@ -202,11 +209,18 @@ export default function DeterminationsAccessForm() {
         }
     }
 
+    function handleReset(event) {
+        event.preventDefault()
+
+        setQueryResponse(null)
+        setSelectedTaskId(null)
+    }
+
     return (
         <DeterminationsAccessFormContainer>
             <h2>Authoritative Determinations</h2>
 
-            <div id='determinationsQueryPanel'>
+            { !queryResponse ? (
                 <form onSubmit={ handleSubmit }>
                     <fieldset disabled={disabled}>
                         <div>
@@ -244,45 +258,48 @@ export default function DeterminationsAccessForm() {
                         <input type='submit' value='Submit' />
                     </fieldset>
                 </form>
-
-                { queryResponse &&
-                    <div id='determinationsQueryResults'>
-                        { queryResponse.status === 200 && queryType === 'get' &&
-                            <a href={queryResponse.data} download='determinations.csv'>Download Determinations Dataset</a>
-                        }
-                        { queryResponse.error &&
-                            <p>Error: {queryResponse.error}</p>
-                        }
-                        { selectedTaskData?.task &&
-                            <>
-                                { selectedTaskData?.task.status &&
-                                    <p>Status: {selectedTaskData?.task.status}</p>
-                                }
-                                { selectedTaskData.task.progress?.currentStep &&
-                                    <p>Current Step: {selectedTaskData.task.progress.currentStep}</p>
-                                }
-                                { selectedTaskData.task.progress?.percentage &&
-                                    <p>{selectedTaskData.task.progress.percentage}</p>
-                                }
-                                {
-                                    downloads?.map((d) => {
-                                        if (d.responseStatus === 200) {
-                                            return <a href={d.url} download={d.fileName}>Download {d.type}{d.subtype ? ` (${d.subtype})` : ''} file</a>
-                                        } else if (d.responseStatus === 401) {
-                                            return <p className='authRequiredDownloadMessage'>Authentication Required</p>
-                                        } else {
-                                            return <p>Error {d.responseStatus}</p>
-                                        }
-                                    })
-                                }
-                            </>
-                        }
-                        { selectedTaskData?.error &&
-                            <p>Error: {selectedTaskData.status} {selectedTaskData.statusText}</p>
-                        }
-                    </div>
-                }
-            </div>
+            ) : (
+                <div id='determinationsQueryResults'>
+                    { queryResponse.status === 200 && queryType === 'get' &&
+                        <a href={queryResponse.data} download='determinations.csv'>Download Determinations Dataset</a>
+                    }
+                    { queryResponse.error &&
+                        <p>Error: {queryResponse.error}</p>
+                    }
+                    { selectedTaskData?.task &&
+                        <>
+                            { selectedTaskData?.task.status &&
+                                <p>Status: {selectedTaskData?.task.status}</p>
+                            }
+                            { selectedTaskData.task.progress?.currentStep &&
+                                <p>Current Step: {selectedTaskData.task.progress.currentStep}</p>
+                            }
+                            { selectedTaskData.task.progress?.percentage &&
+                                <p>{selectedTaskData.task.progress.percentage}</p>
+                            }
+                            {
+                                downloads?.map((d) => {
+                                    if (d.responseStatus === 200) {
+                                        return <a href={d.url} download={d.fileName}>Download {d.type}{d.subtype ? ` (${d.subtype})` : ''} file</a>
+                                    } else if (d.responseStatus === 401) {
+                                        return <p className='authRequiredDownloadMessage'>Authentication Required</p>
+                                    } else {
+                                        return <p>Error {d.responseStatus}</p>
+                                    }
+                                })
+                            }
+                        </>
+                    }
+                    { selectedTaskData?.error &&
+                        <p>Error: {selectedTaskData.status} {selectedTaskData.statusText}</p>
+                    }
+                    <button
+                        id='resetButton'
+                        disabled={selectedTaskData?.task?.status === 'Running'}
+                        onClick={ handleReset }
+                    >New Query</button>
+                </div>
+            )}
         </DeterminationsAccessFormContainer>
     )
 }

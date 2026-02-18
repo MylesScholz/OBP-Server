@@ -1,8 +1,8 @@
 import styled from '@emotion/styled'
 
 import { NavLink } from 'react-router'
-import { useFlow } from '../FlowProvider'
 import { useAuth } from '../AuthProvider'
+import { useFlow } from '../FlowProvider'
 
 const FlowBarContainer = styled.div`
     display: flex;
@@ -56,6 +56,11 @@ export default function FlowBar() {
             <NavLink className='flowStage' to='/dashboard'>
                 <h3>Dashboard ({selectedString}{query.unsubmitted && <span style={{ color: 'dodgerblue' }}>*</span>} selected)</h3>
             </NavLink>
+            { volunteer &&
+                <NavLink className='flowStage' to='/determinations'>
+                    <h3>Determinations</h3>
+                </NavLink>
+            }
             { admin &&
                 <>
                     <NavLink className='flowStage' to='/tasks'>

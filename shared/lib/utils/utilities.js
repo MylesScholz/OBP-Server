@@ -81,6 +81,11 @@ function parseQueryParameters(query, adminId) {
 
     // Parse query parameters
 
+    // Fuzzy field number search parameter
+    if (query.q) {
+        params.filter[fieldNames.fieldNumber] = { $regex: `^${query.q}.*` }
+    }
+
     // Pagination parameters
     const parsedPage = parseInt(query.page)
     if (query.page && !isNaN(parsedPage)) {

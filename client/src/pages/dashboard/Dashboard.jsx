@@ -31,134 +31,6 @@ const DashboardForm = styled.form`
 
         overflow: hidden;
     }
-
-    #resultsHeader {
-        display: flex;
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-        gap: 10px;
-
-        border: 1px solid #222;
-        border-radius: 5px;
-
-        padding: 15px;
-
-        margin: 0px;
-
-        white-space: nowrap;
-
-        #sortDirContainer {
-            display: flex;
-            flex-direction: row;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-
-            label {
-                margin: 0px;
-
-                font-size: 12pt;
-            }
-
-            select {
-                border: 1px solid gray;
-                border-radius: 5px;
-
-                height: 25px;
-
-                background-color: white;
-            
-                &:hover {
-                    background-color: #efefef;
-                }
-            }
-        }
-
-        #resultsHeaderRight {
-            display: flex;
-            flex-direction: row;
-            justify-content: space-between;
-            align-items: center;
-            gap: 15px;
-
-            #resultsPagination {
-                display: flex;
-                flex-direction: row;
-                justify-content: center;
-                align-items: center;
-                gap: 20px;
-
-                p {
-                    margin: 0px;
-
-                    font-size: 12pt;
-                }
-
-                #resultsPageSelector {
-                    display: flex;
-                    flex-direction: row;
-                    justify-content: center;
-                    align-items: center;
-                    gap: 5px;
-
-                    input[type='number'] {
-                        text-align: center;
-
-                        border: 1px solid gray;
-                        border-radius: 5px;
-
-                        padding: 5px;
-
-                        width: 50px;
-
-                        font-size: 10pt;
-
-                        appearance: textfield;
-                        -moz-appearance: textfield;
-                        &::-webkit-inner-spin-button, &::-webkit-outer-spin-button {
-                            -webkit-appearance: none;
-                        }
-                    }
-
-                    .pageIncrementButton {
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-
-                        border: 1px solid gray;
-                        border-radius: 5px;
-
-                        padding: 0px;
-
-                        width: 32px;
-                        height: 32px;
-
-                        background-color: white;
-
-                        &:hover {
-                            background-color: #efefef;
-                        }
-                        
-                        img {
-                            width: 25px;
-                            height: 25px;
-                        }
-                    }
-                }
-            }
-
-            #downloadResults {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-            }
-        }
-    }
-
-    #resultsContainer {
-        border: 1px solid #222;
-    }
 `
 
 export default function Dashboard() {
@@ -226,9 +98,7 @@ export default function Dashboard() {
 
             <DashboardResultsHeader handleEnter={handleEnter} disabled={disabled} />
 
-            <div id='resultsContainer'>
-                <OccurrencesPanel occurrences={results?.data ?? []} />
-            </div>
+            <OccurrencesPanel occurrences={results?.data ?? []} />
         </DashboardForm>
     )
 }

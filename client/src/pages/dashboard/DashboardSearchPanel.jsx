@@ -149,6 +149,11 @@ const DashboardSearchPanelFieldset = styled.fieldset`
         column-gap: 10px;
         row-gap: 5px;
 
+        max-height: 200px;
+
+        overflow-x: hidden;
+        overflow-y: scroll;
+
         .filterPill {
             display: flex;
             flex-direction: row;
@@ -287,6 +292,15 @@ export default function DashboardSearchPanel({ submitRef, disabled }) {
         setQuery({ ...query, [key]: '', unsubmitted: true })
     }
 
+    function handleClearAll(event) {
+        event.preventDefault()
+
+        const newValueQueries = {}
+        if (volunteer) newValueQueries['userLogin'] = volunteer
+
+        setQuery({ ...query, start_date: '', end_date: '', valueQueries: newValueQueries, unsubmitted: true })
+    }
+
     function handleAdd(event) {
         event?.preventDefault()
 
@@ -403,6 +417,12 @@ export default function DashboardSearchPanel({ submitRef, disabled }) {
             </div>
 
             <div id='activeFilters'>
+                { (query.start_date || query.end_date || Object.keys(query.valueQueries).length > 0) &&
+                    <button className='filterPill' onClick={(event) => handleClearAll(event)}>
+                        <p>Clear All</p>
+                        <img src={closeIcon} alt='Clear' />
+                    </button>
+                }
                 { query.start_date &&
                     <button className='filterPill' onClick={(event) => handleClear(event, 'start_date')}>
                         <p>Date &gt; {query.start_date}</p>

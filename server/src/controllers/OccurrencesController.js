@@ -70,7 +70,8 @@ export default class OccurrencesController {
             const subtasks = [
                 {
                     type: 'download',
-                    query: req.query
+                    query: req.query,
+                    params
                 }
             ]
             const { insertedId, createdAt } = await TaskService.createTask(subtasks)

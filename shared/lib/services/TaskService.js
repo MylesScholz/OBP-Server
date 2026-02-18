@@ -1,8 +1,6 @@
 import fs from 'fs'
 
 import { TaskRepository } from '../repositories/index.js'
-import { InvalidArgumentError, ValidationError } from '../utils/errors.js'
-import { parseQueryParameters } from '../utils/utilities.js'
 import QueueManager from '../messaging/QueueManager.js'
 
 class TaskService {
@@ -11,84 +9,10 @@ class TaskService {
     }
 
     /*
-     * parseSubtasks()
-     * Parses subtasks from a given JSON string, throwing errors if any fields are invalid
-     */
-    parseSubtasks(subtasksJSON) {
-        if (!subtasksJSON) { throw new InvalidArgumentError('subtasks must exist') }
-        
-        try {
-            const subtasks = JSON.parse(subtasksJSON)
-
-            const subtaskTypes = [
-                'addresses',
-                'determinations',
-                'download',
-                'emails',
-                'labels',
-                'observations',
-                'occurrences',
-                'pivots',
-                'plantList',
-                'stewardshipReport',
-                'syncOccurrences',
-                'upload'
-            ]
-            for (let i = 0; i < subtasks.length; i++) {
-                const subtask = subtasks[i]
-                if (!subtaskTypes.includes(subtask.type)) { throw new ValidationError(`Invalid subtask type '${subtask.type}'`) }
-
-                if (subtask.query) {
-                    const params = parseQueryParameters(subtask.query)
-
-                    if (params.error) { throw new ValidationError('Invalid query parameters') }
-
-                    subtasks[i].params = params
-                }
-                
-                if (subtask.type === 'observations') {
-                    if (!subtask.sources || !subtask.minDate || !subtask.maxDate) {
-                        throw new ValidationError('sources, minDate, and maxDate required for observations subtasks')
-                    }
-
-                    // Split the sources string
-                    subtasks[i].sources = subtask.sources.split(',')
-
-                    // Parse minDate and maxDate arguments
-                    const parsedMinDate = new Date(subtask.minDate)
-                    const parsedMaxDate = new Date(subtask.maxDate)
-                    if (parsedMinDate > parsedMaxDate) {
-                        throw new ValidationError('minDate must be before maxDate')
-                    }
-
-                    // Format dates how the API (and iNaturalist) expect (YYYY-MM-DD)
-                    const formattedMinDate = parsedMinDate.toISOString().slice(0, 10)
-                    const formattedMaxDate = parsedMaxDate.toISOString().slice(0, 10)
-
-                    // Modify subtasks with the formatted dates
-                    subtasks[i].minDate = formattedMinDate
-                    subtasks[i].maxDate = formattedMaxDate
-                }
-            }
-
-            return subtasks
-        } catch (error) {
-            if (error.message?.search('JSON.parse') !== -1) {   // Catch JSON parsing errors
-                throw new ValidationError('Invalid JSON in subtasks')
-            } else {
-                throw error
-            }
-        }
-    }
-
-    /*
      * createTask()
      * Creates a new task with the given properties
      */
-    async createTask(subtasksJSON, uploadFileName) {
-        // Parse a valid subtasks object from the given JSON argument (throws InvalidArgumentErrors and ValidationErrors)
-        const subtasks = this.parseSubtasks(subtasksJSON)
-
+    async createTask(subtasks, uploadFileName) {
         // Create a formatted timestamp of the task's creation time (set the default tag to it)
         const createdAt = new Date()
         const tag = createdAt.toISOString().slice(0, -5).replaceAll(':', '.')   // ISO minus milliseconds, replace : with .
@@ -104,7 +28,7 @@ class TaskService {
         // Set the upload file if provided
         if (uploadFileName) {
             const uploadFilePath = `./shared/data/uploads/${uploadFileName}`
-            const uploadUri = `/shared/uploads/${uploadFileName}`
+            const uploadUri = `/api/uploads/${uploadFileName}`
             task.upload = {
                 fileName: uploadFileName,
                 filePath: uploadFilePath,

@@ -73,7 +73,7 @@ export default class OccurrencesController {
                     query: req.query
                 }
             ]
-            const { insertedId, createdAt } = await TaskService.createTask(JSON.stringify(subtasks))
+            const { insertedId, createdAt } = await TaskService.createTask(subtasks)
 
             // Return 'Accepted' response and HATEOAS link
             res.status(202).send({
@@ -107,7 +107,7 @@ export default class OccurrencesController {
                     file: 'workingOccurrences'
                 }
             ]
-            const { insertedId, createdAt } = await TaskService.createTask(JSON.stringify(subtasks))
+            const { insertedId, createdAt } = await TaskService.createTask(subtasks)
 
             // Return 'Accepted' response and HATEOAS link
             res.status(202).send({
@@ -136,7 +136,7 @@ export default class OccurrencesController {
                     file: 'workingOccurrences'
                 }
             ]
-            const { insertedId, createdAt } = await TaskService.createTask(JSON.stringify(subtasks))
+            const { insertedId, createdAt } = await TaskService.createTask(subtasks)
 
             // Return 'Accepted' response and HATEOAS link
             res.status(202).send({
@@ -170,7 +170,7 @@ export default class OccurrencesController {
                     file: 'backupOccurrences'
                 }
             ]
-            const { insertedId, createdAt } = await TaskService.createTask(JSON.stringify(subtasks))
+            const { insertedId, createdAt } = await TaskService.createTask(subtasks)
 
             // Return 'Accepted' response and HATEOAS link
             res.status(202).send({
@@ -199,7 +199,7 @@ export default class OccurrencesController {
                     file: 'backupOccurrences'
                 }
             ]
-            const { insertedId, createdAt } = await TaskService.createTask(JSON.stringify(subtasks))
+            const { insertedId, createdAt } = await TaskService.createTask(subtasks)
 
             // Return 'Accepted' response and HATEOAS link
             res.status(202).send({

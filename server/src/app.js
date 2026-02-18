@@ -34,7 +34,7 @@ apiRouter.use('/occurrences', express.static('./shared/data/occurrences'))
 apiRouter.use('/pivots', express.static('./shared/data/pivots'))
 apiRouter.use('/pulls', express.static('./shared/data/pulls'))
 apiRouter.use('/reports', requireAuthentication, express.static('./shared/data/reports'))
-apiRouter.use('/uploads', express.static('./shared/data/uploads'))
+apiRouter.use('/uploads', requireAuthentication, express.static('./shared/data/uploads'))
 app.use('/api', apiRouter)
 
 app.use('/*notFound', (req, res, next) => {

@@ -1,3 +1,5 @@
+import { parseSubtasks } from '../../shared/lib/utils/utilities.js'
+import { subtasks as subtasksConstant } from '../../shared/lib/utils/constants.js'
 import { TaskService } from '../../shared/lib/services/index.js'
 import { InvalidArgumentError, ValidationError } from '../../shared/lib/utils/errors.js'
 
@@ -20,8 +22,21 @@ export default class TaskController {
         }
 
         try {
+            // Parse a valid subtasks object from the given JSON string (throws InvalidArgumentErrors and ValidationErrors)
+            const subtasks = parseSubtasks(req.body.subtasks)
+
+            // List of subtasks that require authentication to use
+            const authSubtasks = subtasksConstant.filter((subtask) => subtask.authRequired).map((subtask) => subtask.type)
+            // Send 'unauthorized' response if unauthenticated and some subtask requires authentication
+            if (!req.adminId && subtasks.some((subtask) => authSubtasks.includes(subtask.type))) {
+                res.status(401).send({
+                    error: 'Valid authentication token required'
+                })
+                return
+            }
+
             // Create task and send its ID to the RabbitMQ queue
-            const { insertedId, createdAt } = await TaskService.createTask(req.body.subtasks, req.file?.filename)
+            const { insertedId, createdAt } = await TaskService.createTask(subtasks, req.file?.filename)
 
             // Return 'Accepted' response and HATEOAS link
             res.status(202).send({
@@ -47,8 +62,17 @@ export default class TaskController {
     static async getTasks(req, res, next) {
         try {
             const tasks = await TaskService.getTasks()
+
+            // List of subtasks that require authentication to use
+            const authSubtasks = subtasksConstant.filter((subtask) => subtask.authRequired).map((subtask) => subtask.type)
+            // If unauthenticated, filter out tasks with subtasks that require authentication
+            // Filter subtask fields to exclude 'params' (for internal use only)
+            const filteredTasks = tasks
+                .filter((task) => req.adminId || !task.subtasks.some((subtask) => authSubtasks.includes(subtask.type)))
+                .map((task) => ({ ...task, subtasks: task.subtasks.map(({ params: _, ...subtask }) => subtask) }))
+
             res.status(200).send({
-                tasks
+                tasks: filteredTasks
             })
         } catch (error) {
             // Forward to 500-code middleware
@@ -64,9 +88,20 @@ export default class TaskController {
         try {
             const task = await TaskService.getTaskById(req.params.id)
             if (task) {
-                res.status(200).send({
-                    task
-                })
+                // List of subtasks that require authentication to use
+                const authSubtasks = subtasksConstant.filter((subtask) => subtask.authRequired).map((subtask) => subtask.type)
+
+                // Send 'unauthorized' response if unauthenticated and some subtask requires authentication
+                // Otherwise, send selected task
+                if (!req.adminId && task.subtasks.some((subtask) => authSubtasks.includes(subtask.type))) {
+                    res.status(401).send({
+                        error: 'Valid authentication token required'
+                    })
+                } else {
+                    res.status(200).send({
+                        task
+                    })
+                }
             } else {
                 next()
             }

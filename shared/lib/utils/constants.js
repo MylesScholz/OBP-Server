@@ -127,6 +127,22 @@ const constants = {
     auth: {
         saltLength: 10
     },
+    tasks: {
+        subtasks: [
+            { type: 'addresses', authRequired: true },
+            { type: 'determinations', authRequired: true },
+            { type: 'download', authRequired: false },
+            { type: 'emails', authRequired: true },
+            { type: 'labels', authRequired: true },
+            { type: 'observations', authRequired: true },
+            { type: 'occurrences', authRequired: true },
+            { type: 'pivots', authRequired: true },
+            { type: 'plantList', authRequired: true },
+            { type: 'stewardshipReport', authRequired: true },
+            { type: 'syncOccurrences', authRequired: true },
+            { type: 'upload', authRequired: true }
+        ]
+    },
     occurrences: {
         // Occurrence field names
         fieldNames: {
@@ -582,6 +598,8 @@ const constants = {
 
 export const { fileLimits } = constants
 export const { auth } = constants
+export const { tasks } = constants
+export const { subtasks } = constants.tasks
 export const { occurrences } = constants
 export const { template, fieldNames, nonEmptyFields, sortConfig } = constants.occurrences
 export const { observations } = constants

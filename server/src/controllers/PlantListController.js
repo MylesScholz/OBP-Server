@@ -38,7 +38,7 @@ export default class PlantListController {
                     url: req.body.url
                 }
             ]
-            const { insertedId, createdAt } = await TaskService.createTask(JSON.stringify(subtasks))
+            const { insertedId, createdAt } = await TaskService.createTask(subtasks)
 
             // Return 'Accepted' response and HATEOAS link
             res.status(202).send({

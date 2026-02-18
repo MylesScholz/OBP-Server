@@ -33,7 +33,7 @@ export default class DeterminationsController {
                     format: req.body.format
                 }
             ]
-            const { insertedId, createdAt } = await TaskService.createTask(JSON.stringify(subtasks), req.file.filename)
+            const { insertedId, createdAt } = await TaskService.createTask(subtasks, req.file.filename)
 
             // Return 'Accepted' response and HATEOAS link
             res.status(202).send({

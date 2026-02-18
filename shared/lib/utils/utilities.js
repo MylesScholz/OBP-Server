@@ -1,4 +1,4 @@
-import { fieldNames, sortConfig } from './constants.js'
+import { fieldNames, subtasks as subtasksConstant } from './constants.js'
 
 /*
  * includesStreetSuffix()
@@ -153,4 +153,62 @@ function parseQueryParameters(query, adminId) {
     return params
 }
 
-export { includesStreetSuffix, getDayOfYear, delay, getOFV, parseQueryParameters }
+/*
+ * parseSubtasks()
+ * Parses subtasks from a given JSON string, throwing errors if any fields are invalid
+ */
+function parseSubtasks(subtasksJSON) {
+    if (!subtasksJSON) { throw new InvalidArgumentError('subtasks must exist') }
+    
+    try {
+        const subtasks = JSON.parse(subtasksJSON)
+
+        const subtaskTypes = subtasksConstant.map((subtask) => subtask.type)
+        for (let i = 0; i < subtasks.length; i++) {
+            const subtask = subtasks[i]
+            if (!subtaskTypes.includes(subtask.type)) { throw new ValidationError(`Invalid subtask type '${subtask.type}'`) }
+
+            if (subtask.query) {
+                const params = parseQueryParameters(subtask.query)
+
+                if (params.error) { throw new ValidationError('Invalid query parameters') }
+
+                subtasks[i].params = params
+            }
+            
+            if (subtask.type === 'observations') {
+                if (!subtask.sources || !subtask.minDate || !subtask.maxDate) {
+                    throw new ValidationError('sources, minDate, and maxDate required for observations subtasks')
+                }
+
+                // Split the sources string
+                subtasks[i].sources = subtask.sources.split(',')
+
+                // Parse minDate and maxDate arguments
+                const parsedMinDate = new Date(subtask.minDate)
+                const parsedMaxDate = new Date(subtask.maxDate)
+                if (parsedMinDate > parsedMaxDate) {
+                    throw new ValidationError('minDate must be before maxDate')
+                }
+
+                // Format dates how the API (and iNaturalist) expect (YYYY-MM-DD)
+                const formattedMinDate = parsedMinDate.toISOString().slice(0, 10)
+                const formattedMaxDate = parsedMaxDate.toISOString().slice(0, 10)
+
+                // Modify subtasks with the formatted dates
+                subtasks[i].minDate = formattedMinDate
+                subtasks[i].maxDate = formattedMaxDate
+            }
+        }
+
+        return subtasks
+    } catch (error) {
+        if (error.message?.search('JSON.parse') !== -1) {   // Catch JSON parsing errors
+            throw new ValidationError('Invalid JSON in subtasks')
+        } else {
+            throw error
+        }
+    }
+}
+
+export { includesStreetSuffix, getDayOfYear, delay, getOFV, parseQueryParameters, parseSubtasks }

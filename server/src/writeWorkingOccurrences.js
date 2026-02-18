@@ -19,7 +19,7 @@ async function writeWorkingOccurrences() {
                 file: 'workingOccurrences'
             }
         ]
-        await TaskService.createTask(JSON.stringify(subtasks))
+        await TaskService.createTask(subtasks)
 
         parentPort.postMessage({ success: true })
     } catch (error) {

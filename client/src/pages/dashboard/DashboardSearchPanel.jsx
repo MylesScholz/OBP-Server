@@ -417,7 +417,13 @@ export default function DashboardSearchPanel({ submitRef, disabled }) {
             </div>
 
             <div id='activeFilters'>
-                { (query.start_date || query.end_date || Object.keys(query.valueQueries).length > 0) &&
+                {(
+                    query.start_date ||                                             // Show if a date query is defined
+                    query.end_date || 
+                    Object.keys(query.valueQueries)
+                        .filter((field) => !(volunteer && field === 'userLogin'))   // Ignore userLogin if volunteer is logged in
+                        .length > 0                                                 // Show if at least one value query is defined
+                ) &&
                     <button className='filterPill' onClick={(event) => handleClearAll(event)}>
                         <p>Clear All</p>
                         <img src={closeIcon} alt='Clear' />

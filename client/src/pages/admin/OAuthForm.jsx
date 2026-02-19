@@ -45,8 +45,8 @@ const OAuthFormContainer = styled.div`
 
 export default function OAuthForm() {
     const iNaturalistAuthBaseUrl = 'https://www.inaturalist.org'
-    const iNaturalistClientId = ''
-    const iNaturalistRedirectUri = 'http://melittologist.org/admin'
+    const iNaturalistClientId = import.meta.env.VITE_INATURALIST_CLIENT_ID ?? ''
+    const iNaturalistRedirectUri = import.meta.env.VITE_INATURALIST_REDIRECT_URL ?? ''
     const iNaturalistAuthUrl = `${iNaturalistAuthBaseUrl}/oauth/authorize?client_id=${iNaturalistClientId}&redirect_uri=${iNaturalistRedirectUri}&response_type=code`
 
     return (

@@ -158,7 +158,7 @@ function parseQueryParameters(query, adminId) {
  * parseSubtasks()
  * Parses subtasks from a given JSON string, throwing errors if any fields are invalid
  */
-function parseSubtasks(subtasksJSON) {
+function parseSubtasks(subtasksJSON, adminId) {
     if (!subtasksJSON) { throw new InvalidArgumentError('subtasks must exist') }
     
     try {
@@ -170,9 +170,9 @@ function parseSubtasks(subtasksJSON) {
             if (!subtaskTypes.includes(subtask.type)) { throw new ValidationError(`Invalid subtask type '${subtask.type}'`) }
 
             if (subtask.query) {
-                const params = parseQueryParameters(subtask.query)
+                const params = parseQueryParameters(subtask.query, adminId)
 
-                if (params.error) { throw new ValidationError('Invalid query parameters') }
+                if (params.error) { throw new ValidationError(`Invalid query parameters: ${params.error.message}`) }
 
                 subtasks[i].params = params
             }

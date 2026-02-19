@@ -23,7 +23,7 @@ export default class TaskController {
 
         try {
             // Parse a valid subtasks object from the given JSON string (throws InvalidArgumentErrors and ValidationErrors)
-            const subtasks = parseSubtasks(req.body.subtasks)
+            const subtasks = parseSubtasks(req.body.subtasks, req.adminId)
 
             // List of subtasks that require authentication to use
             const authSubtasks = subtasksConstant.filter((subtask) => subtask.authRequired).map((subtask) => subtask.type)

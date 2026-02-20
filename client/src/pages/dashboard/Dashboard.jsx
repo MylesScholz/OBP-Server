@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import styled from '@emotion/styled'
 import axios from 'axios'
 
@@ -37,14 +37,9 @@ export default function Dashboard() {
     const [ disabled, setDisabled ] = useState(false)
     const { query, setQuery, results, setResults } = useFlow()
     const { admin } = useAuth()
-    const hasSubmitted = useRef(false)
     const submitRef = useRef()
 
-    useEffect(() => {
-        if(hasSubmitted.current) return
-        handleSubmit()
-        hasSubmitted.current = true
-    }, [])
+    /* Handler Functions */
 
     function handleEnter(event) {
         event.preventDefault()
@@ -59,7 +54,7 @@ export default function Dashboard() {
         event?.preventDefault()
         setDisabled(true)
 
-        const url = new URL(`http://server/api/occurrences`)
+        const url = new URL('http://server/api/occurrences')
         const params = url.searchParams
 
         params.set('page', query.page.toString())
@@ -90,7 +85,7 @@ export default function Dashboard() {
     }
 
     return (
-        <DashboardForm onSubmit={ handleSubmit }>
+        <DashboardForm onSubmit={ handleSubmit } onLoad={() => handleSubmit()}>
             <div id='toolBar'>
                 <DashboardSearchPanel submitRef={submitRef} disabled={disabled} />
                 { admin && <DashboardUploadPanel disabled={disabled} /> }

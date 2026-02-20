@@ -33,8 +33,6 @@ export default class OccurrencesController {
             return
         }
 
-        // TODO: check authentication and limit modifiable fields
-
         const results = {
             modifiedCount: 0,
             upsertedCount: 0

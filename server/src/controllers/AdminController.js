@@ -28,7 +28,7 @@ export default class AdminController {
      * - The ID and username of the created admin
      */
     static async createAdmin(req, res, next) {
-        if (!req.body || !req.body.username || !req.body.password) {
+        if (!req.body?.username || !req.body?.password) {
             res.status(400).send({
                 error: 'Missing required request field'
             })
@@ -86,7 +86,7 @@ export default class AdminController {
      * - A signed JWT
      */
     static async login(req, res, next) {
-        if (!req.body || !req.body.username || !req.body.password) {
+        if (!req.body?.username || !req.body?.password) {
             res.status(400).send({
                 error: 'Missing required request field'
             })

@@ -11,14 +11,15 @@ export default class DeterminationsController {
 
     static async uploadDeterminationsFile(req, res, next) {
         // Check that required fields exist
-        if (!req.file || !req.body.format) {
+        if (!req.file || !req.body?.format) {
             res.status(400).send({
                 error: 'Missing required request field'
             })
             return
         }
-        // Check that req.format is valid
-        if (req.body.format !== 'ecdysis' && req.body.format !== 'determinations') {
+        // Check that req.body.format is valid
+        const formats = ['ecdysis', 'determinations']
+        if (!formats.includes(req.body.format)) {
             res.status(400).send({
                 error: 'Unknown file format provided'
             })

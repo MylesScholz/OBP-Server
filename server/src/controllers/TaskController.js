@@ -14,7 +14,7 @@ export default class TaskController {
      */
     static async createTask(req, res, next) {
         // Check that required fields exist
-        if (!req.body || !req.body.subtasks) {
+        if (!req.body?.subtasks) {
             res.status(400).send({
                 error: 'Missing required request field'
             })

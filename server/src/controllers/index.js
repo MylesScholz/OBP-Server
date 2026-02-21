@@ -3,4 +3,5 @@ export { default as DeterminationsController } from './DeterminationsController.
 export { default as OccurrencesController } from './OccurrencesController.js'
 export { default as PlantListController } from './PlantListController.js'
 export { default as TaskController } from './TaskController.js'
+export { default as TaxonomyController } from './TaxonomyController.js'
 export { default as UsernamesController } from './UsernamesController.js'

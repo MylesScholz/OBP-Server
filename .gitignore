@@ -22,6 +22,8 @@ shared/data/usernames.csv
 shared/data/determinations.csv
 shared/data/plantList.csv
 shared/data/workingOccurrences.csv
+shared/data/beeTaxonomy.json
+shared/data/sexCaste.json
 
 # Logs
 logs

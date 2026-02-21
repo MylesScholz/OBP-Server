@@ -30,6 +30,15 @@ export default function QueriedSelection({ inputId, value = '', setValue, queryF
 
     /* Handler Functions */
 
+    async function queryOptions(value) {
+        const response = await queryFn(value) ?? []
+
+        // Don't update when the response matches the value exactly (to prevent UI flicker)
+        if (!(response.length === 1 && response[0] === value)) {
+            setOptions(response)
+        }
+    }
+
     function handleChange(event) {
         setValue(event.target.value)
 
@@ -38,9 +47,7 @@ export default function QueriedSelection({ inputId, value = '', setValue, queryF
 
         // Delay query to avoid spam
         const id = setTimeout(async () => {
-            const response = await queryFn(event.target.value)
-
-            setOptions(response ?? [])
+            await queryOptions(event.target.value)
 
             if (onChange) onChange(event)
         }, queryDelayMSec)
@@ -57,9 +64,10 @@ export default function QueriedSelection({ inputId, value = '', setValue, queryF
                 placeholder='Enter a query value...'
                 value={value}
                 onChange={(event) => handleChange(event)}
+                onFocus={(event) => queryOptions(event.target.value)}
             />
             <datalist id={`${inputId}Options`}>
-                { options.length > 1 && options.map((option) =>
+                { options.map((option) =>
                     <option key={option} value={option}>{option}</option>
                 )}
                 { options.length === 0 &&

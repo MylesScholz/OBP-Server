@@ -48,15 +48,13 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
 
     /*
      * fieldNumberQuery()
-     * Uses the /occurrences q query parameter to get field numbers matching a given query string
+     * Uses the /api/occurrences q query parameter to get field numbers matching a given query string
      */
     async function fieldNumberQuery(fieldNumber) {
-        if (!fieldNumber) return []
-
         const url = new URL(`http://server/api/occurrences${query.searchParams}`)
         const params = url.searchParams
         params.set('page_size', 5000)
-        params.set('q', fieldNumber)
+        params.set('q', fieldNumber ?? '')
 
         const response = await axios.get(url.pathname + url.search).catch((error) => console.error(error))
 
@@ -65,7 +63,77 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
         return fieldNumbers
     }
 
-    // TODO: bee taxonomy query function
+    /*
+     * taxonomyQuery()
+     * Queries /api/taxonomy with the given query parameters
+     */
+    async function taxonomyQuery(family, genus, species, sex, caste) {
+        const url = new URL(`http://server/api/taxonomy`)
+        const params = url.searchParams
+        if (family) params.set('family', family)
+        if (genus) params.set('genus', genus)
+        if (species) params.set('species', species)
+        if (sex) params.set('sex', sex)
+        if (caste) params.set('caste', caste)
+
+        const response = await axios.get(url.pathname + url.search).catch((error) => console.error(error))
+
+        return response?.data ?? {}
+    }
+
+    async function familyQuery(family) {
+        const response = await taxonomyQuery(
+            family,
+            determination['genusVolDet'],
+            determination['speciesVolDet']
+        )
+
+        // TODO: report errors
+
+        return response.taxonomy?.family ?? []
+    }
+
+    async function genusQuery(genus) {
+        const response = await taxonomyQuery(
+            determination['familyVolDet'],
+            genus,
+            determination['speciesVolDet']
+        )
+
+        // TODO: report errors
+
+        return response.taxonomy?.genus ?? []
+    }
+
+    async function speciesQuery(species) {
+        const response = await taxonomyQuery(
+            determination['familyVolDet'],
+            determination['genusVolDet'],
+            species
+        )
+
+        // TODO: report errors
+
+        return response.taxonomy?.species ?? []
+    }
+
+    async function sexQuery(sex) {
+        const response = await taxonomyQuery(null, null, null, sex, determination['casteVolDet'])
+
+        // TODO: report errors
+
+        console.log(response)
+
+        return response.sexCaste?.sex ?? []
+    }
+
+    async function casteQuery(caste) {
+        const response = await taxonomyQuery(null, null, null, determination['sexVolDet'], caste)
+
+        // TODO: report errors
+
+        return response.sexCaste?.caste ?? []
+    }
 
     return (
         <>
@@ -93,7 +161,7 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
                     if (!edited.current) setUnsubmitted((unsubmitted || 0) + 1)
                     edited.current = true
                 }}
-                queryFn={() => []}
+                queryFn={familyQuery}
             />
             <QueriedSelection
                 inputId={`genusVolDet${row}`}
@@ -103,7 +171,7 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
                     if (!edited.current) setUnsubmitted((unsubmitted || 0) + 1)
                     edited.current = true
                 }}
-                queryFn={() => []}
+                queryFn={genusQuery}
             />
             <QueriedSelection
                 inputId={`speciesVolDet${row}`}
@@ -113,7 +181,7 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
                     if (!edited.current) setUnsubmitted((unsubmitted || 0) + 1)
                     edited.current = true
                 }}
-                queryFn={() => []}
+                queryFn={speciesQuery}
             />
             <QueriedSelection
                 inputId={`sexVolDet${row}`}
@@ -123,7 +191,7 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
                     if (!edited.current) setUnsubmitted((unsubmitted || 0) + 1)
                     edited.current = true
                 }}
-                queryFn={() => []}
+                queryFn={sexQuery}
             />
             <QueriedSelection
                 inputId={`casteVolDet${row}`}
@@ -133,7 +201,7 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
                     if (!edited.current) setUnsubmitted((unsubmitted || 0) + 1)
                     edited.current = true
                 }}
-                queryFn={() => []}
+                queryFn={casteQuery}
             />
         </>
     )

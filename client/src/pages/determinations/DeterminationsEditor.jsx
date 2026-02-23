@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useBlocker } from 'react-router'
 import styled from '@emotion/styled'
 
 import DeterminationsHeader from './DeterminationsHeader'
 import DeterminationsPanel from './DeterminationsPanel'
+import { useAuth } from '../../AuthProvider'
 
 const DeterminationsEditorForm = styled.form`
     display: grid;
@@ -71,12 +72,29 @@ const DeterminationsEditorForm = styled.form`
 export default function DeterminationsEditor() {
     const [ disabled, setDisabled ] = useState(false)
     const [ unsubmitted, setUnsubmitted ] = useState(0)
+    const { setBlockLogOut } = useAuth()
 
     /* Blockers */
-
+    
+    // Block React Router navigation when there are unsubmitted changes
     const blocker = useBlocker(({ currentLocation, nextLocation }) => 
         unsubmitted && currentLocation.pathname !== nextLocation.pathname
     )
+
+    /* Effects */
+
+    // Use the browser's native modal to confirm that the user wants to reload the page or close the tab (when there are unsubmitted changes)
+    useEffect(() => {
+        const handleBeforeUnload = (event) => {
+            if (unsubmitted) {
+                event.preventDefault()
+                event.returnValue = ''
+            }
+        }
+
+        window.addEventListener('beforeunload', handleBeforeUnload)
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+    }, [!!unsubmitted])
 
     /* Handler Functions */
 
@@ -95,7 +113,10 @@ export default function DeterminationsEditor() {
             <DeterminationsPanel
                 disabled={disabled}
                 unsubmitted={unsubmitted}
-                setUnsubmitted={setUnsubmitted}
+                setUnsubmitted={(value) => {
+                    setUnsubmitted(value)
+                    setBlockLogOut(!!value)
+                }}
             />
             { blocker.state === 'blocked' &&
                 <div className='navBlockBackground'>

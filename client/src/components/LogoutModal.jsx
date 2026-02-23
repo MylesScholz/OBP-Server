@@ -1,11 +1,6 @@
-import { useState } from 'react'
-import axios from 'axios'
 import styled from '@emotion/styled'
 
-import { useAuth } from '../AuthProvider'
-import { useNavigate } from 'react-router'
-
-const LogoutModalContainer = styled.form`
+const LogoutModalContainer = styled.div`
     position: absolute;
     top: 30px;
     right: 0px;
@@ -39,35 +34,9 @@ const LogoutModalContainer = styled.form`
     }
 `
 
-export default function LogoutModal({ setAccountModalOpen }) {
-    const [ formDisabled, setFormDisabled ] = useState(false)
-    const { admin, setAdmin, volunteer, setVolunteer } = useAuth()
-    const navigate = useNavigate()
-
-    function handleSubmit(event) {
-        event.preventDefault()
-        setFormDisabled(true)
-        setAccountModalOpen(false)
-
-        if (admin) {
-            axios.post('/api/admins/logout').then((res) => {
-                setFormDisabled(false)
-                if (res.status === 200) {
-                    setAdmin(null)
-                }
-            }).catch((error) => {
-                console.error(error)
-                setFormDisabled(false)
-            })
-        } else if (volunteer) {
-            setVolunteer(null)
-            setFormDisabled(false)
-            navigate('/')
-        }
-    }
-
+export default function LogoutModal() {
     return (
-        <LogoutModalContainer onSubmit={ handleSubmit } disabled={formDisabled}>
+        <LogoutModalContainer>
             <input type='submit' id='logoutSubmit' value='Log Out' />
         </LogoutModalContainer>
     )

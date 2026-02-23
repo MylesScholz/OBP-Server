@@ -7,6 +7,7 @@ const AuthContext = createContext()
 export function AuthProvider({ children }) {
     const [ admin, setAdmin ] = useState(null)
     const [ volunteer, setVolunteer ] = useState(null)
+    const [ blockLogOut, setBlockLogOut ] = useState(false)
 
     useQuery({
         queryKey: ['adminQuery'],
@@ -26,7 +27,7 @@ export function AuthProvider({ children }) {
     })
 
     return (
-        <AuthContext.Provider value={{ admin, setAdmin, volunteer, setVolunteer }}>
+        <AuthContext.Provider value={{ admin, setAdmin, volunteer, setVolunteer, blockLogOut, setBlockLogOut }}>
             { children }
         </AuthContext.Provider>
     )

@@ -151,7 +151,7 @@ export default function VolunteerLoginForm() {
                     navigate('/dashboard')
                 }
             }).catch((error) => {
-                console.log(error)
+                console.error(error)
             }).finally(() => {
                 setDisabled(false)
             })

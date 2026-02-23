@@ -122,8 +122,6 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
 
         // TODO: report errors
 
-        console.log(response)
-
         return response.sexCaste?.sex ?? []
     }
 

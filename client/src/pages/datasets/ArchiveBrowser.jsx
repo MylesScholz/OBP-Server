@@ -141,9 +141,6 @@ export default function ArchiveBrowser() {
         enabled: !!archiveData
     })
 
-    console.log(archiveData)
-    console.log(downloads)
-
     return (
         <ArchiveBrowserContainer>
             <h2>Archive Browser</h2>

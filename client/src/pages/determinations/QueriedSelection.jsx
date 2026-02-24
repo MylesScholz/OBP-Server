@@ -27,6 +27,10 @@ const QueriedSelectionContainer = styled.div`
                 outline: 1px solid gold;
             }
         }
+
+        &.autofilled {
+            color: dodgerblue;
+        }
     }
 `
 
@@ -50,6 +54,9 @@ export default function QueriedSelection({ inputId, value = '', error, setValue,
 
     function handleChange(event) {
         setValue(event.target.value)
+
+        // Remove autofilled highlighting when user edits this field
+        event.target.classList.remove('autofilled')
 
         // Clear previous timeout
         clearTimeout(timeoutId)

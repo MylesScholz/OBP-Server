@@ -40,6 +40,10 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
     
     /* Handler Functions */
 
+    /*
+     * onFieldNumberChange()
+     * Fills this row's fields with values from the matching occurrence, queried by field number
+     */
     async function onFieldNumberChange(event) {
         const url = new URL('http://server/api/occurrences')
         const params = url.searchParams
@@ -56,11 +60,22 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
             const newDetermination = {}
             Object.keys(determination).forEach((field) => newDetermination[field] = occurrence[field])
 
-            // If all taxonomy fields are blank, try to copy down the values from the previous row
+            // If all taxonomy fields in this row are blank, try to copy down the values from the previous row
             const taxonomyFields = [ 'familyVolDet', 'genusVolDet', 'speciesVolDet', 'sexVolDet', 'casteVolDet' ]
             if (taxonomyFields.every((field) => !newDetermination[field])) {
-                // For each taxonomy field, query the element in the previous row by ID
-                taxonomyFields.forEach((field) => newDetermination[field] = document.getElementById(`${field}${Math.max(row - 1, 0)}`)?.value ?? '')
+                // For each taxonomy field, find the element in the previous row by ID
+                for (const field of taxonomyFields) {
+                    const aboveElement = document.getElementById(`${field}${Math.max(row - 1, 0)}`)
+
+                    // If the above element has a value, autofill down
+                    if (aboveElement?.value) {
+                        newDetermination[field] = aboveElement.value
+                        // Mark this row's corresponding field as autofilled
+                        document.getElementById(`${field}${row}`).classList.add('autofilled')
+                    } else {
+                        newDetermination[field] = ''
+                    }
+                }
             }
 
             setDetermination(newDetermination)

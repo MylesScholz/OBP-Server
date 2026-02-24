@@ -3,6 +3,7 @@ import path from 'path'
 import { OccurrenceService, TaskService } from '../../shared/lib/services/index.js'
 import { InvalidArgumentError, ValidationError } from '../../shared/lib/utils/errors.js'
 import { parseQueryParameters } from '../../shared/lib/utils/utilities.js'
+import { fieldNames } from '../../shared/lib/utils/constants.js'
 
 export default class OccurrencesController {
     static async getOccurrencesPage(req, res, next) {
@@ -32,19 +33,47 @@ export default class OccurrencesController {
             })
             return
         }
+        if (req.file && !req.adminId) {
+            res.status(401).send({
+                error: 'Valid authentication token required to upload a file'
+            })
+        }
 
         const results = {
             modifiedCount: 0,
             upsertedCount: 0
         }
-        if (req.file) {
+        if (req.file && req.adminId) {
             const fileResults = await OccurrenceService.upsertOccurrencesFromFile(req.file)
 
             results.modifiedCount += fileResults.modifiedCount
             results.upsertedCount += fileResults.upsertedCount
         }
-        if (req.body?.occurrences) {
-            const jsonResults = await OccurrenceService.upsertOccurrences(req.body.occurrences)
+        // If req.body.occurrences is provided, it must be an array
+        if (Array.isArray(req.body?.occurrences)) {
+            // List of fields that do not require authentication to modify
+            const noAuthFields = [
+                fieldNames.volDetFamily,
+                fieldNames.volDetGenus,
+                fieldNames.volDetSpecies,
+                fieldNames.volDetSex,
+                fieldNames.volDetCaste
+            ]
+            // If no authentication is provided, limit the given 'occurrences' to only the fields that do not require it
+            const occurrences = req.body.occurrences
+                .filter((element) => typeof element === 'object')   // Filter out non-object elements of the given 'occurrences' array
+                .map((object) => {
+                    if (!req.adminId) {
+                        const projection = {}
+                        noAuthFields.forEach((field) => { if (Object.hasOwn(object, field)) projection[field] = object[field] })
+                        return projection
+                    } else {
+                        return object
+                    }
+                })
+                .filter((object) => Object.keys(object).length > 0) // Filter out empty objects
+            
+            const jsonResults = await OccurrenceService.upsertOccurrences(occurrences)
 
             results.modifiedCount += jsonResults.modifiedCount
             results.upsertedCount += jsonResults.upsertedCount

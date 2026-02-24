@@ -18,7 +18,7 @@ occurrencesRouter.get('/', checkAuthentication, OccurrencesController.getOccurre
  * Inserts a given list of occurrences into the working dataset
  * Authentication required for full functionality
  */
-occurrencesRouter.post('/', requireAuthentication, uploadCSV.single('file'), OccurrencesController.uploadOccurrences)
+occurrencesRouter.post('/', checkAuthentication, uploadCSV.single('file'), OccurrencesController.uploadOccurrences)
 
 /*
  * GET /api/occurrences/download

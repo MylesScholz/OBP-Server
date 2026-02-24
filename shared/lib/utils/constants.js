@@ -288,6 +288,7 @@ const constants = {
             LONGITUDE,
             SAMPLING_PROTOCOL
         ],
+        // Default sorting hierarchy used by the composite_sort field
         sortConfig: [
             { field: FIELD_NO, direction: 1, type: 'number' },
             { field: LAST_NAME, direction: 1, type: 'string' },

@@ -404,7 +404,8 @@ class OccurrenceService {
         const results = {
             modifiedCount: 0,
             upsertedCount: 0,
-            upsertedIds: []
+            upsertedIds: [],
+            matchedCount: 0
         }
 
         let update = document
@@ -431,6 +432,7 @@ class OccurrenceService {
                 results.modifiedCount = upsertResults.modifiedCount
                 results.upsertedCount = upsertResults.upsertedCount
                 results.upsertedIds.push(upsertResults.upsertedId)
+                results.matchedCount = upsertResults.matchedCount
             }
         } catch (error) {
             console.error('Error while upserting occurrence:', document)
@@ -454,7 +456,8 @@ class OccurrenceService {
         const results = {
             modifiedCount: 0,
             upsertedCount: 0,
-            upsertedIds: []
+            upsertedIds: [],
+            matchedCount: 0
         }
 
         // Apply formatting (unless skipped)
@@ -482,6 +485,7 @@ class OccurrenceService {
             results.modifiedCount += upsertResults.modifiedCount
             results.upsertedCount += upsertResults.upsertedCount
             results.upsertedIds = results.upsertedIds.concat(upsertResults.upsertedIds)
+            results.matchedCount += upsertResults.matchedCount
         }
 
         return results
@@ -501,7 +505,8 @@ class OccurrenceService {
         const results = {
             modifiedCount: 0,
             upsertedCount: 0,
-            upsertedIds: []
+            upsertedIds: [],
+            matchedCount: 0
         }
 
         const chunkSize = 5000
@@ -511,6 +516,7 @@ class OccurrenceService {
             results.modifiedCount += chunkResults.modifiedCount
             results.upsertedCount += chunkResults.upsertedCount
             results.upsertedIds = results.upsertedIds.concat(chunkResults.upsertedIds)
+            results.matchedCount += chunkResults.matchedCount
         }
 
         return results
@@ -696,8 +702,11 @@ class OccurrenceService {
             scratch = false
         } = options
 
-        // Return value
-        let modifiedCount = 0
+        // Return object containing information about updated occurrences
+        const results = {
+            modifiedCount: 0,
+            matchedCount: 0
+        }
 
         // Apply formatting (unless skipped)
         let updates = documents
@@ -724,7 +733,8 @@ class OccurrenceService {
 
             const response = this.repository.updateById(update._id, update)
 
-            modifiedCount += response?.modifiedCount ?? 0
+            results.modifiedCount += response?.modifiedCount ?? 0
+            results.matchedCount += response?.matchedCount ?? 0
         }
 
         return modifiedCount
@@ -736,14 +746,18 @@ class OccurrenceService {
             scratch = false
         } = options
 
-        // Return value
-        let modifiedCount = 0
+        // Return object containing information about updated occurrences
+        const results = {
+            modifiedCount: 0,
+            matchedCount: 0
+        }
 
         const chunkSize = 5000
         for await (const chunk of FileManager.readCSVChunks(filePath, chunkSize)) {
             const chunkResults = await this.updateMatchingOccurrences(chunk, { skipFormatting, scratch })
 
-            modifiedCount += chunkResults
+            results.modifiedCount += chunkResults.modifiedCount
+            results.matchedCount += chunkResults.matchedCount
         }
 
         return modifiedCount
@@ -760,7 +774,8 @@ class OccurrenceService {
         const results = {
             modifiedCount: 0,
             upsertedCount: 0,
-            upsertedIds: []
+            upsertedIds: [],
+            matchedCount: 0
         }
 
         // Apply formatting (unless skipped)
@@ -778,6 +793,7 @@ class OccurrenceService {
             results.modifiedCount += response.modifiedCount ?? 0
             results.upsertedCount = response.upsertedId ? 1 : 0
             results.upsertedIds = response.upsertedId ? [ response.upsertedId ] : []
+            results.matchedCount += response.matchedCount ?? 0
         }
 
         return results
@@ -794,7 +810,8 @@ class OccurrenceService {
         const results = {
             modifiedCount: 0,
             upsertedCount: 0,
-            upsertedIds: []
+            upsertedIds: [],
+            matchedCount: 0
         }
 
         // Apply formatting (unless skipped)
@@ -810,6 +827,7 @@ class OccurrenceService {
             results.modifiedCount += occurrenceResults.modifiedCount
             results.upsertedCount += occurrenceResults.upsertedCount
             results.upsertedIds = results.upsertedIds.concat(occurrenceResults.upsertedIds)
+            results.matchedCount += occurrenceResults.matchedCount
         }
 
         return results
@@ -825,7 +843,8 @@ class OccurrenceService {
         // Return object containing information about replaced and upserted occurrences
         const results = {
             modifiedCount: 0,
-            upsertedIds: []
+            upsertedIds: [],
+            matchedCount: 0
         }
 
         const chunkSize = 5000
@@ -835,6 +854,7 @@ class OccurrenceService {
             results.modifiedCount += chunkResults.modifiedCount
             results.upsertedCount += chunkResults.upsertedCount
             results.upsertedIds = results.upsertedIds.concat(chunkResults.upsertedIds)
+            results.matchedCount += chunkResults.matchedCount
         }
 
         return results

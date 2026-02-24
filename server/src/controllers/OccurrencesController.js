@@ -41,13 +41,15 @@ export default class OccurrencesController {
 
         const results = {
             modifiedCount: 0,
-            upsertedCount: 0
+            upsertedCount: 0,
+            matchedCount: 0
         }
         if (req.file && req.adminId) {
             const fileResults = await OccurrenceService.upsertOccurrencesFromFile(req.file)
 
             results.modifiedCount += fileResults.modifiedCount
             results.upsertedCount += fileResults.upsertedCount
+            results.matchedCount += fileResults.matchedCount
         }
         // If req.body.occurrences is provided, it must be an array
         if (Array.isArray(req.body?.occurrences)) {
@@ -76,6 +78,7 @@ export default class OccurrencesController {
 
             results.modifiedCount += jsonResults.modifiedCount
             results.upsertedCount += jsonResults.upsertedCount
+            results.matchedCount += jsonResults.matchedCount
         }
         
         res.status(200).send(results)

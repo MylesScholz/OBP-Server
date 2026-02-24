@@ -64,7 +64,7 @@ export default class OccurrencesController {
                 .filter((element) => typeof element === 'object')   // Filter out non-object elements of the given 'occurrences' array
                 .map((object) => {
                     if (!req.adminId) {
-                        const projection = {}
+                        const projection = { _id: object._id }
                         noAuthFields.forEach((field) => { if (Object.hasOwn(object, field)) projection[field] = object[field] })
                         return projection
                     } else {

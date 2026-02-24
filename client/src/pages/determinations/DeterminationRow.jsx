@@ -32,7 +32,7 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
 
         const taxonomyError = taxonomyResponse.taxonomy?.error
         const sexCasteError = taxonomyResponse.sexCaste?.error
-        const newErrors = {}
+        const newErrors = { 'fieldNumber': errors['fieldNumber'] }
         if (taxonomyError) newErrors[taxonomyError.rank] = taxonomyError.message
         if (sexCasteError) newErrors[sexCasteError.field] = sexCasteError.message
         setErrors(newErrors)
@@ -90,6 +90,11 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
             )
             updateErrors(response)
         } else {
+            if (event.target.value) {
+                setErrors({ 'fieldNumber': 'Unrecognized field number' })
+            } else {
+                setErrors({})
+            }
             setDetermination(blankDetermination)
         }
     }
@@ -201,6 +206,7 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
             <QueriedSelection
                 inputId={`fieldNumber${row}`}
                 value={fieldNumber}
+                error={errors['fieldNumber']}
                 setValue={(value) => {
                     setFieldNumber(value)
                     if (!edited.current) setUnsubmitted((unsubmitted || 0) + 1)

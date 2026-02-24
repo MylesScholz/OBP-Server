@@ -14,6 +14,8 @@ const DeterminationsEditorForm = styled.form`
     grid-row-gap: 15px;
 
     .navBlockBackground {
+        z-index: 10000;
+        
         position: fixed;
         top: 0;
         right: 0;

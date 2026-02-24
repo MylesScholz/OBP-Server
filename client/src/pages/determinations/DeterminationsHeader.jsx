@@ -21,6 +21,10 @@ const DeterminationsHeaderContainer = styled.fieldset`
         margin: 0px;
 
         font-size: 12pt;
+
+        font-weight: bold;
+
+        color: dodgerblue;
     }
 
     #determinationsHeaderRight {
@@ -55,7 +59,9 @@ export default function DeterminationsHeader({ disabled, unsubmitted }) {
     return (
         <DeterminationsHeaderContainer disabled={disabled}>
             <div id='determinationsHeaderRight'>
-                <p>{`${(unsubmitted || 0).toLocaleString('en-US')} unsubmitted changes pending`}</p>
+                { !!unsubmitted &&
+                    <p>{unsubmitted.toLocaleString('en-US')} unsubmitted changes pending...</p>
+                }
                 <button
                     id='determinationsSubmitButton'
                     type='submit'

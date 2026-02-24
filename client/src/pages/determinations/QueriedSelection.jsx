@@ -18,10 +18,19 @@ const QueriedSelectionContainer = styled.div`
 
         width: 100%;
         box-sizing: border-box;
+
+        &.error {
+            border: 1px solid gold;
+            box-shadow: 0px 0px 5px gold;
+
+            &:focus {
+                outline: 1px solid gold;
+            }
+        }
     }
 `
 
-export default function QueriedSelection({ inputId, value = '', setValue, queryFn, onChange = null }) {
+export default function QueriedSelection({ inputId, value = '', error, setValue, queryFn, onChange = null }) {
     const [ timeoutId, setTimeoutId ] = useState()
     const [ options, setOptions ] = useState([])
 
@@ -58,6 +67,8 @@ export default function QueriedSelection({ inputId, value = '', setValue, queryF
         <QueriedSelectionContainer>
             <input
                 id={inputId}
+                className={ error ? 'error' : '' }
+                title={ error ? error : '' }
                 type='text'
                 autoComplete='off'
                 list={`${inputId}Options`}

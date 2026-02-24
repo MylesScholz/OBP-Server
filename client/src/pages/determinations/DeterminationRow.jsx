@@ -19,10 +19,23 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
         'casteVolDet': ''
     }
     const [ determination, setDetermination ] = useState(blankDetermination)
+    const [ errors, setErrors ] = useState({})
     const [ fieldNumber, setFieldNumber ] = useState('')
     const edited = useRef(false)
     const { volunteer } = useAuth()
     const { query } = useFlow()
+
+    // Updates the errors object from a given taxonomy query response
+    function updateErrors(taxonomyResponse) {
+        if (!taxonomyResponse) return
+
+        const taxonomyError = taxonomyResponse.taxonomy?.error
+        const sexCasteError = taxonomyResponse.sexCaste?.error
+        const newErrors = {}
+        if (taxonomyError) newErrors[taxonomyError.rank] = taxonomyError.message
+        if (sexCasteError) newErrors[sexCasteError.field] = sexCasteError.message
+        setErrors(newErrors)
+    }
     
     /* Handler Functions */
 
@@ -32,13 +45,34 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
         params.set('userLogin', volunteer)
         params.set('fieldNumber', event.target.value)
 
+        // Query an exact match of the given fieldNumber
         const response = await axios.get(url.pathname + url.search).catch((error) => console.error(error))
 
+        // Only take the first result
         const occurrence = response?.data?.data?.at(0)
         if (occurrence) {
+            // Set this row's fields to the queried values (via the determination state object)
             const newDetermination = {}
             Object.keys(determination).forEach((field) => newDetermination[field] = occurrence[field])
+
+            // If all taxonomy fields are blank, try to copy down the values from the previous row
+            const taxonomyFields = [ 'familyVolDet', 'genusVolDet', 'speciesVolDet', 'sexVolDet', 'casteVolDet' ]
+            if (taxonomyFields.every((field) => !newDetermination[field])) {
+                // For each taxonomy field, query the element in the previous row by ID
+                taxonomyFields.forEach((field) => newDetermination[field] = document.getElementById(`${field}${Math.max(row - 1, 0)}`)?.value ?? '')
+            }
+
             setDetermination(newDetermination)
+
+            // Query new taxonomy fields and update error fields
+            const response = await taxonomyQuery(
+                newDetermination['familyVolDet'],
+                newDetermination['genusVolDet'],
+                newDetermination['speciesVolDet'],
+                newDetermination['sexVolDet'],
+                newDetermination['casteVolDet']
+            )
+            updateErrors(response)
         } else {
             setDetermination(blankDetermination)
         }
@@ -78,6 +112,9 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
 
         const response = await axios.get(url.pathname + url.search).catch((error) => console.error(error))
 
+        // Set taxonomy and sex-caste errors
+        updateErrors(response?.data)
+
         return response?.data ?? {}
     }
 
@@ -85,10 +122,10 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
         const response = await taxonomyQuery(
             family,
             determination['genusVolDet'],
-            determination['speciesVolDet']
+            determination['speciesVolDet'],
+            determination['sexVolDet'],
+            determination['casteVolDet']
         )
-
-        // TODO: report errors
 
         return response.taxonomy?.family ?? []
     }
@@ -97,10 +134,10 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
         const response = await taxonomyQuery(
             determination['familyVolDet'],
             genus,
-            determination['speciesVolDet']
+            determination['speciesVolDet'],
+            determination['sexVolDet'],
+            determination['casteVolDet']
         )
-
-        // TODO: report errors
 
         return response.taxonomy?.genus ?? []
     }
@@ -109,26 +146,34 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
         const response = await taxonomyQuery(
             determination['familyVolDet'],
             determination['genusVolDet'],
-            species
+            species,
+            determination['sexVolDet'],
+            determination['casteVolDet']
         )
-
-        // TODO: report errors
 
         return response.taxonomy?.species ?? []
     }
 
     async function sexQuery(sex) {
-        const response = await taxonomyQuery(null, null, null, sex, determination['casteVolDet'])
-
-        // TODO: report errors
+        const response = await taxonomyQuery(
+            determination['familyVolDet'],
+            determination['genusVolDet'],
+            determination['speciesVolDet'],
+            sex,
+            determination['casteVolDet']
+        )
 
         return response.sexCaste?.sex ?? []
     }
 
     async function casteQuery(caste) {
-        const response = await taxonomyQuery(null, null, null, determination['sexVolDet'], caste)
-
-        // TODO: report errors
+        const response = await taxonomyQuery(
+            determination['familyVolDet'],
+            determination['genusVolDet'],
+            determination['speciesVolDet'],
+            determination['sexVolDet'],
+            caste
+        )
 
         return response.sexCaste?.caste ?? []
     }
@@ -154,6 +199,7 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
             <QueriedSelection
                 inputId={`familyVolDet${row}`}
                 value={determination['familyVolDet']}
+                error={errors['family']}
                 setValue={(value) => {
                     setDetermination({ ...determination, 'familyVolDet': value })
                     if (!edited.current) setUnsubmitted((unsubmitted || 0) + 1)
@@ -164,6 +210,7 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
             <QueriedSelection
                 inputId={`genusVolDet${row}`}
                 value={determination['genusVolDet']}
+                error={errors['genus']}
                 setValue={(value) => {
                     setDetermination({ ...determination, 'genusVolDet': value })
                     if (!edited.current) setUnsubmitted((unsubmitted || 0) + 1)
@@ -174,6 +221,7 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
             <QueriedSelection
                 inputId={`speciesVolDet${row}`}
                 value={determination['speciesVolDet']}
+                error={errors['species']}
                 setValue={(value) => {
                     setDetermination({ ...determination, 'speciesVolDet': value })
                     if (!edited.current) setUnsubmitted((unsubmitted || 0) + 1)
@@ -184,6 +232,7 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
             <QueriedSelection
                 inputId={`sexVolDet${row}`}
                 value={determination['sexVolDet']}
+                error={errors['sex']}
                 setValue={(value) => {
                     setDetermination({ ...determination, 'sexVolDet': value })
                     if (!edited.current) setUnsubmitted((unsubmitted || 0) + 1)
@@ -194,6 +243,7 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
             <QueriedSelection
                 inputId={`casteVolDet${row}`}
                 value={determination['casteVolDet']}
+                error={errors['caste']}
                 setValue={(value) => {
                     setDetermination({ ...determination, 'casteVolDet': value })
                     if (!edited.current) setUnsubmitted((unsubmitted || 0) + 1)

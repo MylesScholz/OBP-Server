@@ -8,6 +8,7 @@ import { useFlow } from '../../FlowProvider'
 export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
     const blankDetermination = {
         // Handle 'fieldNumber' separately to avoid overwriting it
+        '_id': '',
         'sampleId': '',
         'specimenId': '',
         'verbatimEventDate': '',
@@ -180,6 +181,7 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
 
     return (
         <>
+            <input id={`_id${row}`} type='hidden' value={determination['_id']} />
             <p>{row + 1}</p>
             <QueriedSelection
                 inputId={`fieldNumber${row}`}

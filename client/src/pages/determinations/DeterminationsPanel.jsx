@@ -3,15 +3,18 @@ import styled from '@emotion/styled'
 
 import DeterminationRow from './DeterminationRow.jsx'
 
-const DeterminationsPanelContainer = styled.div`
+const DeterminationsPanelContainer = styled.fieldset`
     position: relative;
 
     display: grid;
     grid-template-columns: 40px repeat(10, 1fr);
     grid-auto-rows: 22px;
 
+    margin: 0px;
+
     border: 1px solid #222;
 
+    padding: 0px;
     padding-right: 12px;
 
     height: 600px;
@@ -58,10 +61,9 @@ export default function DeterminationsPanel({ disabled, unsubmitted, setUnsubmit
         'casteVolDet'
     ]
     
-    // TODO: make DeterminationsPanelContainer into a fieldset and use disabled
     // TODO: 'Add rows' button at end of panel
     return (
-        <DeterminationsPanelContainer>
+        <DeterminationsPanelContainer disabled={disabled}>
             <p className='field'>#</p>
             { fields.map((field) => <p className='field' key={field}>{field}</p>) }
             { rows.map((row) =>

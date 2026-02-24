@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useBlocker } from 'react-router'
 import styled from '@emotion/styled'
+import axios from 'axios'
 
 import DeterminationsHeader from './DeterminationsHeader'
 import DeterminationsPanel from './DeterminationsPanel'
@@ -74,6 +75,7 @@ const DeterminationsEditorForm = styled.form`
 export default function DeterminationsEditor() {
     const [ disabled, setDisabled ] = useState(false)
     const [ unsubmitted, setUnsubmitted ] = useState(0)
+    const [ result, setResult ] = useState()
     const { setBlockLogOut } = useAuth()
 
     /* Blockers */
@@ -102,8 +104,50 @@ export default function DeterminationsEditor() {
 
     function handleSubmit(event) {
         event?.preventDefault()
+        setDisabled(true)
 
-        // TODO: submit determination changes
+        // List of determinations to submit
+        const determinations = []
+
+        // Add each row with a defined '_id' value (hidden input) to the determinations list
+        for (const element of event.target) {
+            if (element.type === 'hidden' && element.value !== '' && !element.disabled) {
+                const row = element.id.replace('_id', '')
+
+                const determination = {
+                    '_id': element.value,
+                    'familyVolDet': event.target[`familyVolDet${row}`].value,
+                    'genusVolDet': event.target[`genusVolDet${row}`].value,
+                    'speciesVolDet': event.target[`speciesVolDet${row}`].value,
+                    'sexVolDet': event.target[`sexVolDet${row}`].value,
+                    'casteVolDet':event.target[`casteVolDet${row}`].value
+                }
+
+                determinations.push(determination)
+
+                // Disable submitted determination fields to prevent further submissions
+                event.target[`_id${row}`].disabled = true
+                event.target[`fieldNumber${row}`].disabled = true
+                event.target[`familyVolDet${row}`].disabled = true
+                event.target[`genusVolDet${row}`].disabled = true
+                event.target[`speciesVolDet${row}`].disabled = true
+                event.target[`sexVolDet${row}`].disabled = true
+                event.target[`casteVolDet${row}`].disabled = true
+            }
+        }
+
+        axios.post('/api/occurrences', { occurrences: determinations }).then((res) => {
+            setResult(res.data)
+
+            setBlockLogOut(false)
+            setUnsubmitted(0)
+            setDisabled(false)
+        }).catch((error) => {
+            console.error(error)
+            setResult(error)
+            
+            setDisabled(false)
+        })
     }
 
     return (
@@ -111,6 +155,7 @@ export default function DeterminationsEditor() {
             <DeterminationsHeader
                 disabled={disabled}
                 unsubmitted={unsubmitted}
+                result={result}
             />
             <DeterminationsPanel
                 disabled={disabled}
@@ -118,6 +163,7 @@ export default function DeterminationsEditor() {
                 setUnsubmitted={(value) => {
                     setUnsubmitted(value)
                     setBlockLogOut(!!value)
+                    setResult(null)
                 }}
             />
             { blocker.state === 'blocked' &&

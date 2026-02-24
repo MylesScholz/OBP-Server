@@ -4,7 +4,7 @@ import styled from '@emotion/styled'
 const DeterminationsHeaderContainer = styled.fieldset`
     display: flex;
     flex-direction: row;
-    justify-content: space-between;
+    justify-content: start;
     align-items: center;
     gap: 10px;
 
@@ -24,50 +24,49 @@ const DeterminationsHeaderContainer = styled.fieldset`
 
         font-weight: bold;
 
-        color: dodgerblue;
+        &#unsubmittedMessage {
+            color: dodgerblue;
+        }
+        
+        &#resultMessage {
+            color: limegreen;
+        }
     }
 
-    #determinationsHeaderRight {
-        display: flex;
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-        gap: 15px;
+    #determinationsSubmitButton {
+        border: 1px solid gray;
+        border-radius: 5px;
 
-        #determinationsSubmitButton {
-            border: 1px solid gray;
-            border-radius: 5px;
+        padding: 5px;
 
-            padding: 5px;
+        height: 32px;
 
-            height: 32px;
+        font-size: 10pt;
 
-            font-size: 10pt;
+        background-color: white;
 
-            background-color: white;
-
-            &:hover {
-                background-color: #efefef;
-            }
+        &:hover {
+            background-color: #efefef;
         }
     }
 `
 
-export default function DeterminationsHeader({ disabled, unsubmitted }) {
+export default function DeterminationsHeader({ disabled, unsubmitted, result }) {
     const submitRef = useRef()
 
     return (
         <DeterminationsHeaderContainer disabled={disabled}>
-            <div id='determinationsHeaderRight'>
-                { !!unsubmitted &&
-                    <p>{unsubmitted.toLocaleString('en-US')} unsubmitted changes pending...</p>
-                }
-                <button
-                    id='determinationsSubmitButton'
-                    type='submit'
-                    ref={submitRef}
-                >Submit</button>
-            </div>
+            <button
+                id='determinationsSubmitButton'
+                type='submit'
+                ref={submitRef}
+            >Submit</button>
+            { !!unsubmitted &&
+                <p id='unsubmittedMessage'>{unsubmitted.toLocaleString('en-US')} unsubmitted changes pending...</p>
+            }
+            { result &&
+                <p id='resultMessage'>{(result.matchedCount ?? 0).toLocaleString('en-US')} changes submitted</p>
+            }
         </DeterminationsHeaderContainer>
     )
 }

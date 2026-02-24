@@ -72,8 +72,7 @@ export default class OccurrencesController {
                     }
                 })
                 .filter((object) => Object.keys(object).length > 0) // Filter out empty objects
-            
-            const jsonResults = await OccurrenceService.upsertOccurrences(occurrences)
+            const jsonResults = await OccurrenceService.upsertOccurrences(occurrences, { skipFormatting: true })
 
             results.modifiedCount += jsonResults.modifiedCount
             results.upsertedCount += jsonResults.upsertedCount

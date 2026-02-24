@@ -212,10 +212,16 @@ class TaxonomyService {
                 validation.valid = false
                 validation.caste = Object.keys(casteSex)
             }
-        } else if (!this.sexCaste[sex].includes(caste)) {
-            validation.error = { field: 'caste', message: 'Invalid caste' }
-            validation.valid = false
-            validation.caste = this.sexCaste[sex]
+        } else {
+            if (!this.sexCaste[sex]) {
+                validation.error = { field: 'sex', message: 'Invalid sex' }
+                validation.valid = false
+                validation.sex = Object.keys(this.sexCaste)
+            } else if (!this.sexCaste[sex].includes(caste)) {
+                validation.error = { field: 'caste', message: 'Invalid caste' }
+                validation.valid = false
+                validation.caste = this.sexCaste[sex]
+            }
         }
 
         return validation

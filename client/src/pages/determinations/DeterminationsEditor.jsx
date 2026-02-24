@@ -76,6 +76,7 @@ export default function DeterminationsEditor() {
     const [ disabled, setDisabled ] = useState(false)
     const [ unsubmitted, setUnsubmitted ] = useState(0)
     const [ result, setResult ] = useState()
+    const [ panelKey, setPanelKey ] = useState(0)
     const { setBlockLogOut } = useAuth()
 
     /* Blockers */
@@ -139,13 +140,14 @@ export default function DeterminationsEditor() {
         axios.post('/api/occurrences', { occurrences: determinations }).then((res) => {
             setResult(res.data)
 
+            setPanelKey(panelKey + 1)   // Clear panel
             setBlockLogOut(false)
             setUnsubmitted(0)
             setDisabled(false)
         }).catch((error) => {
             console.error(error)
             setResult(error)
-            
+
             setDisabled(false)
         })
     }
@@ -156,8 +158,14 @@ export default function DeterminationsEditor() {
                 disabled={disabled}
                 unsubmitted={unsubmitted}
                 result={result}
+                onClear={() => {
+                    setPanelKey(panelKey + 1)
+                    setBlockLogOut(false)
+                    setUnsubmitted(0)
+                }}
             />
             <DeterminationsPanel
+                key={panelKey}
                 disabled={disabled}
                 unsubmitted={unsubmitted}
                 setUnsubmitted={(value) => {

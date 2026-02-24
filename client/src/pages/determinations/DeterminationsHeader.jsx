@@ -33,7 +33,7 @@ const DeterminationsHeaderContainer = styled.fieldset`
         }
     }
 
-    #determinationsSubmitButton {
+    button {
         border: 1px solid gray;
         border-radius: 5px;
 
@@ -51,11 +51,17 @@ const DeterminationsHeaderContainer = styled.fieldset`
     }
 `
 
-export default function DeterminationsHeader({ disabled, unsubmitted, result }) {
+export default function DeterminationsHeader({ disabled, unsubmitted, result, onClear }) {
     const submitRef = useRef()
 
     return (
         <DeterminationsHeaderContainer disabled={disabled}>
+            <button
+                onClick={(event) => {
+                    event.preventDefault()
+                    onClear()
+                }}
+            >Clear</button>
             <button
                 id='determinationsSubmitButton'
                 type='submit'

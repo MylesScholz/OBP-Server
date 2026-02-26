@@ -1,3 +1,6 @@
+import fs from 'fs'
+import path from 'path'
+
 import { TaxonomyService } from '../../shared/lib/services/index.js'
 
 export default class TaxonomyController {
@@ -12,6 +15,19 @@ export default class TaxonomyController {
         const sexCasteValidation = TaxonomyService.validateSexCaste(sex, caste)
 
         res.status(200).send({ taxonomy: taxonomyValidation, sexCaste: sexCasteValidation })
+    }
+
+    /*
+     * getTaxonomyFile()
+     * Statically serves a file from /shared/data/taxonomy/
+     */
+    static getTaxonomyFile(req, res, next) {
+        const filePath = path.resolve(`./shared/data/taxonomy/${req.params.fileName}`)
+        if (fs.existsSync(filePath)) {
+            res.status(200).sendFile(filePath)
+        } else {
+            next()
+        }
     }
 
     /*
@@ -51,5 +67,22 @@ export default class TaxonomyController {
             // Forward to 500-code middleware
             next(error)
         }
+    }
+
+    static getTaxonomyDownload(req, res, next) {
+        const taxonomyResponse = TaxonomyService.writeTaxonomyCSV()
+        const sexCasteResponse = TaxonomyService.writeSexCasteCSV()
+
+        const output = { success: taxonomyResponse.success || sexCasteResponse.success }
+        if (taxonomyResponse.success) {
+            output.taxonomyFileName = taxonomyResponse.fileName
+            output.taxonomyUri = taxonomyResponse.uri
+        }
+        if (sexCasteResponse.success) {
+            output.sexCasteFileName = sexCasteResponse.fileName
+            output.sexCasteUri = sexCasteResponse.uri
+        }
+
+        res.status(200).send(output)
     }
 }

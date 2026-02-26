@@ -6,6 +6,8 @@ class TaxonomyService {
         this.sexCasteFilePath = './shared/data/sexCaste.json'
         this.taxonomy = {}
         this.sexCaste = {}
+        this.taxonomyHeader = ['family', 'genus', 'species']
+        this.sexCasteHeader = ['sex', 'caste']
 
         this.readTaxonomy()
         this.readSexCaste()
@@ -22,6 +24,20 @@ class TaxonomyService {
             this.taxonomy = data
             return data
         }
+    }
+
+    /*
+     * writeTaxonomy()
+     * Writes given taxonomy data to taxonomy.json; if no data provided, writes this.taxonomy
+     */
+    writeTaxonomy(taxonomy) {
+        const data = taxonomy || this.taxonomy
+        const success = FileManager.writeJSON(this.taxonomyFilePath, data)
+
+        // If wrote successfully, update this.taxonomy
+        if (success) this.taxonomy = data
+
+        return success
     }
 
     /*
@@ -63,17 +79,40 @@ class TaxonomyService {
     }
 
     /*
-     * writeTaxonomy()
-     * Writes given taxonomy data to taxonomy.json; if no data provided, writes this.taxonomy
+     * writeTaxonomyCSV()
+     * Writes this.taxonomy in a flattened CSV format to a file in ./shared/data/taxonomy/
      */
-    writeTaxonomy(taxonomy) {
-        const data = taxonomy || this.taxonomy
-        const success = FileManager.writeJSON(this.taxonomyFilePath, data)
+    writeTaxonomyCSV() {
+        const now = new Date()
+        const timestamp = now.toISOString().slice(0, -5).replaceAll(':', '.')   // ISO minus milliseconds, replace : with .
+        const fileName = `taxonomy_${timestamp}.csv`
+        const filePath = './shared/data/taxonomy/' + fileName
 
-        // If wrote successfully, update this.taxonomy
-        if (success) this.taxonomy = data
+        // Convert this.taxonomy from hierarchy form to field-value form
+        const data = []
+        for (const family of Object.keys(this.taxonomy)) {
+            for (const genus of Object.keys(this.taxonomy[family])) {
+                for (const species of this.taxonomy[family][genus]) {
+                    data.push({ 'family': family, 'genus': genus, 'species': species })
+                }
+                if (this.taxonomy[family][genus].length === 0) {
+                    data.push({ 'family': family, 'genus': genus })     // Include empty genera
+                }
+            }
+            if (Object.keys(this.taxonomy[family]).length === 0) {
+                data.push({ 'family': family })     // Include empty families
+            }
+        }
 
-        return success
+        const success = FileManager.writeCSV(filePath, data, this.taxonomyHeader)
+        if (success) {
+            return {
+                success,
+                fileName,
+                uri: `/api/taxonomy/${fileName}`
+            }
+        }
+        return { success }
     }
 
     /*
@@ -87,6 +126,20 @@ class TaxonomyService {
             this.sexCaste = data
             return data
         }
+    }
+
+    /*
+     * writeSexCaste()
+     * Writes given sex-caste data to sexCaste.json; if no data provided, writes this.sexCaste
+     */
+    writeSexCaste(sexCaste) {
+        const data = sexCaste || this.sexCaste
+        const success = FileManager.writeJSON(this.sexCasteFilePath, data)
+
+        // If wrote successfully, update this.sexCaste
+        if (success) this.sexCaste = data
+
+        return success
     }
 
     /*
@@ -127,17 +180,32 @@ class TaxonomyService {
     }
 
     /*
-     * writeSexCaste()
-     * Writes given sex-caste data to sexCaste.json; if no data provided, writes this.sexCaste
+     * writeSexCasteCSV()
+     * Writes this.sexCaste in a flattened CSV format to a file in ./shared/data/taxonomy/
      */
-    writeSexCaste(sexCaste) {
-        const data = sexCaste || this.sexCaste
-        const success = FileManager.writeJSON(this.sexCasteFilePath, data)
+    writeSexCasteCSV() {
+        const now = new Date()
+        const timestamp = now.toISOString().slice(0, -5).replaceAll(':', '.')   // ISO minus milliseconds, replace : with .
+        const fileName = `sexCaste_${timestamp}.csv`
+        const filePath = './shared/data/taxonomy/' + fileName
 
-        // If wrote successfully, update this.sexCaste
-        if (success) this.sexCaste = data
+        // Convert this.sexCaste from lookup table form to field-value form
+        const data = []
+        for (const sex of Object.keys(this.sexCaste)) {
+            for (const caste of this.sexCaste[sex]) {
+                data.push({ 'sex': sex, 'caste': caste })
+            }
+        }
 
-        return success
+        const success = FileManager.writeCSV(filePath, data, this.sexCasteHeader)
+        if (success) {
+            return {
+                success,
+                fileName,
+                uri: `/api/taxonomy/${fileName}`
+            }
+        }
+        return { success }
     }
 
     /*

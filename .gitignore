@@ -14,6 +14,7 @@ shared/data/occurrences
 shared/data/pivots
 shared/data/pulls
 shared/data/reports
+shared/data/taxonomy
 shared/data/uploads
 shared/data/places.json
 shared/data/plantTaxa.json

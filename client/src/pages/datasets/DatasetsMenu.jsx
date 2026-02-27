@@ -66,6 +66,10 @@ export default function DatasetsMenu({ selectedTool, setSelectedTool }) {
                     onClick={(e) => setSelectedTool('determinations')}
                 >Determinations</button>
                 <button
+                    className={ selectedTool === 'taxonomy' ? 'selectedTool' : '' }
+                    onClick={(e) => setSelectedTool('taxonomy')}
+                >Taxonomy</button>
+                <button
                     className={ selectedTool === 'usernames' ? 'selectedTool' : '' }
                     onClick={(e) => setSelectedTool('usernames')}
                 >Usernames</button>

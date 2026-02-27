@@ -4,6 +4,7 @@ import styled from '@emotion/styled'
 import DatasetsMenu from './DatasetsMenu'
 import SyncOccurrencesForm from './SyncOccurrencesForm'
 import DeterminationsAccessForm from './DeterminationsAccessForm'
+import TaxonomyAccessForm from './TaxonomyAccessForm'
 import UsernamesAccessForm from './UsernamesAccessForm'
 import PlantListAccessForm from './PlantListAccessForm'
 import ArchiveBrowser from './ArchiveBrowser'
@@ -26,6 +27,9 @@ export default function DatasetsPanel() {
             }
             { selectedTool === 'determinations' &&
                 <DeterminationsAccessForm />
+            }
+            { selectedTool === 'taxonomy' &&
+                <TaxonomyAccessForm />
             }
             { selectedTool === 'usernames' &&
                 <UsernamesAccessForm />

@@ -1,3 +1,4 @@
+import { fileLimits } from '../utils/constants.js'
 import FileManager from '../utils/FileManager.js'
 
 class TaxonomyService {
@@ -106,6 +107,7 @@ class TaxonomyService {
 
         const success = FileManager.writeCSV(filePath, data, this.taxonomyHeader)
         if (success) {
+            FileManager.limitFilesInDirectory('./shared/data/taxonomy', fileLimits.maxTaxonomy, { archive: false })
             return {
                 success,
                 fileName,
@@ -199,6 +201,7 @@ class TaxonomyService {
 
         const success = FileManager.writeCSV(filePath, data, this.sexCasteHeader)
         if (success) {
+            FileManager.limitFilesInDirectory('./shared/data/taxonomy', fileLimits.maxTaxonomy, { archive: false })
             return {
                 success,
                 fileName,

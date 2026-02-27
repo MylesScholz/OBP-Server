@@ -5,6 +5,11 @@ class ApiService {
         this.initialBackoffMs = 1000
         this.backoffLimitMs = 8000
         this.defaultPageSize = 200
+        this.iNaturalistAccessToken = ''
+    }
+
+    setINaturalistToken(token) {
+        this.iNaturalistAccessToken = token
     }
 
     async fetchUrl(url) {
@@ -12,7 +17,9 @@ class ApiService {
         try {
             // Make requests with exponential backoff to avoid API throttling
             for (let i = this.initialBackoffMs; i <= this.backoffLimitMs; i *= 2) {
-                const response = await fetch(url)
+                const config = {}
+                if (this.iNaturalistAccessToken) config = { headers: { 'Authorization': `Bearer ${this.iNaturalistAccessToken}` } }
+                const response = await fetch(url, config)
 
                 if (response.ok) {
                     return await response.json()

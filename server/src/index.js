@@ -1,4 +1,3 @@
-import 'dotenv/config'
 import path from 'path'
 import { Worker } from 'worker_threads'
 

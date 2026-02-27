@@ -122,7 +122,7 @@ const constants = {
         maxPivots: 25,
         maxPulls: 25,
         maxReports: 25,
-        maxTaxonomy: 10,
+        maxTaxonomy: 2,
         maxUploads: 25
     },
     auth: {

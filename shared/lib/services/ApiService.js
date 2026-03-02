@@ -15,8 +15,9 @@ class ApiService {
     }
 
     readINaturalistToken() {
-        const { access_token } = FileManager.readJSON(this.iNaturalistTokenFilePath, { access_token: '' })
-        this.iNaturalistToken = access_token
+        const data = FileManager.readJSON(this.iNaturalistTokenFilePath, { access_token: '' })
+        console.log(data)
+        this.iNaturalistToken = data.access_token
 
         return this.iNaturalistToken
     }

@@ -68,25 +68,29 @@ export default function OAuthForm() {
     return (
         <OAuthFormContainer>
             <h2>iNaturalist Account</h2>
-            { isLoading && <p>Loading...</p> }
-            { !isLoading && authorization?.iNaturalistAuthorization ? (
-                <p>Authorized</p>
+            { isLoading ? (
+                <p>Loading...</p>
             ) : (
-                <a
-                    id='iNaturalistAuthorize'
-                    href={iNaturalistAuthUrl}
-                >Authorize</a>
+                authorization?.iNaturalistAuthorization ? (
+                    <p>Authorized</p>
+                ) : (
+                    <a
+                        id='iNaturalistAuthorize'
+                        href={iNaturalistAuthUrl}
+                    >Authorize</a>
+                )
             )}
 
             <h2>Google Account</h2>
-            { isLoading && <p>Loading...</p> }
-            { !isLoading && authorization?.GoogleAuthorization ? (
-                <p>Authorized</p>
+            { isLoading ? (
+                <p>Loading...</p>
             ) : (
-                <a id='GoogleAuthorize'>Authorize</a>
+                authorization?.GoogleAuthorization ? (
+                    <p>Authorized</p>
+                ) : (
+                    <a id='GoogleAuthorize'>Authorize</a>
+                )
             )}
-
-            
         </OAuthFormContainer>
     )
 }

@@ -1,7 +1,8 @@
+import path from 'path'
 import axios from 'axios'
 
 import { iNaturalist } from '../../shared/lib/config/environment.js'
-import ApiService from '../../shared/lib/services/ApiService.js'
+import FileManager from '../../shared/lib/utils/FileManager.js'
 
 export default class OAuthController {
     static async authorizeINaturalist(req, res, next) {
@@ -27,7 +28,7 @@ export default class OAuthController {
             const { access_token } = tokenResponse.data
 
             console.log(access_token)
-            ApiService.setINaturalistToken(access_token)
+            FileManager.writeJSON(path.resolve('./shared/data/iNaturalistToken.json', { access_token: access_token ?? '' }))
 
             res.redirect('/admin')
         } catch (error) {

@@ -16,7 +16,7 @@ async function start() {
 
         console.log('Consumer is running...')
 
-        console.log(await ApiService.fetchUrl('https://www.inaturalist.org/users/mylesscholz.json'))
+        console.log(await ApiService.fetchUrl('https://api.inaturalist.org/v1/users/me'))
     } catch (error) {
         console.error('Failed to start consumer:', error)
         process.exit(1)

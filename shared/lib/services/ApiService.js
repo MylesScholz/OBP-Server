@@ -1,3 +1,6 @@
+import path from 'path'
+
+import FileManager from '../utils/FileManager.js'
 import { delay } from '../utils/utilities.js'
 
 class ApiService {
@@ -5,21 +8,30 @@ class ApiService {
         this.initialBackoffMs = 1000
         this.backoffLimitMs = 8000
         this.defaultPageSize = 200
-        this.iNaturalistAccessToken = ''
+        this.iNaturalistTokenFilePath = path.resolve('./shared/data/iNaturalistToken.json')
+        this.iNaturalistToken = ''
+
+        this.readINaturalistToken()
     }
 
-    setINaturalistToken(token) {
-        this.iNaturalistAccessToken = token
+    readINaturalistToken() {
+        const { access_token } = FileManager.readJSON(this.iNaturalistTokenFilePath, { access_token: '' })
+        this.iNaturalistToken = access_token
+
+        return this.iNaturalistToken
     }
 
     async fetchUrl(url) {
+        // Read the iNaturalist token file if undefined
+        if (!this.iNaturalistToken) this.readINaturalistToken()
+        
         // Fetch and concatenate the data, catching errors
         try {
             // Make requests with exponential backoff to avoid API throttling
             for (let i = this.initialBackoffMs; i <= this.backoffLimitMs; i *= 2) {
                 const config = {}
-                console.log(this.iNaturalistAccessToken)
-                if (this.iNaturalistAccessToken) config = { headers: { 'Authorization': `Bearer ${this.iNaturalistAccessToken}` } }
+                console.log(this.iNaturalistToken)
+                if (this.iNaturalistToken) config = { headers: { 'Authorization': `Bearer ${this.iNaturalistToken}` } }
                 const response = await fetch(url, config)
 
                 if (response.ok) {

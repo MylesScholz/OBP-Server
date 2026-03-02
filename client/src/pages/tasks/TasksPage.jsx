@@ -1,7 +1,5 @@
 import styled from '@emotion/styled'
-import { Navigate } from 'react-router'
 
-import { useAuth } from '../../AuthProvider'
 import FlowBar from '../../components/FlowBar'
 import TaskPanel from './TaskPanel'
 
@@ -14,18 +12,10 @@ const TasksPageContainer = styled.div`
 `
 
 export default function TasksPage() {
-    const { admin } = useAuth()
-
     return (
         <TasksPageContainer>
-            { admin ? (
-                <>
-                    <FlowBar />
-                    <TaskPanel />
-                </>
-            ) : (
-                <Navigate to='/' />
-            )}
+            <FlowBar />
+            <TaskPanel />
         </TasksPageContainer>
     )
 }

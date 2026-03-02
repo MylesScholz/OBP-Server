@@ -15,6 +15,7 @@ import DatasetsPage from './pages/datasets/DatasetsPage'
 import AdminPage from './pages/admin/AdminPage'
 import VolunteerLoginPage from './pages/volunteerLogin/VolunteerLoginPage'
 import DeterminationsPage from './pages/determinations/DeterminationsPage'
+import ProtectedRoute from './ProtectedRoute'
 
 const queryClient = new QueryClient()
 
@@ -27,9 +28,14 @@ const router = createBrowserRouter([
             { index: true, element: <LandingPage /> },
             { path: 'adminLogin', element: <AdminLoginPage /> },
             { path: 'dashboard', element: <DashboardPage /> },
-            { path: 'tasks', element: <TasksPage /> },
-            { path: 'datasets', element: <DatasetsPage /> },
-            { path: 'admin', element: <AdminPage /> },
+            {
+                element: <ProtectedRoute />,
+                children: [
+                    { path: 'tasks', element: <TasksPage /> },
+                    { path: 'datasets', element: <DatasetsPage /> },
+                    { path: 'admin', element: <AdminPage /> },
+                ]
+            },
             { path: 'volunteerLogin', element: <VolunteerLoginPage /> },
             { path: 'determinations', element: <DeterminationsPage /> }
         ]

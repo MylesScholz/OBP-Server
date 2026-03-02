@@ -79,6 +79,12 @@ const AppContainer = styled.div`
         gap: 10px;
 
         padding: 20px 100px;
+
+        .loadingMessage {
+            margin: 0px;
+
+            font-size: 16pt;
+        }
     }
 `
 

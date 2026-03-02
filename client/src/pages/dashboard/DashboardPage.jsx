@@ -14,8 +14,9 @@ const DashboardPageContainer = styled.div`
 `
 
 export default function DashboardPage() {
-    const { admin, volunteer } = useAuth()
+    const { admin, isLoading, volunteer } = useAuth()
 
+    if (isLoading) return <h2 className='loadingMessage'>Loading...</h2>
     return (
         <DashboardPageContainer>
             { admin || volunteer ? (

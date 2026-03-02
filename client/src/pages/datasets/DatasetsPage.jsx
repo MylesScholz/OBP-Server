@@ -1,7 +1,5 @@
 import styled from '@emotion/styled'
-import { Navigate } from 'react-router'
 
-import { useAuth } from '../../AuthProvider'
 import FlowBar from '../../components/FlowBar'
 import DatasetsPanel from './DatasetsPanel'
 
@@ -14,18 +12,10 @@ const DatasetsPageContainer = styled.div`
 `
 
 export default function DatasetsPage() {
-    const { admin } = useAuth()
-
     return (
         <DatasetsPageContainer>
-            { admin ? (
-                <>
-                    <FlowBar />
-                    <DatasetsPanel />
-                </>
-            ) : (
-                <Navigate to='/' />
-            )}
+            <FlowBar />
+            <DatasetsPanel />
         </DatasetsPageContainer>
     )
 }

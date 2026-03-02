@@ -9,7 +9,7 @@ export function AuthProvider({ children }) {
     const [ volunteer, setVolunteer ] = useState(null)
     const [ blockLogOut, setBlockLogOut ] = useState(false)
 
-    useQuery({
+    const { isLoading } = useQuery({
         queryKey: ['adminQuery'],
         queryFn: async () => {
             const response = await axios.get('/api/admins/login')
@@ -22,12 +22,14 @@ export function AuthProvider({ children }) {
 
             return { status: response?.status, data: response?.data }
         },
+        retry: false,
+        staleTime: Infinity,
         refetchInterval: 300000,    // 5 minutes
         refetchOnMount: 'always'
     })
 
     return (
-        <AuthContext.Provider value={{ admin, setAdmin, volunteer, setVolunteer, blockLogOut, setBlockLogOut }}>
+        <AuthContext.Provider value={{ admin, setAdmin, isLoading, volunteer, setVolunteer, blockLogOut, setBlockLogOut }}>
             { children }
         </AuthContext.Provider>
     )

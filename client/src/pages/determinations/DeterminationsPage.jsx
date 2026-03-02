@@ -14,11 +14,11 @@ const DeterminationsPageContainer = styled.div`
 `
 
 export default function DeterminationsPage() {
-    const { admin, volunteer } = useAuth()
+    const { volunteer } = useAuth()
 
     return (
         <DeterminationsPageContainer>
-            { admin || volunteer ? (
+            { volunteer ? (
                 <>
                     <FlowBar />
                     <DeterminationsEditor />

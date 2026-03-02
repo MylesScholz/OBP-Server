@@ -1,9 +1,7 @@
 import styled from '@emotion/styled'
-import { Navigate } from 'react-router'
 
 import FlowBar from '../../components/FlowBar'
 import AdminPanel from './AdminPanel'
-import { useAuth } from '../../AuthProvider'
 
 const AdminPageContainer = styled.div`
     display: flex;
@@ -14,18 +12,10 @@ const AdminPageContainer = styled.div`
 `
 
 export default function AdminPage() {
-    const { admin } = useAuth()
-
     return (
         <AdminPageContainer>
-            { admin ? (
-                <>
-                    <FlowBar />
-                    <AdminPanel />
-                </>
-            ) : (
-                <Navigate to='/' />
-            )}
+            <FlowBar />
+            <AdminPanel />
         </AdminPageContainer>
     )
 }

@@ -18,9 +18,11 @@ class ApiService {
         // Request a temporary API token from iNaturalist
         const config = {}
         if (access_token) config.headers = { 'Authorization': `Bearer ${access_token}` }
-        const { api_token } = await fetch('https://www.inaturalist.org/users/api_token', config)
+        console.log(config)
+        const data = await fetch('https://www.inaturalist.org/users/api_token', config)
+        console.log(data)
 
-        this.iNaturalistApiToken = api_token
+        this.iNaturalistApiToken = data.api_token ?? ''
         return this.iNaturalistApiToken
     }
 

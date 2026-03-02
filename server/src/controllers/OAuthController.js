@@ -27,9 +27,6 @@ export default class OAuthController {
 
             const { access_token } = tokenResponse.data
 
-            console.log(tokenResponse)
-            console.log(tokenResponse.data)
-
             FileManager.writeJSON(path.resolve('./shared/data/iNaturalistToken.json'), { access_token: access_token ?? '' })
 
             res.redirect('/admin')

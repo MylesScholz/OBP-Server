@@ -1,7 +1,7 @@
 import amqp from 'amqplib'
 
 import { messageBroker } from '../shared/lib/config/environment.js'
-import { TaskService } from '../shared/lib/services/index.js'
+import { TaskService, ApiService } from '../shared/lib/services/index.js'
 import {
     AddressesSubtaskHandler,
     DeterminationsSubtaskHandler,
@@ -71,6 +71,8 @@ class TaskConsumer {
 
     async handleTask(taskId) {
         console.log(`${new Date().toLocaleTimeString('en-US')} Processing task ${taskId}...`)
+
+        console.log(await ApiService.fetchUrl('https://api.inaturalist.org/v1/users/me'))
 
         try {
             const task = await TaskService.getTaskById(taskId)

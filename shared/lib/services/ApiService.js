@@ -10,21 +10,18 @@ class ApiService {
         this.defaultPageSize = 200
         this.iNaturalistTokenFilePath = path.resolve('./shared/data/iNaturalistToken.json')
         this.iNaturalistToken = ''
-
-        this.readINaturalistToken()
     }
 
     readINaturalistToken() {
         const data = FileManager.readJSON(this.iNaturalistTokenFilePath, { access_token: '' })
-        console.log(data)
         this.iNaturalistToken = data.access_token
 
         return this.iNaturalistToken
     }
 
     async fetchUrl(url) {
-        // Read the iNaturalist token file if undefined
-        if (!this.iNaturalistToken) this.readINaturalistToken()
+        // Read the iNaturalist token file
+        this.readINaturalistToken()
         
         // Fetch and concatenate the data, catching errors
         try {

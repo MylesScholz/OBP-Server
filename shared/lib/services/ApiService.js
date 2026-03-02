@@ -30,7 +30,7 @@ class ApiService {
         try {
             // Make requests with exponential backoff to avoid API throttling
             for (let i = this.initialBackoffMs; i <= this.backoffLimitMs; i *= 2) {
-                const config = {}
+                let config = {}
                 console.log(this.iNaturalistToken)
                 if (this.iNaturalistToken) config = { headers: { 'Authorization': `Bearer ${this.iNaturalistToken}` } }
                 const response = await fetch(url, config)

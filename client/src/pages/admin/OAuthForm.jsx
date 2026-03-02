@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 import styled from '@emotion/styled'
 
 const OAuthFormContainer = styled.div`
@@ -15,6 +16,12 @@ const OAuthFormContainer = styled.div`
         margin: 0px;
 
         font-size: 16pt;
+    }
+
+    p {
+        margin: 0px;
+
+        font-size: 12pt;
     }
     
     a {
@@ -49,16 +56,35 @@ export default function OAuthForm() {
     const iNaturalistRedirectUri = import.meta.env.VITE_INATURALIST_REDIRECT_URL ?? ''
     const iNaturalistAuthUrl = `${iNaturalistAuthBaseUrl}/oauth/authorize?client_id=${iNaturalistClientId}&redirect_uri=${iNaturalistRedirectUri}&response_type=code`
 
+    const { data: authorization } = useQuery({
+        queryKey: [ 'authorizationQuery' ],
+        queryFn: async () => {
+            const response = await fetch('/api/oauth/check')
+            return await response.json()
+        },
+        refetchOnMount: 'always'
+    })
+
     return (
         <OAuthFormContainer>
             <h2>iNaturalist Account</h2>
-            <a
-                id='iNaturalistAuthorize'
-                href={iNaturalistAuthUrl}
-            >Authorize</a>
+            { authorization?.iNaturalistAuthorization ? (
+                <p>Authorized</p>
+            ) : (
+                <a
+                    id='iNaturalistAuthorize'
+                    href={iNaturalistAuthUrl}
+                >Authorize</a>
+            )}
 
             <h2>Google Account</h2>
-            <a id='GoogleAuthorize'>Authorize</a>
+            { authorization?.GoogleAuthorization ? (
+                <p>Authorized</p>
+            ) : (
+                <a id='GoogleAuthorize'>Authorize</a>
+            )}
+
+            
         </OAuthFormContainer>
     )
 }

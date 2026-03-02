@@ -40,4 +40,14 @@ export default class OAuthController {
     static async authorizeGoogle(req, res, next) {
 
     }
+
+    static async checkAuthorization(req, res, next) {
+        const { access_token: iNaturalistToken } = FileManager.readJSON(path.resolve('./shared/data/iNaturalistToken.json'), { access_token: '' })
+        const { access_token: GoogleToken } = FileManager.readJSON(path.resolve('./shared/data/GoogleToken.json'), { access_token: '' })
+
+        res.status(200).send({
+            iNaturalistAuthorization: !!iNaturalistToken,
+            GoogleAuthorization: !!GoogleToken
+        })
+    }
 }

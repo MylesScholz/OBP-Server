@@ -26,6 +26,7 @@ export default class OAuthController {
 
             const { access_token } = tokenResponse.data
 
+            console.log(access_token)
             ApiService.setINaturalistToken(access_token)
 
             res.redirect('/admin')

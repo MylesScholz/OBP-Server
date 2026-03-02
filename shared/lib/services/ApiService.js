@@ -8,28 +8,33 @@ class ApiService {
         this.initialBackoffMs = 1000
         this.backoffLimitMs = 8000
         this.defaultPageSize = 200
-        this.iNaturalistTokenFilePath = path.resolve('./shared/data/iNaturalistToken.json')
-        this.iNaturalistToken = ''
+        this.iNaturalistApiToken = ''
     }
 
-    readINaturalistToken() {
-        const data = FileManager.readJSON(this.iNaturalistTokenFilePath, { access_token: '' })
-        this.iNaturalistToken = data.access_token
+    async fetchINaturalistApiToken() {
+        // Read an OAuth access token from the local file
+        const { access_token } = FileManager.readJSON(path.resolve('./shared/data/iNaturalistToken.json'), { access_token: '' })
 
-        return this.iNaturalistToken
+        // Request a temporary API token from iNaturalist
+        const config = {}
+        if (access_token) config.headers = { 'Authorization': `Bearer ${access_token}` }
+        const { api_token } = await fetch('https://inaturalist.org/users/api_token', config)
+
+        this.iNaturalistApiToken = api_token
+        return this.iNaturalistApiToken
     }
 
     async fetchUrl(url) {
-        // Read the iNaturalist token file
-        this.readINaturalistToken()
-        
+        // Get a temporary iNaturalist API token
+        await this.fetchINaturalistApiToken()
+
         // Fetch and concatenate the data, catching errors
         try {
             // Make requests with exponential backoff to avoid API throttling
             for (let i = this.initialBackoffMs; i <= this.backoffLimitMs; i *= 2) {
-                let config = {}
-                console.log(this.iNaturalistToken)
-                if (this.iNaturalistToken) config = { headers: { 'Authorization': `Bearer ${this.iNaturalistToken}` } }
+                const config = {}
+                if (this.iNaturalistApiToken) config.headers = { 'Authorization': `Bearer ${this.iNaturalistApiToken}` }
+                console.log(config)
                 const response = await fetch(url, config)
 
                 if (response.ok) {

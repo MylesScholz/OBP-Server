@@ -20,7 +20,6 @@ class ApiService {
         if (access_token) config.headers = { 'Authorization': `Bearer ${access_token}` }
         const response = await fetch('https://www.inaturalist.org/users/api_token', config)
         const json = await response.json()
-        console.log(json)
 
         this.iNaturalistApiToken = json.api_token ?? ''
         return this.iNaturalistApiToken
@@ -36,7 +35,6 @@ class ApiService {
             for (let i = this.initialBackoffMs; i <= this.backoffLimitMs; i *= 2) {
                 const config = {}
                 if (this.iNaturalistApiToken) config.headers = { 'Authorization': `Bearer ${this.iNaturalistApiToken}` }
-                console.log(config)
                 const response = await fetch(url, config)
 
                 if (response.ok) {

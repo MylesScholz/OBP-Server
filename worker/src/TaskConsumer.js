@@ -72,8 +72,6 @@ class TaskConsumer {
     async handleTask(taskId) {
         console.log(`${new Date().toLocaleTimeString('en-US')} Processing task ${taskId}...`)
 
-        console.log(await ApiService.fetchUrl('https://api.inaturalist.org/v1/users/me'))
-
         try {
             const task = await TaskService.getTaskById(taskId)
 

@@ -6,20 +6,51 @@ import styled from '@emotion/styled'
 const StewardshipReportFormContainer = styled.div`
     display: flex;
     flex-direction: column;
+    align-items: start;
     gap: 10px;
 
-    border: 1px solid gray;
+    border: 1px solid #222;
     border-radius: 5px;
 
     padding: 20px;
-
-    min-width: 400px;
 
     h2 {
         margin: 0px;
         margin-bottom: 5px;
 
         font-size: 16pt;
+    }
+
+    p {
+        margin: 0px;
+
+        font-size: 12pt;
+    }
+
+    select {
+        border: 1px solid gray;
+        border-radius: 5px;
+
+        font-size: 10pt;
+
+        background-color: white;
+
+        &:hover {
+            background-color: #efefef;
+        }
+    }
+
+    button {
+        border: 1px solid gray;
+        border-radius: 5px;
+
+        font-size: 10pt;
+
+        background-color: white;
+
+        &:hover {
+            background-color: #efefef;
+        }
     }
 
     #stewardshipReportQueryPanel {
@@ -57,6 +88,24 @@ const StewardshipReportFormContainer = styled.div`
                     select, input {
                         flex-grow: 1;
                     }
+
+                    input[type='url'] {
+                        border: 1px solid gray;
+                        border-radius: 5px;
+
+                        padding: 3px;
+                    }
+                }
+
+                input[type='submit'] {
+                    border: 1px solid gray;
+                    border-radius: 5px;
+
+                    background-color: white;
+
+                    &:hover {
+                        background-color: #efefef;
+                    }
                 }
             }
         }
@@ -66,7 +115,7 @@ const StewardshipReportFormContainer = styled.div`
             flex-direction: column;
             gap: 10px;
 
-            border: 1px solid gray;
+            border: 1px solid #222;
             border-radius: 5px;
 
             padding: 10px;
@@ -81,7 +130,6 @@ const StewardshipReportFormContainer = styled.div`
 `
 
 export default function StewardshipReportForm() {
-    const [ file, setFile ] = useState()
     const [ formDisabled, setFormDisabled ] = useState(false)
     const [ queryResponse, setQueryResponse ] = useState()
     const [ selectedTaskId, setSelectedTaskId ] = useState()
@@ -161,10 +209,17 @@ export default function StewardshipReportForm() {
 
         const formData = new FormData()
 
-        formData.append('file', file)
+        const file = event.target.stewardshipReportFileUpload.files[0]
+        if (file) formData.append('file', file)
 
         const url = event.target.stewardshipReportUrl?.value ?? ''
-        const subtasks = [ { type: 'stewardshipReport', input: 'upload', url } ]
+        const subtasks = [
+            {
+                type: 'stewardshipReport',
+                input: 'upload',
+                url
+            }
+        ]
         formData.append('subtasks', JSON.stringify(subtasks))
 
         axios.postForm('/api/tasks', formData).then((res) => {
@@ -179,57 +234,68 @@ export default function StewardshipReportForm() {
         })
     }
 
+    /*
+     * handleReset()
+     * Resets the form
+     */
+    function handleReset(event) {
+        event.preventDefault()
+
+        setQueryResponse(null)
+        setSelectedTaskId(null)
+    }
+
     return (
         <StewardshipReportFormContainer>
             <h2>Stewardship Report Script</h2>
 
             <div id='stewardshipReportQueryPanel'>
-                <form onSubmit={ handleSubmit }>
-                    <fieldset disabled={formDisabled}>
-                        <div>
-                            <label htmlFor='stewardshipReportFileUpload'>Melittoflora Dataset:</label>
-                            <input
-                                type='file'
-                                accept='.csv'
-                                id='stewardshipReportFileUpload'
-                                required
-                                onChange={ (event) => setFile(event.target.files[0]) }
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor='stewardshipReportUrl'>URL:</label>
-                            <input
-                                type='url'
-                                id='stewardshipReportUrl'
-                                required
-                            />
-                        </div>
+                { !queryResponse ? (
+                    <form onSubmit={ handleSubmit }>
+                        <fieldset disabled={formDisabled}>
+                            <div>
+                                <label htmlFor='stewardshipReportFileUpload'>Melittoflora Dataset:</label>
+                                <input
+                                    type='file'
+                                    accept='.csv'
+                                    id='stewardshipReportFileUpload'
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor='stewardshipReportUrl'>URL:</label>
+                                <input
+                                    type='url'
+                                    id='stewardshipReportUrl'
+                                    required
+                                />
+                            </div>
 
-                        <input type='submit' value='Submit' />
-                    </fieldset>
-                </form>
-
-                { queryResponse &&
+                            <input type='submit' value='Submit' />
+                        </fieldset>
+                    </form>
+                ) : (
                     <div id='stewardshipReportQueryResults'>
                         { selectedTaskData?.task &&
                             <>
-                                { selectedTaskData.task.progress &&
-                                    <>
-                                        <p>Current Step: {selectedTaskData.task.progress.currentStep}</p>
-                                        { selectedTaskData.task.progress.percentage && <p>{selectedTaskData.task.progress.percentage}</p> }
-                                    </>
+                                { selectedTaskData?.task.status &&
+                                    <p>Status: {selectedTaskData?.task.status}</p>
                                 }
-                                {
-                                    downloads?.map((d) => {
-                                        if (d.responseStatus === 200) {
-                                            return <a href={d.url} download={d.fileName}>Download {d.type}{d.subtype ? ` (${d.subtype})` : ''} file</a>
-                                        } else if (d.responseStatus === 401) {
-                                            return <p className='authRequiredDownloadMessage'>Authentication Required</p>
-                                        } else {
-                                            return <p>Error {d.responseStatus}</p>
-                                        }
-                                    })
+                                { selectedTaskData.task.progress?.currentStep &&
+                                    <p>Current Step: {selectedTaskData.task.progress.currentStep}</p>
                                 }
+                                { selectedTaskData.task.progress?.percentage &&
+                                    <p>{selectedTaskData.task.progress.percentage}</p>
+                                }
+                                { downloads?.map((d) => {
+                                    if (d.responseStatus === 200) {
+                                        return <a href={d.url} download={d.fileName}>Download {d.type}{d.subtype ? ` (${d.subtype})` : ''} file</a>
+                                    } else if (d.responseStatus === 401) {
+                                        return <p className='authRequiredDownloadMessage'>Authentication Required</p>
+                                    } else {
+                                        return <p>Error {d.responseStatus}</p>
+                                    }
+                                })}
                             </>
                         }
                         { queryResponse.error &&
@@ -238,8 +304,13 @@ export default function StewardshipReportForm() {
                         { selectedTaskData?.error &&
                             <p>Error: {selectedTaskData.status} {selectedTaskData.statusText}</p>
                         }
+
+                        <button
+                            id='resetButton'
+                            onClick={ handleReset }
+                        >New Query</button>
                     </div>
-                }
+                )}
             </div>
         </StewardshipReportFormContainer>
     )

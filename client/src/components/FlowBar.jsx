@@ -69,6 +69,9 @@ export default function FlowBar() {
                     <NavLink className='flowStage' to='/datasets'>
                         <h3>Datasets</h3>
                     </NavLink>
+                    <NavLink className='flowStage' to='/scripts'>
+                        <h3>Scripts</h3>
+                    </NavLink>
                     <NavLink className='flowStage' to='/admin'>
                         <h3>Administration</h3>
                     </NavLink>

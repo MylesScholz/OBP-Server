@@ -15,13 +15,20 @@ class ApiService {
         // Read an OAuth access token from the local file
         const { access_token } = FileManager.readJSON(path.resolve('./shared/data/iNaturalistToken.json'), { access_token: '' })
 
-        // Request a temporary API token from iNaturalist
-        const config = {}
-        if (access_token) config.headers = { 'Authorization': `Bearer ${access_token}` }
-        const response = await fetch('https://www.inaturalist.org/users/api_token', config)
-        const json = await response.json()
+        if (access_token) {
+            // Request a temporary API token from iNaturalist
+            const config = {
+                headers: { 'Authorization': `Bearer ${access_token}` }
+            }
+            
+            const response = await fetch('https://www.inaturalist.org/users/api_token', config)
 
-        this.iNaturalistApiToken = json.api_token ?? ''
+            if (response['content-type']?.includes('application/json')) {
+                const json = await response.json()
+                this.iNaturalistApiToken = json.api_token ?? ''
+            }
+        }
+        
         return this.iNaturalistApiToken
     }
 

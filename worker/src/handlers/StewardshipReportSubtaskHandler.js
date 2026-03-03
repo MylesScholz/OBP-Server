@@ -32,7 +32,6 @@ export default class StewardshipReportSubtaskHandler extends BaseSubtaskHandler 
         // Fetch the task and subtask
         const task = await TaskService.getTaskById(taskId)
         const subtask = task.subtasks.find((subtask) => subtask.type === 'stewardshipReport')
-        const previousSubtaskOutputs = task.result?.subtaskOutputs ?? []
 
         // Input and output file names
         const uploadFilePath = task.upload?.filePath ?? ''
@@ -57,11 +56,14 @@ export default class StewardshipReportSubtaskHandler extends BaseSubtaskHandler 
         await TaskService.updateProgressPercentageById(taskId, 0)
         
         const { success, stdout, stderr } = await ScriptService.runRScript('./src/scripts/makeReports.R', [ uploadFilePath ])
+        if (!success) {
+            throw new Error('Script failed')
+        }
         
         // Wait 5 seconds for rendering to finish
         await delay(5000)
 
-        await TaskService.updateProgressPercentageById(taskId, 0)
+        await TaskService.updateProgressPercentageById(taskId, 100)
 
         // Clean up observations files
         await TaskService.logTaskStep(taskId, 'Cleaning up files')
@@ -72,10 +74,7 @@ export default class StewardshipReportSubtaskHandler extends BaseSubtaskHandler 
         const outputs = [
             { uri: `/api/reports/${stewardshipReportFileName}`, fileName: stewardshipReportFileName, type: 'report', subtype: 'stewardship' }
         ]
-        previousSubtaskOutputs.push({ type: subtask.type, outputs })
-        await TaskService.updateResultById(taskId, {
-            subtaskOutputs: previousSubtaskOutputs
-        })
+        await TaskService.updateSubtaskOutputsById(taskId, 'stewardshipReport', outputs)
 
         // Archive excess output files
         FileManager.limitFilesInDirectory('./shared/data/reports', fileLimits.maxReports)

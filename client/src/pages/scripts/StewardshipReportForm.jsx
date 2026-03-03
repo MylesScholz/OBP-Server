@@ -115,11 +115,6 @@ const StewardshipReportFormContainer = styled.div`
             flex-direction: column;
             gap: 10px;
 
-            border: 1px solid #222;
-            border-radius: 5px;
-
-            padding: 10px;
-
             p {
                 margin: 0px;
 

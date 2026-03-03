@@ -29,31 +29,23 @@ const uploadCSV = multer({
     }
 })
 
-// Multer object for processing usernames.csv uploads; only allows CSV files and overwrites the existing usernames.csv
-const uploadUsernames = multer({
-    storage: multer.diskStorage({
-        destination: './shared/data',
-        filename: (req, file, cb) => {
-            cb(null, 'usernames.csv')
+/*
+ * createCSVDatasetUpload()
+ * Creates a multer object for processing CSV dataset uploads; only allows CSV files and overwrites the existing dataset
+ */
+function createCSVDatasetUpload(fileName) {
+    return multer({
+        storage: multer.diskStorage({
+            destination: './shared/data',
+            filename: (req, file, cb) => {
+                cb(null, fileName ?? 'dataset.csv')
+            }
+        }),
+        fileFilter: (req, file, cb) => {
+            cb(null, !!fileTypes[file.mimetype])
         }
-    }),
-    fileFilter: (req, file, cb) => {
-        cb(null, !!fileTypes[file.mimetype])
-    }
-})
-
-// Multer object for processing plantList.csv uploads; only allows CSV files and overwrites the existing plantList.csv
-const uploadPlantList = multer({
-    storage: multer.diskStorage({
-        destination: './shared/data',
-        filename: (req, file, cb) => {
-            cb(null, 'plantList.csv')
-        }
-    }),
-    fileFilter: (req, file, cb) => {
-        cb(null, !!fileTypes[file.mimetype])
-    }
-})
+    })
+}
 
 /*
  * limitUploadFiles()
@@ -65,4 +57,4 @@ function limitUploadFiles(req, res, next) {
     next()
 }
 
-export { uploadCSV, uploadUsernames, uploadPlantList, limitUploadFiles }
+export { uploadCSV, createCSVDatasetUpload, limitUploadFiles }

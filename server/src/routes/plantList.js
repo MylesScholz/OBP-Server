@@ -1,10 +1,13 @@
 import Router from 'express'
 
 import { requireAuthentication } from '../middleware/auth.js'
-import { uploadPlantList } from '../middleware/multer.js'
+import { createCSVDatasetUpload } from '../middleware/multer.js'
 import { PlantListController } from '../controllers/index.js'
 
 const plantListRouter = Router()
+
+// Create multer object that uploads directly to /shared/data/plantList.csv
+const uploadPlantList = createCSVDatasetUpload('plantList.csv')
 
 /*
  * GET /api/plantList

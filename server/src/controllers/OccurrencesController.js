@@ -127,6 +127,18 @@ export default class OccurrencesController {
         res.status(200).sendFile(path.resolve('./shared/data/workingOccurrences.csv'))
     }
 
+    static async uploadWorkingFile(req, res, next) {
+        // Check that required field exists
+        if (!req.file) {
+            res.status(400).send({
+                error: 'Missing required request field'
+            })
+            return
+        }
+
+        res.status(200).send()
+    }
+
     static async readWorkingFile(req, res, next) {
         try {
             // Create task and send its ID to the RabbitMQ queue
@@ -188,6 +200,18 @@ export default class OccurrencesController {
     static async getBackupFile(req, res, next) {
         // Send backupOccurrences.csv
         res.status(200).sendFile(path.resolve('./shared/data/backupOccurrences.csv'))
+    }
+
+    static async uploadBackupFile(req, res, next) {
+        // Check that required field exists
+        if (!req.file) {
+            res.status(400).send({
+                error: 'Missing required request field'
+            })
+            return
+        }
+
+        res.status(200).send()
     }
 
     static async readBackupFile(req, res, next) {

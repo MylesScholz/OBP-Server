@@ -126,6 +126,20 @@ export default function SyncOccurrencesForm() {
                 setQueryResponse({ status: error.response?.status, error: error.response?.data?.error ?? error.message })
                 console.error(error)
             })
+        } else if (syncQuery.operation === 'upload') {
+            const formData = new FormData()
+
+            const file = event.target.syncOccurrencesFileUpload.files[0]
+            if (file) formData.append('file', file)
+
+            axios.postForm(`/api/occurrences/${syncQuery.file}`, formData).then((res) => {
+                setDisabled(false)
+                setQueryResponse({ status: res.status, data: res.data })
+            }).catch((error) => {
+                setDisabled(false)
+                setQueryResponse({ status: error.response?.status, error: error.response?.data?.error ?? error.message })
+                console.error(error)
+            })
         } else {
             axios.post(`/api/occurrences/${syncQuery.file}/${syncQuery.operation}`).then((res) => {
                 setDisabled(false)
@@ -166,6 +180,7 @@ export default function SyncOccurrencesForm() {
                                 onChange={(event) => setSyncQuery({ ...syncQuery, operation: event.target.value })}
                             >
                                 <option value='download'>Download</option>
+                                <option value='upload'>Upload</option>
                                 <option value='read'>Read</option>
                                 <option value='write'>Write</option>
                             </select>
@@ -182,7 +197,16 @@ export default function SyncOccurrencesForm() {
                                 <option value='backup'>Backup Occurrences</option>
                             </select>
 
-                            { syncQuery.operation !== 'download' &&
+                            { syncQuery.operation === 'upload' &&
+                                <input
+                                    type='file'
+                                    accept='.csv'
+                                    id='syncOccurrencesFileUpload'
+                                    required
+                                />
+                            }
+
+                            { syncQuery.operation !== 'download' && syncQuery.operation !== 'upload' &&
                                 <p>
                                     {syncQuery.operation === 'read' ? 'into ' : 'from '}
                                     {syncQuery.file === 'working' ? 'the occurrence database' : 'the working occurrences file'}
@@ -198,6 +222,9 @@ export default function SyncOccurrencesForm() {
                 <div id='syncQueryStatus'>
                     { queryResponse.status === 200 && syncQuery.operation === 'download' &&
                         <a href={queryResponse.data} download={`${syncQuery.file}Occurrences.csv`}>Download {syncQuery.file} occurrences file</a>
+                    }
+                    { queryResponse.status === 200 && syncQuery.operation === 'upload' &&
+                        <p>File uploaded successfully</p>
                     }
                     { queryResponse.error &&
                         <p>Error: {queryResponse.error}</p>

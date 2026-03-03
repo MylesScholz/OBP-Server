@@ -1,10 +1,14 @@
 import Router from 'express'
 
 import { checkAuthentication, requireAuthentication } from '../middleware/auth.js'
-import { uploadCSV } from '../middleware/multer.js'
+import { uploadCSV, createCSVDatasetUpload } from '../middleware/multer.js'
 import { OccurrencesController } from '../controllers/index.js'
 
 const occurrencesRouter = Router()
+
+// Create multer objects that upload directly to /shared/data/workingOccurrences.csv and /shared/data/backupOccurrences.csv
+const uploadWorkingOccurrences = createCSVDatasetUpload('workingOccurrences.csv')
+const uploadBackupOccurrences = createCSVDatasetUpload('backupOccurrences.csv')
 
 /*
  * GET /api/occurrences
@@ -35,6 +39,12 @@ occurrencesRouter.get('/download', checkAuthentication, OccurrencesController.ge
 occurrencesRouter.get('/working', requireAuthentication, OccurrencesController.getWorkingFile)
 
 /*
+ * POST /api/occurrences/working
+ * Replaces working occurrences file with an uploaded CSV
+ */
+occurrencesRouter.post('/working', requireAuthentication, uploadWorkingOccurrences.single('file'), OccurrencesController.uploadWorkingFile)
+
+/*
  * POST /api/occurrences/working/read
  * Read the current working occurrences dataset file into the database
  * Authentication required
@@ -55,6 +65,12 @@ occurrencesRouter.post('/working/write', requireAuthentication, OccurrencesContr
  * Authentication required
  */
 occurrencesRouter.get('/backup', requireAuthentication, OccurrencesController.getBackupFile)
+
+/*
+ * POST /api/occurrences/backup
+ * Replaces backup occurrences file with an uploaded CSV
+ */
+occurrencesRouter.post('/backup', requireAuthentication, uploadBackupOccurrences.single('file'), OccurrencesController.uploadBackupFile) 
 
 /*
  * POST /api/occurrences/backup/read

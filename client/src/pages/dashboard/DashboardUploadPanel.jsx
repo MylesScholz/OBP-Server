@@ -23,6 +23,21 @@ const DashboardUploadPanelContainer = styled.div`
         font-size: 14pt;
     }
 
+    button {
+        border: 1px solid gray;
+        border-radius: 5px;
+
+        padding: 5px;
+
+        font-size: 10pt;
+
+        background-color: white;
+
+        &:hover {
+            background-color: #efefef;
+        }
+    }
+
     #uploadFieldset {
         display: flex;
         flex-direction: column;
@@ -111,21 +126,6 @@ const DashboardUploadPanelContainer = styled.div`
             margin: 0px;
 
             font-size: 12pt;
-        }
-    }
-
-    #uploadButton {
-        border: 1px solid gray;
-        border-radius: 5px;
-
-        padding: 5px;
-
-        font-size: 10pt;
-
-        background-color: white;
-
-        &:hover {
-            background-color: #efefef;
         }
     }
 `

@@ -737,7 +737,7 @@ class OccurrenceService {
             results.matchedCount += response?.matchedCount ?? 0
         }
 
-        return modifiedCount
+        return results
     }
 
     async updateMatchingOccurrencesFromFile(filePath, options = { skipFormatting: false, scratch: false }) {
@@ -760,7 +760,7 @@ class OccurrenceService {
             results.matchedCount += chunkResults.matchedCount
         }
 
-        return modifiedCount
+        return results
     }
 
     async replaceOccurrenceById(id, document, options = { skipFormatting: false, scratch: false, upsert: false }) {

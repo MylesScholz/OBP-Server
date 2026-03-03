@@ -37,7 +37,7 @@ const PlantListAccessFormContainer = styled.div`
             fieldset {
                 display: flex;
                 flex-direction: column;
-                gap: 10px;
+                gap: 15px;
 
                 margin: 0px;
 

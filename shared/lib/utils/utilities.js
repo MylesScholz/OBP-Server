@@ -1,4 +1,7 @@
+import Crypto from 'node:crypto'
+
 import { fieldNames, subtasks as subtasksConstant } from './constants.js'
+import { tokens } from '../config/environment.js'
 import { InvalidArgumentError, ValidationError } from './errors.js'
 
 /*
@@ -212,4 +215,43 @@ function parseSubtasks(subtasksJSON, adminId) {
     }
 }
 
-export { includesStreetSuffix, getDayOfYear, delay, getOFV, parseQueryParameters, parseSubtasks }
+const ALGORITHM = 'aes-256-gcm'
+const KEY = Crypto.scryptSync(tokens.secret, tokens.salt, 32)
+
+function encryptObject(object) {
+    const iv = Crypto.randomBytes(16)
+    const cipher = Crypto.createCipheriv(ALGORITHM, KEY, iv)
+
+    const encrypted = Buffer.concat([
+        cipher.update(JSON.stringify(object), 'utf8'),
+        cipher.final()
+    ])
+    const authTag = cipher.getAuthTag()
+
+    // Store iv, authTag, and ciphertext together (all needed for decryption)
+    return {
+        iv: iv.toString('hex'),
+        authTag: authTag.toString('hex'),
+        data: encrypted.toString('hex')
+    }
+}
+
+function decryptObject(encryptedObject) {
+    if (!encryptedObject || !encryptedObject.iv || !encryptedObject.authTag || !encryptedObject.data) return ''
+
+    const decipher = Crypto.createDecipheriv(
+        ALGORITHM,
+        KEY,
+        Buffer.from(encryptedObject.iv, 'hex')
+    )
+    decipher.setAuthTag(Buffer.from(encryptedObject.authTag, 'hex'))
+
+    const decrypted = Buffer.concat([
+        decipher.update(Buffer.from(encryptedObject.data, 'hex')),
+        decipher.final()
+    ])
+
+    return JSON.parse(decrypted.toString('utf8'))
+}
+
+export { includesStreetSuffix, getDayOfYear, delay, getOFV, parseQueryParameters, parseSubtasks, encryptObject, decryptObject }

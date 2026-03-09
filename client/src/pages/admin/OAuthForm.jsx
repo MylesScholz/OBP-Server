@@ -51,10 +51,7 @@ const OAuthFormContainer = styled.div`
 `
 
 export default function OAuthForm() {
-    const iNaturalistAuthBaseUrl = 'https://www.inaturalist.org'
-    const iNaturalistClientId = import.meta.env.VITE_INATURALIST_CLIENT_ID ?? ''
-    const iNaturalistRedirectUri = import.meta.env.VITE_INATURALIST_REDIRECT_URL ?? ''
-    const iNaturalistAuthUrl = `${iNaturalistAuthBaseUrl}/oauth/authorize?client_id=${iNaturalistClientId}&redirect_uri=${iNaturalistRedirectUri}&response_type=code`
+    /* Queries */
 
     const { data: authorization, isLoading } = useQuery({
         queryKey: [ 'authorizationQuery' ],
@@ -76,7 +73,7 @@ export default function OAuthForm() {
                 ) : (
                     <a
                         id='iNaturalistAuthorize'
-                        href={iNaturalistAuthUrl}
+                        href='/api/oauth/iNaturalist/link'
                     >Authorize</a>
                 )
             )}
@@ -88,7 +85,10 @@ export default function OAuthForm() {
                 authorization?.GoogleAuthorization ? (
                     <p>Authorized</p>
                 ) : (
-                    <a id='GoogleAuthorize'>Authorize</a>
+                    <a
+                        id='GoogleAuthorize'
+                        href='/api/oauth/Google/link'
+                    >Authorize</a>
                 )
             )}
         </OAuthFormContainer>

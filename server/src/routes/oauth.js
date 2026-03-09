@@ -11,10 +11,22 @@ const oauthRouter = Router()
 oauthRouter.get('/iNaturalist', OAuthController.authorizeINaturalist)
 
 /*
+ * GET /api/oauth/iNaturalist/link
+ * Redirects to the iNaturalist consent screen
+ */
+oauthRouter.get('/iNaturalist/link', OAuthController.redirectToINaturalist)
+
+/*
  * GET /api/oauth/Google
  * Callback endpoint for the Google OAuth workflow; exchanges the given code for an access token
  */
 oauthRouter.get('/Google', OAuthController.authorizeGoogle)
+
+/*
+ * GET /api/oauth/Google/link
+ * Redirects to the Google consent screen
+ */
+oauthRouter.get('/Google/link', OAuthController.redirectToGoogle)
 
 /*
  * GET /api/oauth/check

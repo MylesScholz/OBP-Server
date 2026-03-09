@@ -58,9 +58,13 @@ const config = {
     auth: {
         jwtSecret: required('JWT_SECRET')
     },
+    tokens: {
+        secret: required('TOKEN_ENCRYPTION_SECRET'),
+        salt: required('TOKEN_ENCRYPTION_SALT')
+    },
     iNaturalist: {
-        clientId: process.env.VITE_INATURALIST_CLIENT_ID,
-        redirectUrl: process.env.VITE_INATURALIST_REDIRECT_URL,
+        clientId: process.env.INATURALIST_CLIENT_ID,
+        redirectUrl: process.env.INATURALIST_REDIRECT_URL,
         clientSecret: process.env.INATURALIST_CLIENT_SECRET
     }
 }
@@ -69,6 +73,7 @@ export const { port } = config
 export const { database } = config
 export const { messageBroker } = config
 export const { auth } = config
+export const { tokens } = config
 export const { iNaturalist } = config
 
 export default config

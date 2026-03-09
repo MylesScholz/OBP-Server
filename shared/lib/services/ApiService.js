@@ -1,7 +1,7 @@
 import path from 'path'
 
 import FileManager from '../utils/FileManager.js'
-import { delay } from '../utils/utilities.js'
+import { decryptObject, delay } from '../utils/utilities.js'
 
 class ApiService {
     constructor() {
@@ -13,7 +13,8 @@ class ApiService {
 
     async fetchINaturalistApiToken() {
         // Read an OAuth access token from the local file
-        const { access_token } = FileManager.readJSON(path.resolve('./shared/data/iNaturalistToken.json'), { access_token: '' })
+        const { encryptedToken } = FileManager.readJSON(path.resolve('./shared/data/iNaturalistToken.json'), { encryptedToken: {} })
+        const access_token = decryptObject(encryptedToken)
 
         if (access_token) {
             // Request a temporary API token from iNaturalist

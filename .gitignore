@@ -27,6 +27,7 @@ shared/data/beeTaxonomy.json
 shared/data/sexCaste.json
 shared/data/iNaturalistToken.json
 shared/data/GoogleToken.json
+shared/data/credentials.json
 
 # Logs
 logs

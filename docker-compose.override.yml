@@ -5,6 +5,12 @@ services:
     worker:
         command: npm run dev
 
+    nginx:
+        volumes:
+            - ./nginx/nginx.prod.conf:/etc/nginx/nginx.prod.conf
+            - /etc/nginx/ssl:/etc/nginx/ssl:ro
+            - ./client/dist:/usr/share/nginx/html
+
     client-dev:
         container_name: client-dev
         image: node:20-alpine

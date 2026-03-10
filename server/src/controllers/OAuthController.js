@@ -65,7 +65,7 @@ export default class OAuthController {
         const { encryptedToken: iNaturalistToken } = FileManager.readJSON(path.resolve('./shared/data/iNaturalistToken.json'), { encryptedToken: {} })
 
         res.status(200).send({
-            authorized: !!iNaturalistToken
+            authorized: !!iNaturalistToken?.data
         })
     }
 

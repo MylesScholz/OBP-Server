@@ -1,7 +1,7 @@
 import path from 'path'
 
 import BaseSubtaskHandler from './BaseSubtaskHandler.js'
-import { OccurrenceService, TaskService } from '../../shared/lib/services/index.js'
+import { ApiService, OccurrenceService, TaskService } from '../../shared/lib/services/index.js'
 import { fileLimits } from '../../shared/lib/utils/constants.js'
 import FileManager from '../../shared/lib/utils/FileManager.js'
 
@@ -68,6 +68,9 @@ export default class SyncOccurrencesSubtaskHandler extends BaseSubtaskHandler {
             const timestamp = now.toISOString().slice(0, -5).replaceAll(':', '.')   // ISO minus milliseconds, replace : with .
             const archivedOccurrencesFilePath = path.resolve(`./shared/data/backups/backupOccurrences_${timestamp}.csv`)
             FileManager.copyFile(backupOccurrencesFilePath, archivedOccurrencesFilePath)
+            // Upload the copy to Google Drive (if authorized)
+            await ApiService.uploadFileToGoogleDrive(archivedOccurrencesFilePath)
+            // Compress the copy (creates a separate zip file) and delete the CSV
             FileManager.compressFile(archivedOccurrencesFilePath)
             FileManager.deleteFile(archivedOccurrencesFilePath)
             FileManager.limitFilesInDirectory('./shared/data/backups', fileLimits.maxBackups, { archive: false })

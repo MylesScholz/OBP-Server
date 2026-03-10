@@ -1,7 +1,10 @@
 import path from 'path'
+import fs from 'fs'
+import { google } from 'googleapis'
 
+import { delay, encryptObject, decryptObject } from '../utils/utilities.js'
+import { Google } from '../config/environment.js'
 import FileManager from '../utils/FileManager.js'
-import { decryptObject, delay } from '../utils/utilities.js'
 
 class ApiService {
     constructor() {
@@ -233,6 +236,75 @@ class ApiService {
         // Yield any remaining observations (a partial chunk)
         if (chunk.length > 0) {
             yield chunk
+        }
+    }
+
+    async getGoogleDriveClient() {
+        // Read an OAuth token information from the local file
+        const { encryptedToken } = FileManager.readJSON(path.resolve('./shared/data/GoogleToken.json'), { encryptedToken: {} })
+        const tokens = decryptObject(encryptedToken)
+
+        if (!tokens) return
+
+        // Read credentials file and create an OAuth client
+        const encryptedCredentials = FileManager.readJSON(path.resolve('./shared/data/credentials.json'))
+        const credentials = decryptObject(encryptedCredentials)
+        const { client_id, client_secret, redirect_uris } = credentials?.web ?? {}
+
+        const GoogleOAuthClient = new google.auth.OAuth2(
+            client_id,
+            client_secret,
+            redirect_uris[0]
+        )
+        GoogleOAuthClient.setCredentials(tokens)
+
+        // Refresh token if expired
+        GoogleOAuthClient.on('tokens', (newTokens) => {
+            const updatedTokens = { ...tokens, ...newTokens }
+            const encryptedTokens = encryptObject(updatedTokens)
+            FileManager.writeJSON(path.resolve('./shared/data/GoogleToken.json'), { encryptedToken: encryptedTokens ?? {} })
+        })
+
+        // Return a new Drive client using the OAuth client
+        return google.drive({ version: 'v3', auth: GoogleOAuthClient })
+    }
+
+    async uploadFileToGoogleDrive(filePath, updateProgress = null) {
+        try {
+            const GoogleDriveClient = await this.getGoogleDriveClient()
+
+            const resolvedPath = path.resolve(filePath)
+            const fileName = path.basename(resolvedPath)
+            const mimeType = 'text/csv'     // TODO: determine MIME type based on file
+            const fileSize = fs.statSync(resolvedPath).size
+            const folderId = Google.backupDriveId
+
+            const response = await GoogleDriveClient.files.create(
+                {
+                    requestBody: {
+                        name: fileName,
+                        parents: [ folderId ]
+                    },
+                    media: {
+                        mimeType,
+                        body: fs.createReadStream(resolvedPath)
+                    },
+                    fields: 'id, name, webViewLink'
+                },
+                {
+                    onUploadProgress: (event) => {
+                        if (updateProgress) updateProgress(100 * (event.bytesRead ?? 0) / fileSize)
+                    }
+                }
+            )
+
+            return {
+                fileId: response?.data?.id ?? '',
+                fileName: response?.data?.name ?? '',
+                uri: response?.data?.webViewLink ?? ''
+            }
+        } catch (error) {
+            console.error('Failed to upload file:', error)
         }
     }
 }

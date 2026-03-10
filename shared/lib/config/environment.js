@@ -66,6 +66,9 @@ const config = {
         clientId: process.env.INATURALIST_CLIENT_ID,
         redirectUrl: process.env.INATURALIST_REDIRECT_URL,
         clientSecret: process.env.INATURALIST_CLIENT_SECRET
+    },
+    Google: {
+        backupDriveId: process.env.GOOGLE_DRIVE_ID
     }
 }
 
@@ -75,5 +78,6 @@ export const { messageBroker } = config
 export const { auth } = config
 export const { tokens } = config
 export const { iNaturalist } = config
+export const { Google } = config
 
 export default config

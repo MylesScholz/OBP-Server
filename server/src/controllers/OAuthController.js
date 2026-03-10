@@ -82,7 +82,7 @@ export default class OAuthController {
         try {
             const GoogleOAuthClient = createGoogleOAuthClient()
 
-            const tokens = await GoogleOAuthClient.getToken(code)
+            const { tokens } = await GoogleOAuthClient.getToken(code)
             const encryptedTokens = encryptObject(tokens)
 
             FileManager.writeJSON(path.resolve('./shared/data/GoogleToken.json'), { encryptedToken: encryptedTokens ?? {} })

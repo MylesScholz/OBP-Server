@@ -145,7 +145,8 @@ export default class OAuthController {
 
                 const { credentials } = GoogleOAuthClient.refreshAccessToken()
                 const newTokens = { ...tokens, ...credentials }
-                FileManager.writeJSON(path.resolve('./shared/data/GoogleToken.json'), { encryptedToken: newTokens })
+                const encryptedTokens = encryptObject(newTokens)
+                FileManager.writeJSON(path.resolve('./shared/data/GoogleToken.json'), { encryptedToken: encryptedTokens })
 
                 res.status(200).send({ authorized: true })
             } catch (refreshError) {

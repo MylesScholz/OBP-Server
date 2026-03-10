@@ -289,7 +289,8 @@ class ApiService {
                         mimeType,
                         body: fs.createReadStream(resolvedPath)
                     },
-                    fields: 'id, name, webViewLink'
+                    fields: 'id, name, webViewLink',
+                    supportsAllDrives: true
                 },
                 {
                     onUploadProgress: (event) => {

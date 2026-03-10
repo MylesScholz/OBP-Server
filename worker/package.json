@@ -21,6 +21,7 @@
     "csv-stringify": "^6.6.0",
     "dotenv": "^17.2.3",
     "geotiff": "^2.1.4-beta.1",
+    "googleapis": "^171.4.0",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.21.0",
     "pdf-lib": "^1.17.1"

@@ -235,7 +235,7 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
         // Delete old scratch space occurrences (from previous tasks)
         await OccurrenceService.deleteOccurrences({ scratch: true })
 
-        if (subtask.input === 'download') {
+        if (subtask.input === 'upload') {
             // Upsert data from the uploaded occurrence file into scratch space (existing records will be moved to scratch space)
             await OccurrenceService.upsertOccurrencesFromFile(uploadFilePath, { scratch: true })
         } else if (subtask.input === 'selection') {

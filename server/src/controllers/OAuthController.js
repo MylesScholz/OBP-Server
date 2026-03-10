@@ -6,6 +6,18 @@ import { iNaturalist } from '../../shared/lib/config/environment.js'
 import { encryptObject, decryptObject } from '../../shared/lib/utils/utilities.js'
 import FileManager from '../../shared/lib/utils/FileManager.js'
 
+const encryptedCredentials = FileManager.readJSON(path.resolve('./shared/data/credentials.json'))
+const credentials = decryptObject(encryptedCredentials)
+const { client_id, client_secret, redirect_uris } = credentials?.web ?? {}
+
+function createGoogleOAuthClient() {
+    return new google.auth.OAuth2(
+        client_id,
+        client_secret,
+        redirect_uris[0]
+    )
+}
+
 export default class OAuthController {
     static async authorizeINaturalist(req, res, next) {
         const { code, error } = req.query
@@ -49,6 +61,14 @@ export default class OAuthController {
         res.redirect(iNaturalistAuthUrl)
     }
 
+    static async getINaturalistStatus(req, res, next) {
+        const { encryptedToken: iNaturalistToken } = FileManager.readJSON(path.resolve('./shared/data/iNaturalistToken.json'), { encryptedToken: {} })
+
+        res.status(200).send({
+            authorized: !!iNaturalistToken
+        })
+    }
+
     static async authorizeGoogle(req, res, next) {
         const { code, error } = req.query
 
@@ -60,15 +80,7 @@ export default class OAuthController {
         }
 
         try {
-            const encryptedCredentials = FileManager.readJSON(path.resolve('./shared/data/credentials.json'))
-            const credentials = decryptObject(encryptedCredentials)
-            const { client_id, client_secret, redirect_uris } = credentials.web
-
-            const GoogleOAuthClient = new google.auth.OAuth2(
-                client_id,
-                client_secret,
-                redirect_uris[0]
-            )
+            const GoogleOAuthClient = createGoogleOAuthClient()
 
             const tokens = await GoogleOAuthClient.getToken(code)
             const encryptedTokens = encryptObject(tokens)
@@ -84,15 +96,7 @@ export default class OAuthController {
     }
 
     static async redirectToGoogle(req, res, next) {
-        const encryptedCredentials = FileManager.readJSON(path.resolve('./shared/data/credentials.json'))
-        const credentials = decryptObject(encryptedCredentials)
-        const { client_id, client_secret, redirect_uris } = credentials.web
-
-        const GoogleOAuthClient = new google.auth.OAuth2(
-            client_id,
-            client_secret,
-            redirect_uris[0]
-        )
+        const GoogleOAuthClient = createGoogleOAuthClient()
 
         const GoogleAuthUrl = GoogleOAuthClient.generateAuthUrl({
             access_type: 'offline',     // Includes a refresh token in response
@@ -103,13 +107,52 @@ export default class OAuthController {
         res.redirect(GoogleAuthUrl)
     }
 
-    static async checkAuthorization(req, res, next) {
-        const { encryptedToken: iNaturalistToken } = FileManager.readJSON(path.resolve('./shared/data/iNaturalistToken.json'), { encryptedToken: {} })
-        const { encryptedToken: GoogleToken } = FileManager.readJSON(path.resolve('./shared/data/GoogleToken.json'), { encryptedToken: {} })
+    static async getGoogleStatus(req, res, next) {
+        const { encryptedToken } = FileManager.readJSON(path.resolve('./shared/data/GoogleToken.json'), { encryptedToken: {} })
+        const tokens = decryptObject(encryptedToken)
 
-        res.status(200).send({
-            iNaturalistAuthorization: !!iNaturalistToken,
-            GoogleAuthorization: !!GoogleToken
-        })
+        // No token
+        if (!tokens) {
+            res.status(200).send({ authorized: false })
+            return
+        }
+
+        // No refresh token (should be persistent)
+        if (!tokens.refresh_token) {
+            FileManager.writeJSON(path.resolve('./shared/data/GoogleToken.json'), { encryptedToken: {} })
+            res.status(200).send({ authorized: false })
+        }
+
+        try {
+            const GoogleOAuthClient = createGoogleOAuthClient()
+            GoogleOAuthClient.setCredentials(tokens)
+
+            const tokenInfo = GoogleOAuthClient.getTokenInfo(tokens.access_token)
+
+            // Insufficient scopes
+            const requiredScopes = [ 'https://www.googleapis.com/auth/drive.file' ]
+            if (!requiredScopes.every((scope) => tokenInfo.scopes.includes(scope))) {
+                FileManager.writeJSON(path.resolve('./shared/data/GoogleToken.json'), { encryptedToken: {} })
+                res.status(200).send({ authorized: false })
+            }
+
+            res.status(200).send({ authorized: true })
+        } catch (error) {
+            // access_token is invalid; try refreshing
+            try {
+                const GoogleOAuthClient = createGoogleOAuthClient()
+                GoogleOAuthClient.setCredentials(tokens)
+
+                const { credentials } = GoogleOAuthClient.refreshAccessToken()
+                const newTokens = { ...tokens, ...credentials }
+                FileManager.writeJSON(path.resolve('./shared/data/GoogleToken.json'), { encryptedToken: newTokens })
+
+                res.status(200).send({ authorized: true })
+            } catch (refreshError) {
+                // Refresh token is also invalid; must redo OAuth
+                FileManager.writeJSON(path.resolve('./shared/data/GoogleToken.json'), { encryptedToken: {} })
+                res.status(200).send({ authorized: false })
+            }
+        }
     }
 }

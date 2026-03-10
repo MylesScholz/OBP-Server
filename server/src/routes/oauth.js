@@ -17,6 +17,12 @@ oauthRouter.get('/iNaturalist', OAuthController.authorizeINaturalist)
 oauthRouter.get('/iNaturalist/link', OAuthController.redirectToINaturalist)
 
 /*
+ * GET /api/oauth/iNaturalist/status
+ * Checks the status of the iNaturalist access token
+ */
+oauthRouter.get('/iNaturalist/status', OAuthController.getINaturalistStatus)
+
+/*
  * GET /api/oauth/Google
  * Callback endpoint for the Google OAuth workflow; exchanges the given code for an access token
  */
@@ -29,9 +35,9 @@ oauthRouter.get('/Google', OAuthController.authorizeGoogle)
 oauthRouter.get('/Google/link', OAuthController.redirectToGoogle)
 
 /*
- * GET /api/oauth/check
- * Checks for an existing access token for each service; returns a flag for each
+ * GET /api/oauth/Google/status
+ * Checks the status of the Google access token; refreshes if necessary
  */
-oauthRouter.get('/check', OAuthController.checkAuthorization)
+oauthRouter.get('/Google/status', OAuthController.getGoogleStatus)
 
 export default oauthRouter

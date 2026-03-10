@@ -53,10 +53,19 @@ const OAuthFormContainer = styled.div`
 export default function OAuthForm() {
     /* Queries */
 
-    const { data: authorization, isLoading } = useQuery({
-        queryKey: [ 'authorizationQuery' ],
+    const { data: iNatAuth, isLoading: iNatLoading } = useQuery({
+        queryKey: [ 'iNatAuthQuery' ],
         queryFn: async () => {
-            const response = await fetch('/api/oauth/check')
+            const response = await fetch('/api/oauth/iNaturalist/status')
+            return await response.json()
+        },
+        refetchOnMount: 'always'
+    })
+
+    const { data: GoogleAuth, isLoading: GoogleLoading } = useQuery({
+        queryKey: [ 'GoogleAuthQuery' ],
+        queryFn: async () => {
+            const response = await fetch('/api/oauth/Google/status')
             return await response.json()
         },
         refetchOnMount: 'always'
@@ -65,10 +74,10 @@ export default function OAuthForm() {
     return (
         <OAuthFormContainer>
             <h2>iNaturalist Account</h2>
-            { isLoading ? (
+            { iNatLoading ? (
                 <p>Loading...</p>
             ) : (
-                authorization?.iNaturalistAuthorization ? (
+                iNatAuth?.authorized ? (
                     <p>Authorized</p>
                 ) : (
                     <a
@@ -79,10 +88,10 @@ export default function OAuthForm() {
             )}
 
             <h2>Google Account</h2>
-            { isLoading ? (
+            { GoogleLoading ? (
                 <p>Loading...</p>
             ) : (
-                authorization?.GoogleAuthorization ? (
+                GoogleAuth?.authorized ? (
                     <p>Authorized</p>
                 ) : (
                     <a

@@ -237,7 +237,7 @@ function encryptObject(object) {
 }
 
 function decryptObject(encryptedObject) {
-    if (!encryptedObject || !encryptedObject.iv || !encryptedObject.authTag || !encryptedObject.data) return ''
+    if (!encryptedObject || !encryptedObject.iv || !encryptedObject.authTag || !encryptedObject.data) return
 
     const decipher = Crypto.createDecipheriv(
         ALGORITHM,

@@ -23,6 +23,8 @@ const QueriedSelectionContainer = styled.div`
             border: 1px solid gold;
             box-shadow: 0px 0px 5px gold;
 
+            background-color: lightgoldenrodyellow;
+
             &:focus {
                 outline: 1px solid gold;
             }

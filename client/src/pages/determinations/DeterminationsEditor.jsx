@@ -140,7 +140,6 @@ export default function DeterminationsEditor() {
         axios.post('/api/occurrences', { occurrences: determinations }).then((res) => {
             setResult(res.data)
 
-            setPanelKey(panelKey + 1)   // Clear panel
             setBlockLogOut(false)
             setUnsubmitted(0)
             setDisabled(false)

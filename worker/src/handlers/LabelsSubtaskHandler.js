@@ -607,8 +607,10 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
 
         await TaskService.logTaskStep(taskId, 'Writing output files')
 
-        // Upload labels file to the Google Drive (if authorized)
-        await ApiService.uploadFileToGoogleDrive(labelFilePath, this.#createUpdateProgressFn(taskId))
+        // Upload labels file to the Google Drive (if authorized and not blank)
+        if (partitionedLabels.length > 0) {
+            await ApiService.uploadFileToGoogleDrive(labelFilePath, this.#createUpdateProgressFn(taskId))
+        }
 
         // Update the dateLabelPrint field of the printed occurrences
         const printedIds = printableOccurrences.map((occurrence) => occurrence._id)

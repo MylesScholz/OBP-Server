@@ -5,7 +5,7 @@ import { datamatrixrectangularextension } from 'bwip-js/node'
 
 import BaseSubtaskHandler from './BaseSubtaskHandler.js'
 import { abbreviations, fieldNames, fileLimits, template } from '../../shared/lib/utils/constants.js'
-import { TaskService, OccurrenceService } from '../../shared/lib/services/index.js'
+import { ApiService, TaskService, OccurrenceService } from '../../shared/lib/services/index.js'
 import FileManager from '../../shared/lib/utils/FileManager.js'
 
 export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
@@ -41,6 +41,16 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
     #verticalSpacing = (this.#letterPaperHeight - (2 * this.#verticalMargin) - (this.#nRows * this.#labelHeight)) / (this.#nRows - 1)
 
     /* Private Helper Methods */
+
+    /*
+     * #createUpdateProgressFn()
+     * Returns a function that updates a given task's current step progress percentage
+     */
+    #createUpdateProgressFn(taskId) {
+        return async (percentage) => {
+            return await TaskService.updateProgressPercentageById(taskId, percentage)
+        }
+    }
 
     /*
      * #createLabelFromOccurrence()
@@ -579,12 +589,10 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         // Add blank partitions to labels for spacing
         const partitionedLabels = this.#partitionLabels(labels)
 
-        await TaskService.logTaskStep(taskId, 'Generating PDF of labels')
+        await TaskService.logTaskStep(taskId, 'Generating label PDFs')
 
         // Write the labels PDF
-        await this.#writePDF(labelFilePath, partitionedLabels, async (percentage) => {
-            await TaskService.updateProgressPercentageById(taskId, percentage)
-        })
+        await this.#writePDF(labelFilePath, partitionedLabels, this.#createUpdateProgressFn(taskId))
 
         // Generate a warning labels PDF if there are any labels with warnings
         if (warningLabels.length > 0) {
@@ -594,10 +602,13 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
             await TaskService.logTaskStep(taskId, 'Generating PDF of labels with warnings')
 
             // Write the warning labels PDF
-            await this.#writePDF(warningLabelsFilePath, partitionedWarningLabels, async (percentage) => {
-                await TaskService.updateProgressPercentageById(taskId, percentage)
-            })
+            await this.#writePDF(warningLabelsFilePath, partitionedWarningLabels, this.#createUpdateProgressFn(taskId))
         }
+
+        await TaskService.logTaskStep(taskId, 'Writing output files')
+
+        // Upload labels file to the Google Drive (if authorized)
+        await ApiService.uploadFileToGoogleDrive(labelFilePath, this.#createUpdateProgressFn(taskId))
 
         // Update the dateLabelPrint field of the printed occurrences
         const printedIds = printableOccurrences.map((occurrence) => occurrence._id)
@@ -616,7 +627,7 @@ export default class LabelsSubtaskHandler extends BaseSubtaskHandler {
         await OccurrenceService.updateOccurrences(printedFilter, { [fieldNames.dateLabelPrint]: dateLabelPrint })
 
         // Write printed occurrences file
-        await OccurrenceService.writeOccurrencesFromDatabase(occurrencesFilePath, printedFilter)
+        await OccurrenceService.writeOccurrencesFromDatabase(occurrencesFilePath, printedFilter, {}, this.#createUpdateProgressFn(taskId))
 
         // Write the flags file
         const flags = await OccurrenceService.getUnprintableOccurrences({ scratch: true, ignoreDateLabelPrint: true })

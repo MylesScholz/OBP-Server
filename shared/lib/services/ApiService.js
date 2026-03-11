@@ -272,6 +272,7 @@ class ApiService {
     async uploadFileToGoogleDrive(filePath, updateProgress = null) {
         try {
             const GoogleDriveClient = await this.getGoogleDriveClient()
+            if (!GoogleDriveClient) throw new Error('Unable to create Google Drive client')
 
             const resolvedPath = path.resolve(filePath)
             const fileName = path.basename(resolvedPath)

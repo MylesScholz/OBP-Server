@@ -5,7 +5,7 @@ import axios from 'axios'
 import DashboardSearchPanel from './DashboardSearchPanel'
 import DashboardUploadPanel from './DashboardUploadPanel'
 import DashboardResultsHeader from './DashboardResultsHeader'
-import OccurrencesPanel from '../../components/OccurrencesPanel'
+import OccurrencesPanel from './OccurrencesPanel'
 import { useFlow } from '../../FlowProvider'
 import { useAuth } from '../../AuthProvider'
 

@@ -276,7 +276,13 @@ class ApiService {
 
             const resolvedPath = path.resolve(filePath)
             const fileName = path.basename(resolvedPath)
-            const mimeType = 'text/csv'     // TODO: determine MIME type based on file
+            const mimeTypes = {
+                'csv': 'text/csv',
+                'pdf': 'application/pdf',
+                'json': 'application/json'
+            }
+            const extension = path.extname(resolvedPath)
+            const mimeType = mimeTypes[extension] || 'application/octet-stream'
             const fileSize = fs.statSync(resolvedPath).size
             const folderId = Google.backupDriveId
 

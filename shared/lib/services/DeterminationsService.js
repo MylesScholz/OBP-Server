@@ -39,7 +39,7 @@ class DeterminationsService {
      * createDeterminations()
      * Inserts multiple determinations into the database
      */
-    async createDeterminations(documents) {
+    async createDeterminations(documents, format = 'determinations') {
         // Return object containing information about inserted and duplicate determinations
         const results = {
             insertedCount: 0,
@@ -47,7 +47,7 @@ class DeterminationsService {
             duplicates: []
         }
 
-        const determinations = documents?.map((document) => this.formatDetermination(document))
+        const determinations = documents?.map((document) => this.formatDetermination(document, format))
 
         // Return if no documents were provided
         if (!determinations || determinations.length === 0) return results
@@ -83,7 +83,7 @@ class DeterminationsService {
      * createDeterminationsFromFile()
      * Reads the determinations file chunk-by-chunk and inserts it into the database
      */
-    async createDeterminationsFromFile(updateProgress = null) {
+    async createDeterminationsFromFile(filePath, format = 'determinations', updateProgress = null) {
         const chunkSize = 5000
         // Return object containing information about inserted and duplicate determinations
         const results = {
@@ -92,8 +92,8 @@ class DeterminationsService {
             duplicates: []
         }
 
-        for await (const chunk of FileManager.readCSVChunks(this.filePath, chunkSize, updateProgress)) {
-            const chunkResults = await this.createDeterminations(chunk)
+        for await (const chunk of FileManager.readCSVChunks(filePath, chunkSize, updateProgress)) {
+            const chunkResults = await this.createDeterminations(chunk, format)
             
             // Add the results for this chunk to the running total
             results.insertedCount += chunkResults.insertedCount
@@ -245,6 +245,16 @@ class DeterminationsService {
             async (page) => this.getDeterminationsPage({ page, filter }),
             updateProgress
         )
+    }
+
+    /*
+     * writeDeterminationsFile()
+     * Writes determinations to a given file path
+     */
+    writeDeterminationsFile(filePath, determinations) {
+        if (!filePath) return
+        
+        FileManager.writeCSV(filePath, determinations, this.header)
     }
 
     /*

@@ -93,18 +93,57 @@ export default class DeterminationsSubtaskHandler extends BaseSubtaskHandler {
         // Set the input file to the file upload
         const inputFilePath = task.upload?.filePath ?? ''
         const determinationsFileName = 'determinations.csv'
+        const determinationsFilePath = './shared/data/' + determinationsFileName
+        const duplicatesFileName = `duplicates_${task.tag}.csv`
+        const duplicatesFilePath = './shared/data/duplicates/' + duplicatesFileName
 
         await TaskService.logTaskStep(taskId, 'Reading base determinations file')
 
         // Delete previous determinations from database
         await DeterminationsService.deleteDeterminations()
         // Read determinations data from CSV into database
-        await DeterminationsService.createDeterminationsFromFile(this.#createUpdateProgressFn(taskId))
+        await DeterminationsService.createDeterminationsFromFile(determinationsFilePath, 'determinations', this.#createUpdateProgressFn(taskId))
 
         await TaskService.logTaskStep(taskId, 'Combining records from input file with existing determinations')
 
         // Append determinations data from the upload file onto database determinations
-        await DeterminationsService.upsertDeterminationsFromFile(inputFilePath, subtask.format, this.#createUpdateProgressFn(taskId))
+        let duplicates = []
+        if (subtask.upsert) {
+            await DeterminationsService.upsertDeterminationsFromFile(inputFilePath, subtask.format, this.#createUpdateProgressFn(taskId))
+        } else {
+            const results = await DeterminationsService.createDeterminationsFromFile(inputFilePath, subtask.format, this.#createUpdateProgressFn(taskId))
+            duplicates = results.duplicates
+
+            // Query all determination fieldNumbers
+            let determinationFieldNumbers = await DeterminationsService.getDeterminations({}, { projection: { _id: 1 } })
+            determinationFieldNumbers = determinationFieldNumbers.map((determination) => determination._id)
+            // Query occurrences with fieldNumbers matching the determinations and with some non-empty determination field; project to only fieldNumber
+            const filter = {
+                [fieldNames.fieldNumber]: { $in: determinationFieldNumbers },
+                $or: [
+                    { [fieldNames.beePhylum]: { $nin: [ null, '' ] } },
+                    { [fieldNames.beeClass]: { $nin: [ null, '' ] } },
+                    { [fieldNames.beeOrder]: { $nin: [ null, '' ] } },
+                    { [fieldNames.beeFamily]: { $nin: [ null, '' ] } },
+                    { [fieldNames.beeGenus]: { $nin: [ null, '' ] } },
+                    { [fieldNames.beeSubgenus]: { $nin: [ null, '' ] } },
+                    { [fieldNames.specificEpithet]: { $nin: [ null, '' ] } },
+                    { [fieldNames.taxonomicNotes]: { $nin: [ null, '' ] } },
+                    { [fieldNames.scientificName]: { $nin: [ null, '' ] } },
+                    { [fieldNames.sex]: { $nin: [ null, '' ] } },
+                    { [fieldNames.caste]: { $nin: [ null, '' ] } },
+                    { [fieldNames.beeTaxonRank]: { $nin: [ null, '' ] } },
+                    { [fieldNames.identifiedBy]: { $nin: [ null, '' ] } },
+                ]
+            }
+            let occurrenceFieldNumbers = await OccurrenceService.getOccurrences(filter, { projection: { [fieldNames.fieldNumber]: 1 } })
+            occurrenceFieldNumbers = occurrenceFieldNumbers.map((occurrence) => occurrence[fieldNames.fieldNumber])
+            // Query determinations with matching occurrences that have some non-empty determination field
+            const duplicateDeterminations = await DeterminationsService.getDeterminations({ [determinations.fieldNames.fieldNumber]: { $in: occurrenceFieldNumbers } })
+            // Add duplicate determinations to duplicates; delete them from the database
+            duplicates = duplicates.concat(duplicateDeterminations)
+            await DeterminationsService.deleteDeterminations({ [determinations.fieldNames.fieldNumber]: { $in: occurrenceFieldNumbers } })
+        }
 
         // Update existing occurrences with determinations data (keyed by fieldNumber)
         await TaskService.logTaskStep(taskId, 'Updating occurrence data with bee species determinations')
@@ -114,12 +153,18 @@ export default class DeterminationsSubtaskHandler extends BaseSubtaskHandler {
         // Write database determinations to determinations.csv
         await TaskService.logTaskStep(taskId, 'Writing output files')
 
-        await DeterminationsService.writeDeterminationsFromDatabase({}, this.#createUpdateProgressFn(taskId))
+        await DeterminationsService.writeDeterminationsFromDatabase({}, this.#createUpdateProgressFn(taskId))        
 
         // Update the task result with the output files
         const outputs = [
-            { uri: `/api/determinations`, fileName: determinationsFileName, type: 'determinations' }
+            { uri: '/api/determinations', fileName: determinationsFileName, type: 'determinations' }
         ]
+        // Write duplicate determinations (if any) to duplicates output file and add it to the outputs array
+        if (duplicates.length > 0) {
+            await DeterminationsService.writeDeterminationsFile(duplicatesFilePath, duplicates)
+            outputs.push({ uri: `/api/duplicates/${duplicatesFileName}`, fileName: duplicatesFileName, type: 'determinations', subtype: 'duplicates' })
+        }
+
         await TaskService.updateSubtaskOutputsById(taskId, 'determinations', outputs)
     }
 }

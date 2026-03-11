@@ -109,8 +109,7 @@ const DeterminationsAccessFormContainer = styled.div`
 `
 
 export default function DeterminationsAccessForm() {
-    const [ queryType, setQueryType ] = useState('get')
-    const [ uploadFormat, setUploadFormat ] = useState('ecdysis')
+    const [ operation, setOperation ] = useState('get')
     const [ disabled, setDisabled ] = useState(false)
     const [ queryResponse, setQueryResponse ] = useState()
     const [ selectedTaskId, setSelectedTaskId ] = useState()
@@ -183,7 +182,7 @@ export default function DeterminationsAccessForm() {
         setQueryResponse(null)
         setSelectedTaskId(null)
 
-        if (queryType === 'get') {
+        if (operation === 'get') {
             axios.get('/api/determinations', { responseType: 'blob' }).then((res) => {
                 setDisabled(false)
                 setQueryResponse({ status: res.status, data: URL.createObjectURL(res.data) })
@@ -191,10 +190,11 @@ export default function DeterminationsAccessForm() {
                 setDisabled(false)
                 setQueryResponse({ status: err.response?.status, error: err.response?.data?.error ?? err.message })
             })
-        } else if (queryType === 'post') {
+        } else if (operation === 'post') {
             const formData = new FormData()
             formData.append('file', event.target.determinationsFileUpload.files[0])
-            formData.append('format', uploadFormat)
+            formData.append('format', event.target.determinationsUploadFormat.value)
+            formData.append('upsert', event.target.determinationsUpsert.value)
 
             axios.postForm('/api/determinations', formData).then((res) => {
                 setDisabled(false)
@@ -227,20 +227,27 @@ export default function DeterminationsAccessForm() {
                             <label htmlFor='determinationsQueryType'>Operation:</label>
                             <select id='determinationsQueryType' onChange={(event) => {
                                 setQueryResponse(undefined)
-                                setQueryType(event.target.value)
+                                setOperation(event.target.value)
                             }}>
-                                <option value='get' selected={queryType === 'get'}>Download</option>
-                                <option value='post' selected={queryType === 'post'}>Upload</option>
+                                <option value='get' selected={operation === 'get'}>Download</option>
+                                <option value='post' selected={operation === 'post'}>Upload</option>
                             </select>
                         </div>
 
-                        { queryType === 'post' &&
+                        { operation === 'post' &&
                             <>
                                 <div>
                                     <label htmlFor='determinationsUploadFormat'>Upload Format:</label>
-                                    <select id='determinationsUploadFormat' onChange={(event) => setUploadFormat(event.target.value)}>
-                                        <option value='ecdysis' selected={uploadFormat === 'ecdysis'}>Ecdysis</option>
-                                        <option value='determinations' selected={uploadFormat === 'determinations'}>Determinations</option>
+                                    <select id='determinationsUploadFormat'>
+                                        <option value='ecdysis'>Ecdysis</option>
+                                        <option value='determinations'>Determinations</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label htmlFor='determinationsUpsert'>Existing Determinations:</label>
+                                    <select id='determinationsUpsert'>
+                                        <option value='reject'>Reject Changes</option>
+                                        <option value='update'>Update</option>
                                     </select>
                                 </div>
                                 <div>
@@ -260,7 +267,7 @@ export default function DeterminationsAccessForm() {
                 </form>
             ) : (
                 <div id='determinationsQueryResults'>
-                    { queryResponse.status === 200 && queryType === 'get' &&
+                    { queryResponse.status === 200 && operation === 'get' &&
                         <a href={queryResponse.data} download='determinations.csv'>Download Determinations Dataset</a>
                     }
                     { queryResponse.error &&

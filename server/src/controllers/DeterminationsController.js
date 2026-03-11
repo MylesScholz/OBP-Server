@@ -31,7 +31,8 @@ export default class DeterminationsController {
             const subtasks = [
                 {
                     type: 'determinations',
-                    format: req.body.format
+                    format: req.body.format,
+                    upsert: req.body.upsert === 'update'
                 }
             ]
             const { insertedId, createdAt } = await TaskService.createTask(subtasks, req.file.filename)

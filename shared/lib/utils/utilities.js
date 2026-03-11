@@ -87,7 +87,7 @@ function parseQueryParameters(query, adminId) {
 
     // Fuzzy field number search parameter
     if (query.q) {
-        params.filter[fieldNames.fieldNumber] = { $regex: `^${query.q}.*` }
+        params.filter[fieldNames.fieldNumber] = { $regex: `${query.q}.*` }
     }
 
     // Pagination parameters

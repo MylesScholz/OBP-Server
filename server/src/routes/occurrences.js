@@ -1,7 +1,7 @@
 import Router from 'express'
 
 import { checkAuthentication, requireAuthentication } from '../middleware/auth.js'
-import { uploadCSV, createCSVDatasetUpload } from '../middleware/multer.js'
+import { createCSVDatasetUpload } from '../middleware/multer.js'
 import { OccurrencesController } from '../controllers/index.js'
 
 const occurrencesRouter = Router()
@@ -22,7 +22,7 @@ occurrencesRouter.get('/', checkAuthentication, OccurrencesController.getOccurre
  * Inserts a given list of occurrences into the working dataset
  * Authentication required for full functionality
  */
-occurrencesRouter.post('/', checkAuthentication, uploadCSV.single('file'), OccurrencesController.uploadOccurrences)
+occurrencesRouter.post('/', checkAuthentication, OccurrencesController.uploadOccurrences)
 
 /*
  * GET /api/occurrences/download

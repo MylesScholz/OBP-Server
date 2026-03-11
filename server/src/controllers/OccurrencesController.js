@@ -27,16 +27,11 @@ export default class OccurrencesController {
     }
 
     static async uploadOccurrences(req, res, next) {
-        if (!req.file && !req.body?.occurrences) {
+        if (!req.body?.occurrences) {
             res.status(400).send({
-                error: 'Must provide an occurrences file or an occurrences field'
+                error: 'Missing required request field'
             })
             return
-        }
-        if (req.file && !req.adminId) {
-            res.status(401).send({
-                error: 'Valid authentication token required to upload a file'
-            })
         }
 
         const results = {
@@ -44,15 +39,8 @@ export default class OccurrencesController {
             upsertedCount: 0,
             matchedCount: 0
         }
-        if (req.file && req.adminId) {
-            const fileResults = await OccurrenceService.upsertOccurrencesFromFile(req.file)
-
-            results.modifiedCount += fileResults.modifiedCount
-            results.upsertedCount += fileResults.upsertedCount
-            results.matchedCount += fileResults.matchedCount
-        }
-        // If req.body.occurrences is provided, it must be an array
-        if (Array.isArray(req.body?.occurrences)) {
+        // Check that req.body.occurrences is an array
+        if (Array.isArray(req.body.occurrences)) {
             // List of fields that do not require authentication to modify
             const noAuthFields = [
                 fieldNames.volDetFamily,

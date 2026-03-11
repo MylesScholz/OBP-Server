@@ -965,12 +965,20 @@ class OccurrenceService {
         )
     }
 
+    /*
+     * writeOccurrencesFile()
+     * Writes occurrences to a given file path
+     */
     writeOccurrencesFile(filePath, occurrences) {
         if (!filePath) return
 
         FileManager.writeCSV(filePath, occurrences, Object.keys(template))
     }
 
+    /*
+     * deleteOccurrences()
+     * Deletes occurrences matching a given filter from the database
+     */
     async deleteOccurrences(filter = {}) {
         return await this.repository.deleteMany(filter)
     }

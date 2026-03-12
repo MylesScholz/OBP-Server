@@ -136,8 +136,9 @@ function parseQueryParameters(query, adminId) {
             // The query value '(non-empty)' is reserved for non-empty value queries
             params.filter[queryField] = { $exists: true, $nin: [ null, '' ] }
         } else {
-            // Comma-separated multi-value queries
-            params.filter[queryField] = { $in: query[queryField].split(',') }
+            // Comma-separated multi-value queries (case insensitive)
+            const regexes = query[queryField].split(',').map((value) => new RegExp(`^${value}$`, 'i'))
+            params.filter[queryField] = { $in: regexes }
         }
     }
 
@@ -153,6 +154,8 @@ function parseQueryParameters(query, adminId) {
             { field: 'composite_sort', direction: 1 }
         ]
     }
+
+    console.log(params)
 
     return params
 }

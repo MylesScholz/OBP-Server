@@ -45,7 +45,8 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
                 // specimenId is initially set to the number of bees collected
                 // Duplicate observations a number of times equal to this value and overwrite specimenId to index the duplications
                 const beesCollected = parseInt(occurrence[fieldNames.specimenId])
-                if (!isNaN(beesCollected)) {
+                const sampleId = parseInt(occurrence[fieldNames.sampleId])
+                if (!isNaN(beesCollected) && !isNaN(sampleId) && sampleId !== 0) {
                     for (let i = 1; i <= beesCollected; i++) {
                         const duplicateOccurrence = Object.assign({}, occurrence)
                         duplicateOccurrence[fieldNames.specimenId] = i.toString()

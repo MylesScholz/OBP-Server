@@ -58,6 +58,12 @@ const SubtaskCardFormContainer = styled.div`
                 height: 15px;
             }
         }
+
+        .excludeOutputNotice {
+            color: goldenrod;
+
+            font-weight: bold;
+        }
     }
 
     #removeSubtask {
@@ -74,6 +80,7 @@ export default function SubtaskCardForm({ type, taskState, pipelineState, setPip
     const currentDateFormatted = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`
     const [ minDate, setMinDate ] = useState(firstDayFormatted)
     const [ maxDate, setMaxDate ] = useState(currentDateFormatted)
+    const [ excludeOutput, setExcludeOutput ] = useState(false)
 
     const descriptions = {
         'occurrences': 'Formats and updates an occurrences file',
@@ -129,8 +136,17 @@ export default function SubtaskCardForm({ type, taskState, pipelineState, setPip
                             id={`${type}ExcludeOutput`}
                             type='checkbox'
                             autoComplete='off'
+                            checked={excludeOutput}
+                            onChange={(event) => setExcludeOutput(event.target.checked)}
                         />
                     </div>
+                }
+                { excludeOutput &&
+                    <p>
+                        <span className='excludeOutputNotice'>Notice: </span>
+                        Any input occurrences that match an existing database record will be ignored for this subtask.
+                        Output occurrences will not be merged with the database.
+                    </p>
                 }
             </fieldset>
         </SubtaskCardFormContainer>

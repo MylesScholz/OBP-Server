@@ -141,14 +141,14 @@ export default function AdminLoginForm() {
                 <Link to='/'>
                     <img src={arrowBackIcon} alt='Back' />
                 </Link>
-                <h2>Admin Account</h2>
+                <h2>Administrator Log In</h2>
             </div>
 
-            <label htmlFor='adminUsername'>Username:</label>
-            <input type='text' id='adminUsername' />
+            <label htmlFor='adminUsername'>Username</label>
+            <input type='text' id='adminUsername' placeholder='Enter a username...' required />
 
-            <label htmlFor='adminPassword'>Password:</label>
-            <input type='password' id='adminPassword' />
+            <label htmlFor='adminPassword'>Password</label>
+            <input type='password' id='adminPassword' placeholder='Enter a password...' required />
 
             <input type='submit' id='loginSubmit' value='Log In' />
         </AdminLoginFormContainer>

@@ -81,14 +81,14 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
             setDetermination(newDetermination)
 
             // Query new taxonomy fields and update error fields
-            const response = await taxonomyQuery(
+            await taxonomyQuery(
                 newDetermination['familyVolDet'],
                 newDetermination['genusVolDet'],
                 newDetermination['speciesVolDet'],
                 newDetermination['sexVolDet'],
                 newDetermination['casteVolDet']
             )
-            updateErrors(response)
+            setErrors({ ...errors, 'fieldNumber': null })
         } else {
             if (event.target.value) {
                 setErrors({ 'fieldNumber': 'Unrecognized field number' })

@@ -108,7 +108,7 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
     async function fieldNumberQuery(fieldNumber) {
         const url = new URL(`http://server/api/occurrences${query.searchParams}`)
         const params = url.searchParams
-        params.set('page_size', 5000)
+        params.set('per_page', 5000)
         params.set('q', fieldNumber ?? '')
 
         const response = await axios.get(url.pathname + url.search).catch((error) => console.error(error))

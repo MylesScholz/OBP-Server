@@ -122,6 +122,16 @@ export default function SubtaskCardForm({ type, taskState, pipelineState, setPip
                         />
                     </div>
                 }
+                { taskState.subtaskIO[type].outputs.includes('occurrences') &&
+                    <div className='subtaskSetting'>
+                        <label>Exclude output from database:</label>
+                        <input
+                            id={`${type}ExcludeOutput`}
+                            type='checkbox'
+                            autoComplete='off'
+                        />
+                    </div>
+                }
             </fieldset>
         </SubtaskCardFormContainer>
     )   

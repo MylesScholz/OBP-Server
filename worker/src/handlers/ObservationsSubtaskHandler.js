@@ -195,9 +195,17 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
         await OccurrenceService.deleteOccurrences({ scratch: true })
 
         if (inputFilePath) {   // subtask.input is either 'upload' or a previous subtask's output file
-            // Upsert data from the input occurrence file into scratch space (existing records will be moved to scratch space)
-            await OccurrenceService.upsertOccurrencesFromFile(inputFilePath, { scratch: true })
-        } else if (subtask.input === 'selection') {
+            if (subtask.excludeOutput) {
+                // Insert new occurrences from the input file into scratch space; ignore existing occurrences
+                await OccurrenceService.createOccurrencesFromFile(inputFilePath, { scratch: true })
+            } else {
+                // Upsert data from the input occurrence file into scratch space (existing records will be moved to scratch space)
+                await OccurrenceService.upsertOccurrencesFromFile(inputFilePath, { scratch: true })
+            }
+        } else if (subtask.input === 'selection' && !subtask.excludeOutput) {
+            // Existing occurrences are not allowed to be excluded from the database
+            // The scratch space will be empty if input === 'selection' and excludeOutput === true
+
             // Move occurrences matching the query parameters into scratch space
             await OccurrenceService.updateOccurrences(subtask.params?.filter ?? {}, { scratch: true })
         }
@@ -301,16 +309,18 @@ export default class ObservationsSubtaskHandler extends BaseSubtaskHandler {
         FileManager.limitFilesInDirectory('./shared/data/pulls', fileLimits.maxPulls)
         FileManager.limitFilesInDirectory('./shared/data/flags', fileLimits.maxFlags)
 
-        // Move occurrences with a fieldNumber or no errorFlags back to non-scratch space
-        const unscratchFilter = {
-            scratch: true,
-            $or: [
-                { [fieldNames.fieldNumber]: { $exists: true, $nin: [ null, '' ] } },
-                { [fieldNames.errorFlags]: { $exists: false } },
-                { [fieldNames.errorFlags]: { $in: [ null, '' ] } }
-            ]
+        if (!subtask.excludeOutput) {
+            // Move occurrences with a fieldNumber or no errorFlags back to non-scratch space
+            const unscratchFilter = {
+                scratch: true,
+                $or: [
+                    { [fieldNames.fieldNumber]: { $exists: true, $nin: [ null, '' ] } },
+                    { [fieldNames.errorFlags]: { $exists: false } },
+                    { [fieldNames.errorFlags]: { $in: [ null, '' ] } }
+                ]
+            }
+            await OccurrenceService.updateOccurrences(unscratchFilter, { scratch: false })
         }
-        await OccurrenceService.updateOccurrences(unscratchFilter, { scratch: false })
         // Discard remaining scratch space occurrences
         await OccurrenceService.deleteOccurrences({ scratch: true })
     }

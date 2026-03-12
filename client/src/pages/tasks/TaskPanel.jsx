@@ -160,6 +160,12 @@ export default function TaskPanel() {
                 subtask.ignoreDateLabelPrint = event.target.addressesIgnoreDateLabelPrint.checked
             }
 
+            const excludeOutput = event.target[`${type}ExcludeOutput`]?.checked
+            console.log(excludeOutput)
+            if (excludeOutput) {
+                subtask.excludeOutput = excludeOutput
+            }
+
             return subtask
         })
         formData.append('subtasks', JSON.stringify(subtaskPipeline))

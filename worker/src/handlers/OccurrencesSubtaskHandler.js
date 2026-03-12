@@ -236,9 +236,17 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
         await OccurrenceService.deleteOccurrences({ scratch: true })
 
         if (subtask.input === 'upload') {
-            // Upsert data from the uploaded occurrence file into scratch space (existing records will be moved to scratch space)
-            await OccurrenceService.upsertOccurrencesFromFile(uploadFilePath, { scratch: true })
-        } else if (subtask.input === 'selection') {
+            if (subtask.excludeOutput) {
+                // Insert new occurrences from the upload file into scratch space; ignore existing occurrences
+                await OccurrenceService.createOccurrencesFromFile(uploadFilePath, { scratch: true })
+            } else {
+                // Upsert data from the uploaded occurrence file into scratch space (existing records will be moved to scratch space)
+                await OccurrenceService.upsertOccurrencesFromFile(uploadFilePath, { scratch: true })
+            }
+        } else if (subtask.input === 'selection' && !subtask.excludeOutput) {
+            // Existing occurrences are not allowed to be excluded from the database
+            // The scratch space will be empty if input === 'selection' and excludeOutput === true
+            
             // Move occurrences matching the query parameters into scratch space
             await OccurrenceService.updateOccurrences(subtask.params?.filter ?? {}, { scratch: true })
         }
@@ -320,7 +328,13 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
         // Archive excess output files
         FileManager.limitFilesInDirectory('./shared/data/occurrences', fileLimits.maxOccurrences)
 
-        // Move all scratch space occurrences back to non-scratch space
-        await OccurrenceService.updateOccurrences({ scratch: true }, { scratch: false })
+        if (subtask.excludeOutput) {
+            // Discard scratch space occurrences
+            await OccurrenceService.deleteOccurrences({ scratch: true })
+        } else {
+            // Move all scratch space occurrences back to non-scratch space
+            await OccurrenceService.updateOccurrences({ scratch: true }, { scratch: false })
+        }
+        
     }
 }

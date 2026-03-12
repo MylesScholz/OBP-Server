@@ -10,7 +10,7 @@ export default class TaskState {
         this.subtaskIO = {
             'occurrences': {
                 inputs: [ 'occurrences' ],
-                outputs: [ 'occurrences', 'duplicates' ]
+                outputs: [ 'occurrences' ]
             },
             'observations': {
                 inputs: [ 'occurrences', 'none' ],      // The first input file type will be treated as the default

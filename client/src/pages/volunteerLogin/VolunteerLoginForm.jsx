@@ -9,9 +9,10 @@ import { useFlow } from '../../FlowProvider'
 
 const VolunteerLoginFormContainer = styled.form`
     display: grid;
-    grid-template-columns: 375px 1fr 375px;
-    grid-template-rows: 1fr 3fr 1fr;
-    grid-column-gap: 30px;
+    grid-template-columns: 215px 400px;
+    grid-template-rows: repeat(4, 1fr);
+    grid-column-gap: 10px;
+    grid-row-gap: 15px;
 
     border: 1px solid #222;
     border-radius: 5px;
@@ -46,39 +47,23 @@ const VolunteerLoginFormContainer = styled.form`
         font-weight: bold;
     }
 
-    .volunteerSearchOption {
+    label {
+        grid-column: 1 / 2;
+
         display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: stretch;
-        gap: 15px;
+        flex-direction: row;
+        justify-content: start;
+        align-items: center;
 
-        label {
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        margin: 0px;
 
-            margin: 0px;
-
-            font-size: 16pt;
-            font-weight: bold;
-        }
-
-        #volunteerUsername, #volunteerFullName {
-            font-size: 14pt;
-
-            &:focus {
-                border: 1px solid #222;
-
-                outline: none;
-            }
-        }
+        font-size: 16pt;
     }
 
     #volunteerLoginFormHeader {
         position: relative;
 
-        grid-column: 1 / 4;
+        grid-column: 1 / 3;
 
         display: flex;
         flex-direction: row;
@@ -115,8 +100,18 @@ const VolunteerLoginFormContainer = styled.form`
         }
     }
 
+    #volunteerUsername, #volunteerPassword {
+        font-size: 14pt;
+
+        &:focus {
+            border: 1px solid #222;
+
+            outline: none;
+        }
+    }
+
     #volunteerSubmit {
-        grid-column: 1 / 4;
+        grid-column: 1 / 3;
 
         &:hover {
             background-color: #efefef;
@@ -130,31 +125,31 @@ export default function VolunteerLoginForm() {
     const { query, setQuery } = useFlow()
     const navigate = useNavigate()
 
-    function handleSubmit(event) {
+    async function handleSubmit(event) {
         event.preventDefault()
 
         if (disabled) return
         setDisabled(true)
 
-        const fullName = event.target.volunteerFullName.value
         const username = event.target.volunteerUsername.value
-        let queryUrl = username ? `/api/occurrences?per_page=1&userLogin=${username}&recordedBy=%28non-empty%29` : ''
-        queryUrl = !queryUrl && fullName ? `/api/occurrences?per_page=1&userLogin=%28non-empty%29&recordedBy=${fullName}` : queryUrl
+        const password = event.target.volunteerPassword.value ?? ''
+        if (username && password.toLowerCase() === import.meta.env.VITE_VOLUNTEER_PASSWORD) {
+            // Query by both userLogin and recordedBy; use either result
+            const userLoginQueryUrl = `/api/occurrences?per_page=1&userLogin=${username}&recordedBy=%28non-empty%29`
+            const fullNameQueryUrl = `/api/occurrences?per_page=1&userLogin=%28non-empty%29&recordedBy=${username}`
 
-        if (queryUrl) {
-            axios.get(queryUrl).then((res) => {
-                const occurrence = res?.data?.data?.at(0)
+            const userLoginResponse = await axios.get(userLoginQueryUrl).catch((error) => console.error(error))
+            const fullNameResponse = await axios.get(fullNameQueryUrl).catch((error) => console.error(error))
 
-                if (occurrence) {
-                    setVolunteer(!admin ? occurrence['userLogin'] : null)   // Admin login supercedes volunteer
-                    setQuery({ ...query, valueQueries: { 'userLogin': occurrence['userLogin'] } })
-                    navigate('/dashboard')
-                }
-            }).catch((error) => {
-                console.error(error)
-            }).finally(() => {
-                setDisabled(false)
-            })
+            const occurrence = userLoginResponse?.data?.data?.at(0) || fullNameResponse?.data?.data?.at(0)
+
+            if (occurrence) {
+                setVolunteer(!admin ? occurrence['userLogin'] : null)   // Admin login supercedes volunteer
+                setQuery({ ...query, valueQueries: { 'userLogin': occurrence['userLogin'] } })
+                navigate('/dashboard')
+            }
+
+            setDisabled(false)
         } else {
             setDisabled(false)
         }
@@ -168,22 +163,16 @@ export default function VolunteerLoginForm() {
                 <Link to='/'>
                     <img src={arrowBackIcon} alt='Back' />
                 </Link>
-                <h2>Search for Volunteer Records</h2>
+                <h2>Volunteer Log In</h2>
             </div>
 
-            <div className='volunteerSearchOption'>
-                <label htmlFor='volunteerUsername'>By iNaturalist Username</label>
-                <input type='text' id='volunteerUsername' placeholder='Search for an iNaturalist username...' />
-            </div>
+            <label htmlFor='volunteerUsername'>iNaturalist Username<br />or Full Name</label>
+            <input type='text' id='volunteerUsername' placeholder='Enter an iNaturalist username or full name...' required />
 
-            <p>or</p>
-
-            <div className='volunteerSearchOption'>
-                <label htmlFor='volunteerFullName'>By Full Name</label>
-                <input type='text' id='volunteerFullName' placeholder='Search for a full name...' />
-            </div>
+            <label>Password</label>
+            <input type='password' id='volunteerPassword' placeholder='Enter a password...' required />
             
-            <input type='submit' id='volunteerSubmit' value='Search' />
+            <input type='submit' id='volunteerSubmit' value='Log In' />
         </VolunteerLoginFormContainer>
     )
 }

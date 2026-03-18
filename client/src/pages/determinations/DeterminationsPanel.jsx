@@ -45,7 +45,7 @@ const DeterminationsPanelContainer = styled.fieldset`
     }
 `
 
-export default function DeterminationsPanel({ disabled, unsubmitted, setUnsubmitted }) {
+export default function DeterminationsPanel({ disabled, unsubmitted, setUnsubmitted, autofill }) {
     const [ rows, setRows ] = useState(Array.from(Array(50).keys()))
 
     const fields = [
@@ -70,8 +70,10 @@ export default function DeterminationsPanel({ disabled, unsubmitted, setUnsubmit
                 <DeterminationRow
                     key={row}
                     row={row}
+                    autofill={autofill}
                     unsubmitted={unsubmitted}
                     setUnsubmitted={setUnsubmitted}
+                    autofill={autofill}
                 />
             )}
         </DeterminationsPanelContainer>

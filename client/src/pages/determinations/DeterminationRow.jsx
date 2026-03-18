@@ -5,7 +5,7 @@ import QueriedSelection from './QueriedSelection.jsx'
 import { useAuth } from '../../AuthProvider.jsx'
 import { useFlow } from '../../FlowProvider'
 
-export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
+export default function DeterminationRow({ row, unsubmitted, setUnsubmitted, autofill }) {
     const blankDetermination = {
         // Handle 'fieldNumber' separately to avoid overwriting it
         '_id': '',
@@ -44,7 +44,9 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
      * onFieldNumberChange()
      * Fills this row's fields with values from the matching occurrence, queried by field number
      */
-    async function onFieldNumberChange(event) {
+    // Would it have been possible to achieve this by just treating autofill
+    //  as a global instead of drilling it down into the QueriedSelections?
+    async function onFieldNumberChange(event, autofill) {
         const url = new URL('http://server/api/occurrences')
         const params = url.searchParams
         params.set('userLogin', volunteer)
@@ -62,7 +64,8 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
 
             // If all taxonomy fields in this row are blank, try to copy down the values from the previous row
             const taxonomyFields = [ 'familyVolDet', 'genusVolDet', 'speciesVolDet', 'sexVolDet', 'casteVolDet' ]
-            if (taxonomyFields.every((field) => !newDetermination[field])) {
+            if (taxonomyFields.every((field) => !newDetermination[field])
+                && autofill) {
                 // For each taxonomy field, find the element in the previous row by ID
                 for (const field of taxonomyFields) {
                     const aboveElement = document.getElementById(`${field}${Math.max(row - 1, 0)}`)
@@ -213,6 +216,7 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
                     edited.current = true
                 }}
                 queryFn={fieldNumberQuery}
+                autofill={autofill}
                 onChange={onFieldNumberChange}
             />
             <p id={`sampleId${row}`}>{determination['sampleId']}</p>

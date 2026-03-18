@@ -49,6 +49,20 @@ const DeterminationsHeaderContainer = styled.fieldset`
             background-color: #efefef;
         }
     }
+
+    #clearButton {
+        margin-left: auto;
+    }
+    
+    #determinationsSubmitButton {
+        // background-color: royalblue;
+        // color: white;
+        //
+        // &:hover {
+        //     background-color: dodgerblue;
+        // }
+    }
+    
 `
 
 export default function DeterminationsHeader({ disabled, unsubmitted, result, onClear }) {
@@ -57,22 +71,26 @@ export default function DeterminationsHeader({ disabled, unsubmitted, result, on
     return (
         <DeterminationsHeaderContainer disabled={disabled}>
             <button
-                onClick={(event) => {
-                    event.preventDefault()
-                    onClear()
-                }}
-            >Clear</button>
-            <button
                 id='determinationsSubmitButton'
                 type='submit'
                 ref={submitRef}
             >Submit</button>
+
+
             { !!unsubmitted &&
                 <p id='unsubmittedMessage'>{unsubmitted.toLocaleString('en-US')} unsubmitted changes pending...</p>
             }
             { result &&
                 <p id='resultMessage'>{(result.matchedCount ?? 0).toLocaleString('en-US')} changes submitted</p>
             }
+
+            <button
+                id='clearButton'
+                onClick={(event) => {
+                    event.preventDefault()
+                    onClear()
+                }}
+            >Clear</button>
         </DeterminationsHeaderContainer>
     )
 }

@@ -1,5 +1,7 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import styled from '@emotion/styled'
+
+import ConfirmationModal from '../../components/ConfirmationModal'
 
 const DeterminationsHeaderContainer = styled.fieldset`
     display: flex;
@@ -53,20 +55,11 @@ const DeterminationsHeaderContainer = styled.fieldset`
     #clearButton {
         margin-left: auto;
     }
-    
-    #determinationsSubmitButton {
-        // background-color: royalblue;
-        // color: white;
-        //
-        // &:hover {
-        //     background-color: dodgerblue;
-        // }
-    }
-    
 `
 
 export default function DeterminationsHeader({ disabled, unsubmitted, result, onClear }) {
     const submitRef = useRef()
+    const [modalEnabled, setModalEnabled] = useState(false)
 
     return (
         <DeterminationsHeaderContainer disabled={disabled}>
@@ -88,9 +81,17 @@ export default function DeterminationsHeader({ disabled, unsubmitted, result, on
                 id='clearButton'
                 onClick={(event) => {
                     event.preventDefault()
-                    onClear()
+                    // onClear()
+                    setModalEnabled(true)
                 }}
             >Clear</button>
+
+            <ConfirmationModal 
+                modalEnabled={modalEnabled}
+                setModalEnabled={setModalEnabled}
+                callback={() => onClear()}
+                modalText="Are you sure you want to clear your work?"
+            />
         </DeterminationsHeaderContainer>
     )
 }

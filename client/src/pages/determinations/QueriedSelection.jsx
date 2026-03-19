@@ -36,7 +36,7 @@ const QueriedSelectionContainer = styled.div`
     }
 `
 
-export default function QueriedSelection({ inputId, value = '', error, setValue, queryFn, onChange = null, autofill = true }) {
+export default function QueriedSelection({ inputId, value = '', error, setValue, queryFn, onChange = null }) {
     const [ timeoutId, setTimeoutId ] = useState()
     const [ options, setOptions ] = useState([])
 
@@ -67,7 +67,7 @@ export default function QueriedSelection({ inputId, value = '', error, setValue,
         const id = setTimeout(async () => {
             await queryOptions(event.target.value)
 
-            if (onChange) onChange(event, autofill)
+            if (onChange) onChange(event)
         }, queryDelayMSec)
         setTimeoutId(id)
     }
@@ -83,7 +83,7 @@ export default function QueriedSelection({ inputId, value = '', error, setValue,
                 list={`${inputId}Options`}
                 placeholder='Enter a query value...'
                 value={value}
-                onChange={(event) => handleChange(event, autofill)}
+                onChange={(event) => handleChange(event)}
                 onFocus={(event) => queryOptions(event.target.value)}
             />
             <datalist id={`${inputId}Options`}>

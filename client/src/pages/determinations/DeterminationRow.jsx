@@ -44,9 +44,7 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted, aut
      * onFieldNumberChange()
      * Fills this row's fields with values from the matching occurrence, queried by field number
      */
-    // Would it have been possible to achieve this by just treating autofill
-    //  as a global instead of drilling it down into the QueriedSelections?
-    async function onFieldNumberChange(event, autofill) {
+    async function onFieldNumberChange(event) {
         const url = new URL('http://server/api/occurrences')
         const params = url.searchParams
         params.set('userLogin', volunteer)
@@ -216,7 +214,6 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted, aut
                     edited.current = true
                 }}
                 queryFn={fieldNumberQuery}
-                autofill={autofill}
                 onChange={onFieldNumberChange}
             />
             <p id={`sampleId${row}`}>{determination['sampleId']}</p>

@@ -77,6 +77,7 @@ export default function DeterminationsEditor() {
     const [ unsubmitted, setUnsubmitted ] = useState(0)
     const [ result, setResult ] = useState()
     const [ panelKey, setPanelKey ] = useState(0)
+    const [ autofill, setAutofill ] = useState(true)
     const { setBlockLogOut } = useAuth()
 
     /* Blockers */
@@ -157,6 +158,8 @@ export default function DeterminationsEditor() {
                 disabled={disabled}
                 unsubmitted={unsubmitted}
                 result={result}
+                autofill={autofill}
+                setAutofill={(value) => setAutofill(value)}
                 onClear={() => {
                     setPanelKey(panelKey + 1)
                     setBlockLogOut(false)
@@ -167,6 +170,7 @@ export default function DeterminationsEditor() {
                 key={panelKey}
                 disabled={disabled}
                 unsubmitted={unsubmitted}
+                autofill={autofill}
                 setUnsubmitted={(value) => {
                     setUnsubmitted(value)
                     setBlockLogOut(!!value)
@@ -177,8 +181,17 @@ export default function DeterminationsEditor() {
                 <div className='navBlockBackground'>
                     <div className='navBlockModal'>
                         <p>You have unsubmitted changes. Are you sure you want to leave?</p>
-                        <button onClick={() => blocker.proceed()}>Leave</button>
-                        <button onClick={() => blocker.reset()}>Stay</button>
+                        <button onClick={(event) => {
+                            // Doesn't seem strictly required in this case, but 
+                            //  I'm keeping it for consistency's sake
+                            event.preventDefault() 
+                            blocker.proceed()
+                        }}>Leave</button>
+                        <button onClick={(event) => {
+                            // Required to stop form submission
+                            event.preventDefault() 
+                            blocker.reset()
+                        }}>Stay</button>
                     </div>
                 </div>
             }

@@ -1,12 +1,14 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import styled from '@emotion/styled'
+
+import ConfirmationModal from '../../components/ConfirmationModal'
 
 const DeterminationsHeaderContainer = styled.fieldset`
     display: flex;
     flex-direction: row;
     justify-content: start;
     align-items: center;
-    gap: 10px;
+    gap: 20px;
 
     border: 1px solid #222;
     border-radius: 5px;
@@ -49,30 +51,53 @@ const DeterminationsHeaderContainer = styled.fieldset`
             background-color: #efefef;
         }
     }
+
+    #clearButton {
+        margin-left: auto;
+    }
 `
 
-export default function DeterminationsHeader({ disabled, unsubmitted, result, onClear }) {
+export default function DeterminationsHeader({ disabled, unsubmitted, result, onClear, autofill, setAutofill }) {
     const submitRef = useRef()
+    const [modalEnabled, setModalEnabled] = useState(false)
 
     return (
         <DeterminationsHeaderContainer disabled={disabled}>
-            <button
-                onClick={(event) => {
-                    event.preventDefault()
-                    onClear()
-                }}
-            >Clear</button>
             <button
                 id='determinationsSubmitButton'
                 type='submit'
                 ref={submitRef}
             >Submit</button>
+
+            <div>
+                <input type="checkbox" id="fill-toggle" 
+                    defaultChecked={autofill} onChange={e => {
+                        setAutofill(e.target.checked)
+                    }} />
+                <label htmlFor="fill-toggle">Enable fill-down</label>
+            </div>
+
             { !!unsubmitted &&
                 <p id='unsubmittedMessage'>{unsubmitted.toLocaleString('en-US')} unsubmitted changes pending...</p>
             }
             { result &&
                 <p id='resultMessage'>{(result.matchedCount ?? 0).toLocaleString('en-US')} changes submitted</p>
             }
+
+            <button
+                id='clearButton'
+                onClick={(event) => {
+                    event.preventDefault()
+                    setModalEnabled(true)
+                }}
+            >Clear</button>
+
+            <ConfirmationModal 
+                modalEnabled={modalEnabled}
+                setModalEnabled={setModalEnabled}
+                callback={() => onClear()}
+                modalText="Are you sure you want to clear your work?"
+            />
         </DeterminationsHeaderContainer>
     )
 }

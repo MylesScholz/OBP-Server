@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useContext } from 'react'
 import styled from '@emotion/styled'
 
 const QueriedSelectionContainer = styled.div`

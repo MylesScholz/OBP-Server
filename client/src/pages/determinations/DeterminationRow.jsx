@@ -5,7 +5,7 @@ import QueriedSelection from './QueriedSelection.jsx'
 import { useAuth } from '../../AuthProvider.jsx'
 import { useFlow } from '../../FlowProvider'
 
-export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
+export default function DeterminationRow({ row, unsubmitted, setUnsubmitted, autofill }) {
     const blankDetermination = {
         // Handle 'fieldNumber' separately to avoid overwriting it
         '_id': '',
@@ -62,7 +62,8 @@ export default function DeterminationRow({ row, unsubmitted, setUnsubmitted }) {
 
             // If all taxonomy fields in this row are blank, try to copy down the values from the previous row
             const taxonomyFields = [ 'familyVolDet', 'genusVolDet', 'speciesVolDet', 'sexVolDet', 'casteVolDet' ]
-            if (taxonomyFields.every((field) => !newDetermination[field])) {
+            if (taxonomyFields.every((field) => !newDetermination[field])
+                && autofill) {
                 // For each taxonomy field, find the element in the previous row by ID
                 for (const field of taxonomyFields) {
                     const aboveElement = document.getElementById(`${field}${Math.max(row - 1, 0)}`)

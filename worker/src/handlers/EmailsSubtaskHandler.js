@@ -105,6 +105,7 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
      * Writes user emails divided into error categories to a CSV file at the given file path
      */
     #writeEmailsFile(filePath, locationEmails, accuracyEmails, taxonomyEmails) {
+        console.log("In writeEmailsFile")
         const emailsHeader = [
             'locationEmails',
             'accuracyEmails',
@@ -113,6 +114,9 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
 
         // Convert email lists into object rows
         const emailRows = []
+
+        // push test row
+        emailRows.push({locationEmails: 'test', accuracyEmails: 'test', taxonomyEmails: 'test'})
         for (let i = 0; i < Math.max(locationEmails.length, accuracyEmails.length, taxonomyEmails.length); i++) {
             const row = {
                 'locationEmails': locationEmails[i] ?? '',
@@ -120,6 +124,7 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
                 'taxonomyEmails': taxonomyEmails[i] ?? ''
             }
             emailRows.push(row)
+            console.log(row)
         }
 
         return FileManager.writeCSV(filePath, emailRows, emailsHeader)
@@ -155,6 +160,7 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
             // Build the input file path if the given file was found in the previous subtask outputs
             inputFilePath = outputFile ? `./shared/data/${outputFile.type}/${outputFile.fileName}` : inputFilePath
         }
+
         const emailsFileName = `emails_${task.tag}.csv`
         const emailsFilePath = './shared/data/emails/' + emailsFileName
 
@@ -163,6 +169,7 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
         // Delete old scratch space occurrences (from previous tasks)
         await OccurrenceService.deleteOccurrences({ scratch: true })
 
+        console.log('==we love daemons')
         if (subtask.input !== 'selection') {
             // Upsert data from the input occurrence file into scratch space (existing records will be moved to scratch space)
             await OccurrenceService.upsertOccurrencesFromFile(inputFilePath, { scratch: true })
@@ -174,11 +181,19 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
         await TaskService.logTaskStep(taskId, 'Compiling user email addresses')
 
         // Read users dataset; extract the userLogins
-        const users = UsernamesService.readUsernames()
+        const users = UsernamesService.readUsernames()  // reads all usernames
+        // for each user in the complete usernames file; get the userLogin field
         const userLogins = users.map((user) => user[usernames.fieldNames.userLogin])
+        // Then, only return useres with a non-empty userLogin
                                 .filter((userLogin) => !!userLogin)
-        
-        const userErrors = await OccurrenceService.getErrorFlagsByUserLogins(userLogins, { scratch: true })
+        console.log("==userLogins: ", userLogins)
+
+        // Given all of the valid usernames, get a list of users who had
+        //  errorsome occurrences and a truthy scratch field
+        //  by default, the function seems to grab falsy scratch fields only
+        const userErrors = await OccurrenceService.getErrorFlagsByUserLogins(
+            userLogins, { scratch: true })
+        console.log("==userErrors: ", userErrors)
 
         // Construct a map of each user login to its corresponding error flags (as an Array)
         const userErrorMap = this.#buildUserErrorMap(userErrors)
@@ -189,6 +204,9 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
         // Build three lists of emails categorized by error type (location, accuracy, and taxonomy)
         const { locationEmails, accuracyEmails, taxonomyEmails } = this.#buildEmailCategories(userErrorMap, userEmailMap)
         
+        console.log("==locationEmails: ", locationEmails)
+        console.log("==accuracyEmails: ", accuracyEmails)
+        console.log("==taxonomyEmails: ", taxonomyEmails)
         // Write output file
         this.#writeEmailsFile(emailsFilePath, locationEmails, accuracyEmails, taxonomyEmails)
 

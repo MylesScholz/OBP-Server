@@ -634,6 +634,9 @@ class OccurrenceService {
 
         // Query occurrences with errorFlags and iNaturalistAliases in the given list of user logins
         // Group by iNaturalistAlias
+
+        // Aggregate is available in mongosh. It mostly provides advanced 
+        //  filtering, grouping, and calculation functionalities
         return await this.repository.aggregate([
             {
                 $match: {

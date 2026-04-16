@@ -76,6 +76,8 @@ class DeterminationsService {
             }
         }
 
+        console.log("== successful insertions:\n", results.insertedCount)
+        console.log("== duplicates:\n", results.duplicates)
         return results
     }
 
@@ -199,6 +201,8 @@ class DeterminationsService {
             results.upsertedIds = results.upsertedIds.concat(chunkResults.upsertedIds)
         }
 
+        const updated_dets = await this.getDeterminations()
+        console.log("new determinations: ", updated_dets.length)
         return results
     }
 

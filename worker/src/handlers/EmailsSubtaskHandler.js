@@ -124,7 +124,6 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
                 'taxonomyEmails': taxonomyEmails[i] ?? ''
             }
             emailRows.push(row)
-            console.log(row)
         }
 
         return FileManager.writeCSV(filePath, emailRows, emailsHeader)
@@ -169,7 +168,8 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
         // Delete old scratch space occurrences (from previous tasks)
         await OccurrenceService.deleteOccurrences({ scratch: true })
 
-        console.log('==we love daemons')
+        // This would seem to insert a single scratch record, by Stephanie Hazen
+        //  ID = 66f7462689733e7b529f9c5eefe41c07f9e831c50365f2182021697788451378
         if (subtask.input !== 'selection') {
             // Upsert data from the input occurrence file into scratch space (existing records will be moved to scratch space)
             await OccurrenceService.upsertOccurrencesFromFile(inputFilePath, { scratch: true })
@@ -181,16 +181,18 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
         await TaskService.logTaskStep(taskId, 'Compiling user email addresses')
 
         // Read users dataset; extract the userLogins
+        // Reads *all* usernames from the file, all 554 of them
         const users = UsernamesService.readUsernames()  // reads all usernames
         // for each user in the complete usernames file; get the userLogin field
         const userLogins = users.map((user) => user[usernames.fieldNames.userLogin])
         // Then, only return useres with a non-empty userLogin
                                 .filter((userLogin) => !!userLogin)
-        console.log("==userLogins: ", userLogins)
 
         // Given all of the valid usernames, get a list of users who had
         //  errorsome occurrences and a truthy scratch field
         //  by default, the function seems to grab falsy scratch fields only
+
+        // CRASHES
         const userErrors = await OccurrenceService.getErrorFlagsByUserLogins(
             userLogins, { scratch: true })
         console.log("==userErrors: ", userErrors)

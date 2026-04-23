@@ -116,7 +116,7 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
         const emailRows = []
 
         // push test row
-        emailRows.push({locationEmails: 'test', accuracyEmails: 'test', taxonomyEmails: 'test'})
+        // emailRows.push({locationEmails: 'test', accuracyEmails: 'test', taxonomyEmails: 'test'})
         for (let i = 0; i < Math.max(locationEmails.length, accuracyEmails.length, taxonomyEmails.length); i++) {
             const row = {
                 'locationEmails': locationEmails[i] ?? '',
@@ -131,6 +131,7 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
 
     /* Main Handler Method */
 
+    // Testing with /home/nora/Documents/work/data/bugs/emails-deletion/working-local-reproduction/flags_2026-04-20T22.08.03.csv
     async handleTask(taskId) {
         if (!taskId) { return }
 
@@ -163,19 +164,25 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
         const emailsFileName = `emails_${task.tag}.csv`
         const emailsFilePath = './shared/data/emails/' + emailsFileName
 
-        await TaskService.logTaskStep(taskId, 'Formatting and uploading provided dataset')
+        await TaskService.logTaskStep(taskId, 'Formatting and uploading provided dataset (this may take a few minutes)')
 
         // Delete old scratch space occurrences (from previous tasks)
         await OccurrenceService.deleteOccurrences({ scratch: true })
 
         // This would seem to insert a single scratch record, by Stephanie Hazen
         //  ID = 66f7462689733e7b529f9c5eefe41c07f9e831c50365f2182021697788451378
-        if (subtask.input !== 'selection') {
+
+        // For some reason, this "!== selection" case seems to execute.
+        //  Is this what myles intended? I thought we were working with 
+        //  occurrences here, not the flags file.
+        if (false && subtask.input !== 'selection') {
             // Upsert data from the input occurrence file into scratch space (existing records will be moved to scratch space)
             await OccurrenceService.upsertOccurrencesFromFile(inputFilePath, { scratch: true })
+
         } else {    // subtask.input === 'selection'
             // Move occurrences matching the query parameters into scratch space
-            await OccurrenceService.updateOccurrences(subtask.params?.filter ?? {}, { scratch: true })
+            // This doesn't work, which is very concerning. What else could be broken?
+            // await OccurrenceService.updateOccurrences(subtask.params?.filter ?? {}, { scratch: true })
         }
 
         await TaskService.logTaskStep(taskId, 'Compiling user email addresses')
@@ -193,9 +200,12 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
         //  by default, the function seems to grab falsy scratch fields only
 
         // CRASHES
+        // Critically, returns an empty array, which would account for empty
+        //  output from the subtask
+        // const userErrors = await OccurrenceService.getErrorFlagsByUserLogins(
+        //     userLogins, { scratch: true })
         const userErrors = await OccurrenceService.getErrorFlagsByUserLogins(
-            userLogins, { scratch: true })
-        console.log("==userErrors: ", userErrors)
+            userLogins)
 
         // Construct a map of each user login to its corresponding error flags (as an Array)
         const userErrorMap = this.#buildUserErrorMap(userErrors)
@@ -206,9 +216,6 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
         // Build three lists of emails categorized by error type (location, accuracy, and taxonomy)
         const { locationEmails, accuracyEmails, taxonomyEmails } = this.#buildEmailCategories(userErrorMap, userEmailMap)
         
-        console.log("==locationEmails: ", locationEmails)
-        console.log("==accuracyEmails: ", accuracyEmails)
-        console.log("==taxonomyEmails: ", taxonomyEmails)
         // Write output file
         this.#writeEmailsFile(emailsFilePath, locationEmails, accuracyEmails, taxonomyEmails)
 
@@ -222,6 +229,8 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
         FileManager.limitFilesInDirectory('./shared/data/emails', fileLimits.maxEmails)
 
         // Move occurrences with a fieldNumber or no errorFlags back to non-scratch space
+        // I get the impression that this unscratch filter should be "everything",
+        //  not just those that have a fieldNumber or no errors
         const unscratchFilter = {
             scratch: true,
             $or: [
@@ -230,8 +239,13 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
                 { [fieldNames.errorFlags]: { $in: [ null, '' ] } }
             ]
         }
-        await OccurrenceService.updateOccurrences(unscratchFilter, { scratch: false })
+        // Why is this operation so slow? Ideally we would sub-set it anyway, but
+        //  this is certainly curious. See OccurrenceRepo.updateMany for implementation
+        // For the time being, probably just change the unscratchFilter to {}
+        // await OccurrenceService.updateOccurrences(unscratchFilter, { scratch: false })
+
         // Discard remaining scratch space occurrences
-        await OccurrenceService.deleteOccurrences({ scratch: true })
+        // await OccurrenceService.deleteOccurrences({ scratch: true })
+        console.log("Finished")
     }
 }

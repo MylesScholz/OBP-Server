@@ -235,6 +235,7 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
         // Delete old scratch space occurrences (from previous tasks)
         await OccurrenceService.deleteOccurrences({ scratch: true })
 
+        // Having a progress bar on this step would be nice
         if (subtask.input === 'upload') {
             if (subtask.excludeOutput) {
                 // Insert new occurrences from the upload file into scratch space; ignore existing occurrences
@@ -248,9 +249,14 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
             // The scratch space will be empty if input === 'selection' and excludeOutput === true
             
             // Move occurrences matching the query parameters into scratch space
+            //  i.e. *all* occurrences within the selection are moved to scratch?
+            //  If so, clear cause for future subtasks deleting whole DB
             await OccurrenceService.updateOccurrences(subtask.params?.filter ?? {}, { scratch: true })
         }
 
+        // OOM crash between here and next logTaskStep :'(
+        //  With this being the case, these steps (and maybe ALL of the steps)
+        //  should happen in chunks.
         await TaskService.logTaskStep(taskId, 'Querying corresponding iNaturalist observations from provided dataset')
 
         // Query all distinct URLs from the occurrences database table and extract the observation IDs
@@ -260,14 +266,26 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
             .filter((id) => id && !isNaN(id))
         // Fetch the observations corresponding to the uploaded occurrences and insert them into the observations database table
         let matchingObservations = await ApiService.fetchObservationsByIds(observationIds, this.#createUpdateProgressFn(taskId))
+
+
         // Set a custom field indicating that this observation has a matching occurrence
-        matchingObservations = matchingObservations.map((obs) => ({ ...obs, matched: true }))
+
+        // The OOM crash happened at exactly 100%, which I believe means that it
+        //  occurred at or after this .map call.
+        //  According to https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map
+        //  .map() does NOT occur in-place which would explain why this line may cause a crash
+        //  Try Array.forEach https://stackoverflow.com/a/46520839
+        matchingObservations.forEach((obs) => ({ ...obs, matched: true }))
+        // .forEach() didn't fix it :'(
 
         // Insert observations into the database; delete old observations first
         await ObservationService.deleteObservations()
         if (matchingObservations.length > 0) {
             await ObservationService.createObservations(matchingObservations)
         }
+
+        // Free memory taken by matchingObservations
+        matchingObservations = null
 
         const observations = await ObservationService.getObservations()
 
@@ -333,6 +351,8 @@ export default class OccurrencesSubtaskHandler extends BaseSubtaskHandler {
             await OccurrenceService.deleteOccurrences({ scratch: true })
         } else {
             // Move all scratch space occurrences back to non-scratch space
+            //  If the program crashes in the middle of this subtask, many
+            //  records are liable to being deleted down the road.
             await OccurrenceService.updateOccurrences({ scratch: true }, { scratch: false })
         }
         

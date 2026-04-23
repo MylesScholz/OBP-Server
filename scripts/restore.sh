@@ -18,7 +18,7 @@ fi
 
 # Wait for MongoDB to be ready
 echo "$(date) - Waiting for MongoDB to be ready..." | tee -a "${LOG_FILE}"
-until mongosh --host="${MONGO_HOST}" --port="${MONGO_PORT}" \
+until mongo --host="${MONGO_HOST}" --port="${MONGO_PORT}" \
   --username="${MONGO_USER}" --password="${MONGO_PASSWORD}" \
   --authenticationDatabase=${MONGO_DB} --eval "db.adminCommand('ping')" > /dev/null 2>&1
 do

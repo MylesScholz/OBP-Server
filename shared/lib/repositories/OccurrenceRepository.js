@@ -308,7 +308,14 @@ export default class OccurrenceRepository extends BaseRepository {
     async updateById(id, updateDocument = {}, options = {}) {
         // Find the existing document and assign the update values to it
         const document = await this.findById(id)
-        if (!document) return
+        if (!document && options.upsert === true) {
+            console.error("Creating new occurrence with ID: ", id)
+            return this.create(updateDocument)
+
+        } else if (!document) {
+            console.error("Couldn't find the id: ", id)
+            return
+        }
         
         let processedDocument = Object.assign(document, updateDocument)
 

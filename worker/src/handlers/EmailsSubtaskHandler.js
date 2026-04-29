@@ -163,14 +163,13 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
         // Delete old scratch space occurrences (from previous tasks)
         await OccurrenceService.deleteOccurrences({ scratch: true })
 
-        // BODGE: We'll always use the whole DB for this step
-        // if (subtask.input !== 'selection') {
-        //     // Upsert data from the input occurrence file into scratch space (existing records will be moved to scratch space)
-        //     await OccurrenceService.upsertOccurrencesFromFile(inputFilePath, { scratch: true })
-        // } else {    // subtask.input === 'selection'
-        //     // Move occurrences matching the query parameters into scratch space
-        //     await OccurrenceService.updateOccurrences(subtask.params?.filter ?? {}, { scratch: true })
-        // }
+        if (subtask.input !== 'selection') {
+            // Upsert data from the input occurrence file into scratch space (existing records will be moved to scratch space)
+            await OccurrenceService.upsertOccurrencesFromFile(inputFilePath, { scratch: true })
+        } else {    // subtask.input === 'selection'
+            // Move occurrences matching the query parameters into scratch space
+            await OccurrenceService.updateOccurrences(subtask.params?.filter ?? {}, { scratch: true })
+        }
 
         await TaskService.logTaskStep(taskId, 'Compiling user email addresses')
 
@@ -179,9 +178,7 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
         const userLogins = users.map((user) => user[usernames.fieldNames.userLogin])
                                 .filter((userLogin) => !!userLogin)
         
-        // BODGE: We'll always use the whole DB for this step
-        // const userErrors = await OccurrenceService.getErrorFlagsByUserLogins(userLogins, { scratch: true })
-        const userErrors = await OccurrenceService.getErrorFlagsByUserLogins(userLogins)
+        const userErrors = await OccurrenceService.getErrorFlagsByUserLogins(userLogins, { scratch: true })
 
         // Construct a map of each user login to its corresponding error flags (as an Array)
         const userErrorMap = this.#buildUserErrorMap(userErrors)
@@ -204,18 +201,17 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
         // Archive excess output files
         FileManager.limitFilesInDirectory('./shared/data/emails', fileLimits.maxEmails)
 
-        // BODGE: We'll always use the whole DB for this step
         // Move occurrences with a fieldNumber or no errorFlags back to non-scratch space
-        // const unscratchFilter = {
-        //     scratch: true,
-        //     $or: [
-        //         { [fieldNames.fieldNumber]: { $exists: true, $nin: [ null, '' ] } },
-        //         { [fieldNames.errorFlags]: { $exists: false } },
-        //         { [fieldNames.errorFlags]: { $in: [ null, '' ] } }
-        //     ]
-        // }
-        // await OccurrenceService.updateOccurrences(unscratchFilter, { scratch: false })
-        // // Discard remaining scratch space occurrences
-        // await OccurrenceService.deleteOccurrences({ scratch: true })
+        const unscratchFilter = {
+            scratch: true,
+            $or: [
+                { [fieldNames.fieldNumber]: { $exists: true, $nin: [ null, '' ] } },
+                { [fieldNames.errorFlags]: { $exists: false } },
+                { [fieldNames.errorFlags]: { $in: [ null, '' ] } }
+            ]
+        }
+        await OccurrenceService.updateOccurrences(unscratchFilter, { scratch: false })
+        // Discard remaining scratch space occurrences
+        await OccurrenceService.deleteOccurrences({ scratch: true })
     }
 }

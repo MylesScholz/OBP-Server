@@ -426,6 +426,7 @@ class OccurrenceService {
         update.scratch = scratch
 
         try {
+            // CRASHES... bothersome time to do such a thing.
             const upsertResults = await this.repository.updateById(update._id, update, { upsert: true })
 
             if (upsertResults) {
@@ -479,6 +480,7 @@ class OccurrenceService {
         // Return if no documents were provided
         if (!updates || updates.length === 0) return results
 
+        // does it get to here?
         for (const update of updates) {
             const upsertResults = await this.upsertOccurrence(update, { skipFormatting: true, scratch })
 

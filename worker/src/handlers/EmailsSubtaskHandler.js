@@ -64,6 +64,8 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
      */
     #buildEmailCategories(userErrorMap, userEmailMap) {
         // Lists of field names that imply membership in each category of email list
+        // Here's the problem... should decimalLat/Lon really not count
+        // as a location error?
         const locationErrorFlags = [
             fieldNames.locality
         ]
@@ -169,20 +171,23 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
         // Delete old scratch space occurrences (from previous tasks)
         await OccurrenceService.deleteOccurrences({ scratch: true })
 
-        // This would seem to insert a single scratch record, by Stephanie Hazen
-        //  ID = 66f7462689733e7b529f9c5eefe41c07f9e831c50365f2182021697788451378
 
         // For some reason, this "!== selection" case seems to execute.
         //  Is this what myles intended? I thought we were working with 
         //  occurrences here, not the flags file.
-        if (false && subtask.input !== 'selection') {
+
+        // Oh my god. We *are* working with occurrences. That's what the flags
+        //  were all along, just with a different name.
+        if (subtask.input !== 'selection') {
             // Upsert data from the input occurrence file into scratch space (existing records will be moved to scratch space)
+            // This would seem to insert a single scratch record, by Stephanie Hazen
+            //  ID = 66f7462689733e7b529f9c5eefe41c07f9e831c50365f2182021697788451378
             await OccurrenceService.upsertOccurrencesFromFile(inputFilePath, { scratch: true })
 
         } else {    // subtask.input === 'selection'
             // Move occurrences matching the query parameters into scratch space
             // This doesn't work, which is very concerning. What else could be broken?
-            // await OccurrenceService.updateOccurrences(subtask.params?.filter ?? {}, { scratch: true })
+            await OccurrenceService.updateOccurrences(subtask.params?.filter ?? {}, { scratch: true })
         }
 
         await TaskService.logTaskStep(taskId, 'Compiling user email addresses')
@@ -202,15 +207,17 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
         // CRASHES
         // Critically, returns an empty array, which would account for empty
         //  output from the subtask
-        // const userErrors = await OccurrenceService.getErrorFlagsByUserLogins(
-        //     userLogins, { scratch: true })
         const userErrors = await OccurrenceService.getErrorFlagsByUserLogins(
-            userLogins)
+            userLogins, { scratch: true })
+        // const userErrors = await OccurrenceService.getErrorFlagsByUserLogins(
+        //     userLogins)
 
         // Construct a map of each user login to its corresponding error flags (as an Array)
+        // temp: still good!
         const userErrorMap = this.#buildUserErrorMap(userErrors)
 
         // Construct a map of each user login to its corresponding email
+        // keep going, priscilla
         const userEmailMap = this.#buildUserEmailMap(users)
 
         // Build three lists of emails categorized by error type (location, accuracy, and taxonomy)
@@ -242,10 +249,9 @@ export default class EmailsSubtaskHandler extends BaseSubtaskHandler {
         // Why is this operation so slow? Ideally we would sub-set it anyway, but
         //  this is certainly curious. See OccurrenceRepo.updateMany for implementation
         // For the time being, probably just change the unscratchFilter to {}
-        // await OccurrenceService.updateOccurrences(unscratchFilter, { scratch: false })
+        await OccurrenceService.updateOccurrences(unscratchFilter, { scratch: false })
 
         // Discard remaining scratch space occurrences
-        // await OccurrenceService.deleteOccurrences({ scratch: true })
-        console.log("Finished")
+        await OccurrenceService.deleteOccurrences({ scratch: true })
     }
 }

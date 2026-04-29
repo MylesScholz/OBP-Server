@@ -71,6 +71,7 @@ class FileManager {
 
             while (pageNumber <= results.pagination.totalPages) {
                 for (const document of results.data) {
+                    console.log(document._id)
                     await writeAsync(stringifier, document)
                 }
 
